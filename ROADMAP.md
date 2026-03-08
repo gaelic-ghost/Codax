@@ -26,11 +26,14 @@
 - [ ] Milestone 7: UI/UX Improvements
 - [ ] Milestone 8: Full SwiftUI AX Implementation
 - [ ] Milestone 9: Codax TTS (Codex `Speech Generation Skill` Wrapper)
-- [ ] Milestone 10: Codax Axe™ (Chop through the noise. See the Forest for the Trees)
-- [ ] Milestone 11: Codax Axplanation™ (Intelligent, Adaptive Summarization)
-- [ ] Milestone 12: Schema Diff-Check Automation (Script or SPM/XC Plugin)
-- [ ] Milestone 13: Performance Improvements (AppKit Views)
-- [ ] Milestone 14: Performance Improvements (Local TTS Engine)
+- [ ] Milestone 10: Codax Thread Axe™ (Chop through the thread noise. See the Forest for the Trees)
+- [ ] Milestone 11: Codax Thread Axplanation™ (Intelligent, Adaptive Summarization of Stale Threads)
+- [ ] Milestone 12: Codax Auto-Lang™ (Automatic Environment Detection for Coding Languages)
+- [ ] Milestone 13: Codax Code Axe™ (Chop through the code noise. See the Forest for the Trees)
+- [ ] Milestone 14: Codax Code Axplanation™ (Intelligent, Adaptive Summarization of Codebases)
+- [ ] Milestone 15: Schema Diff-Check Automation (Script or SPM/XC Plugin)
+- [ ] Milestone 16: Performance Improvements (AppKit Views)
+- [ ] Milestone 17: Performance Improvements (Local TTS Engine)
 
 ## Milestone 0: Foundation
 
@@ -42,12 +45,13 @@ Tickets:
 
 - [x] Create the app target and source tree.
 - [x] Add `codex-schemas` as an Xcode reference group.
-- [ ] Add an automated test target for transport and client coverage.
+- [x] Add the `CodaxTests` test target and keep it runnable locally.
+- [ ] Add meaningful transport and client coverage to `CodaxTests`.
 - [ ] Normalize placeholder docs and the app shell beyond the current scaffolding.
 
 Exit criteria:
 
-- [ ] Project structure is stable enough for feature milestones and tests can run in local and CI workflows.
+- [ ] Project structure is stable enough for feature milestones and tests can run in local and CI workflows with non-placeholder coverage.
 
 ## Milestone 1: Transport
 
@@ -117,10 +121,10 @@ Scope:
 Tickets:
 
 - [ ] Detect the installed `codex` binary path and version at startup.
-- [ ] Define the supported version policy for Codax relative to the pinned schema and transport report version.
+- [ ] Define the supported version policy for Codax relative to the pinned schema artifacts and the transport or connection reports.
 - [ ] Fail clearly for unsupported or unknown versions.
-- [ ] Surface compatibility warnings or errors into app state for the UI layer.
-- [ ] Document compatibility behavior in the roadmap, report, and startup flow.
+- [ ] Surface compatibility warnings or errors into `CodaxOrchestrator` or `AuthCoordinator` state for the UI layer.
+- [ ] Document compatibility behavior in the roadmap, reports, and startup flow.
 
 Exit criteria:
 
@@ -166,110 +170,200 @@ Exit criteria:
 
 Scope:
 
-- [ ] TBD.
+- [ ] Make the three-pane shell pleasant and usable for daily work without changing core protocol architecture.
 
 Tickets:
 
-- [ ] TBD.
+- [ ] Improve conversation rendering, message grouping, and inspector presentation.
+- [ ] Add better loading, error, reconnect, and retry UX for connection- and thread-level state.
+- [ ] Add command, file-change, reasoning, and approval visual treatments that are readable and scannable.
+- [ ] Add app-level affordances for login state, active thread state, pending approvals, and version-compatibility warnings.
+- [ ] Tighten typography, spacing, and information hierarchy across sidebar, content, and detail panes.
+- [ ] Add keyboard shortcuts and interaction polish for common navigation actions.
 
 Exit Criteria:
 
-- [ ] TBD.
+- [ ] The app is no longer a functional shell only; it is coherent, readable, and usable for repeated daily sessions.
 
 ## Milestone 8: Full SwiftUI AX Implementation
 
 Scope:
 
-- [ ] In a sentence? Repo-level Auto-env detection for your agent's language awareness.
+- [ ] Deliver a VoiceOver- and keyboard-usable experience across the main app shell and core workflows.
 
 Tickets:
 
-- [ ] TBD.
+- [ ] Audit all major views for semantic labels, values, hints, and roles.
+- [ ] Define predictable focus order across sidebar, conversation pane, and detail pane.
+- [ ] Ensure keyboard-only navigation works for thread selection, conversation reading, and approval actions.
+- [ ] Add accessibility announcements for connection changes, turn completion, login completion, and approval prompts.
+- [ ] Ensure streamed content updates remain understandable to assistive technologies.
+- [ ] Add accessibility-oriented tests or repeatable audit checklists for core flows.
 
 Exit Criteria:
 
-- [ ] TBD.
+- [ ] A user can connect, navigate threads, read conversation state, and handle approvals with VoiceOver and keyboard navigation only.
 
 ## Milestone 9: Codax TTS (Codex `Speech Generation Skill` Wrapper)
 
 Scope:
 
-- [ ] TBD.
+- [ ] Add narrated output using Codex/OpenAI speech generation first.
 
 Tickets:
 
-- [ ] TBD.
+- [ ] Define which content can be narrated, including assistant replies, summaries, and selected thread content.
+- [ ] Wrap the existing speech-generation workflow behind app actions and `CodaxOrchestrator` state.
+- [ ] Add playback controls, progress state, cancel/retry handling, and output-file management.
+- [ ] Expose narration settings such as voice or profile selection and target content selection.
+- [ ] Document fallback behavior when speech generation is unavailable.
 
 Exit Criteria:
 
-- [ ] TBD.
+- [ ] Users can reliably generate and play narrated output for supported app content from within Codax.
 
-## Milestone 10: Codax Axe™ (Chop through the noise. See the Forest for the Trees)
+## Milestone 10: Codax Thread Axe™ (Chop through the thread noise. See the Forest for the Trees)
 
 Scope:
 
-- [ ] TBD.
+- [ ] Build a signal-reduction feature that helps users cut through large conversations, noisy tool output, and multi-item turns.
 
 Tickets:
 
-- [ ] TBD.
+- [ ] Define target use cases such as “find the important outcome,” “show only blockers,” and “collapse noise.”
+- [ ] Add structured filters and views for command output, file changes, reasoning, approvals, and other high-volume item types.
+- [ ] Generate condensed “what matters” views using Codex/OpenAI-first summarization or classification support.
+- [ ] Let users jump from condensed views back to full underlying context without losing traceability.
+- [ ] Ensure the feature works incrementally while a turn is still streaming.
 
 Exit Criteria:
 
-- [ ] TBD.
+- [ ] Users can reduce a noisy thread or turn to an actionable view without losing traceability back to raw events.
 
-## Milestone 11: Codax Axplanation™ (Intelligent, Adaptive Summarization)
+## Milestone 11: Codax Thread Axplanation™ (Intelligent, Adaptive Summarization of Stale Threads)
 
 Scope:
 
-- [ ] TBD.
+- [ ] Add intelligent, adaptive summaries for threads, turns, or selected content. Generate summaries automatically for presentation when users return to a thread later on. Generate summaries via background subagent (Codex 5.3 Spark, or GPT). Integrate with `Codax TTS`, `Codax Thread Axe`, and a dedicated UI control.
 
 Tickets:
 
-- [ ] TBD.
+- [ ] Define summary modes such as quick recap, technical summary, handoff summary, and accessible explanation.
+- [ ] Allow summaries for the current turn, full thread, or selected items.
+- [ ] Store or cache generated summaries in app state where appropriate.
+- [ ] Integrate summary generation into the inspector and detail workflow.
+- [ ] Distinguish summary output from raw model content so users can trust what is derived versus original.
 
 Exit Criteria:
 
-- [ ] TBD.
+- [ ] Users can request and consume reliable summaries tailored to their current task and reading needs.
+- [ ] Users can request and consume these summaries via minimal interaction with native UI controls.
 
-## Milestone 12: Schema Diff-Check Automation (Script or SPM/XC Plugin)
+## Milestone 12: Codax Auto-Lang™ (Automatic Environment Detection for Coding Languages)
 
 Scope:
 
-- [ ] TBD.
+- [ ] Build automatic project-level coding language detection. Include profiles for various coding languages/tooling/ecosystems. Use these to implement a system providing the agent with the proper context, tools, and Agent Skills automatically based upon the project being worked on. Start with Swift.
 
 Tickets:
 
+- [ ] Define detection criteria (Presense of `Package.Swift`, `.xcodeproj`, `.xcworkspace`, etc.)
 - [ ] TBD.
 
 Exit Criteria:
 
-- [ ] TBD.
+- [ ] Roughly: Swift Package support. Xcode Project support.
 
-## Milestone 13: Performance Improvements (AppKit Views)
+## Milestone 13: Codax Code Axe™ (Chop through the code noise. See the Forest for the Trees)
 
 Scope:
 
-- [ ] TBD.
+- [ ] Build a repo-level, language-aware "switcher" to ensure the correct context, tools, and Agent Skills are always top of mind. 
 
 Tickets:
 
+- [ ] Define target use cases such as "TBD" or "TBD".
+- [ ] Add structured, language-aware filters for Swift Symbols (other langs later) usign native tooling. COnsider Xcode MCP, swift-syntax, symbol-kit, SourceKit-LSP, etc.
+- [ ] Define idomatic ways to describe symbols, declarations, calls, etc for Swift source (other langs later).
+- [ ] Define familiar, and idiomatic ways to provide views of symbols, declarations, etc. (Swift first, other langs later)
+- [ ] Generate condensed “what matters” views using Codex/OpenAI-first summarization or classification support.
+- [ ] Let users jump from condensed views back to full underlying context without losing traceability.
 - [ ] TBD.
 
 Exit Criteria:
 
-- [ ] TBD.
+- [ ] Users can reduce a noisy file or codebase to an actionable view (or explanation?) without losing traceability back to raw events.
 
-## Milestone 14: Performance Improvements (Local TTS Engine)
+## Milestone 14: Codax Code Axplanation™ (Intelligent, Adaptive Summarization of Codebases)
 
 Scope:
 
-- [ ] TBD.
+- [ ] Add intelligent, adaptive, language-aware summaries for codebases, interfaces, libs, and source files. Generate summaries eagerly w/ subagent (Model depending on size of the codebase/file. Perhaps Codex 5.3 Spark for smaller contexts?). Integrate with `Codax TTS`, `Codax Code Axe`, and a dedicated UI control.
 
 Tickets:
 
-- [ ] TBD.
+- [ ] Define summary modes such as quick recap, technical summary, handoff summary, and accessible explanation.
+- [ ] Allow summaries for a single file, an interface, full framework/sdk, or entire codebase.
+- [ ] Store or cache generated summaries in app state where appropriate.
+- [ ] Integrate summary generation into the inspector and detail workflow.
+- [ ] Distinguish summary output from raw model content so users can trust what is derived versus original.
 
 Exit Criteria:
 
-- [ ] TBD.
+- [ ] Users can request and consume reliable summaries tailored to their current task and reading needs.
+- [ ] Users can request and consume these summaries via minimal interaction with native UI controls.
+
+
+## Milestone 15: Schema Diff-Check Automation (Script or SPM/XC Plugin)
+
+Scope:
+
+- [ ] Automate detection of schema drift between pinned local schema artifacts and future Codex versions.
+
+Tickets:
+
+- [ ] Define the source of truth for pinned schema versions and report references.
+- [ ] Add a script or SwiftPM/Xcode-integrated tool that compares schema snapshots.
+- [ ] Generate a readable diff summary for changed request, notification, and payload shapes.
+- [ ] Identify breaking versus additive schema changes.
+- [ ] Connect the output to roadmap and report maintenance workflow.
+
+Exit Criteria:
+
+- [ ] Schema-version drift is detectable and reviewable before protocol mismatches silently ship.
+
+## Milestone 16: Performance Improvements (AppKit Views)
+
+Scope:
+
+- [ ] Address UI performance bottlenecks by selectively introducing AppKit-backed views where SwiftUI is insufficient.
+
+Tickets:
+
+- [ ] Identify likely high-churn or high-volume surfaces such as long conversations, rich logs, or diff views.
+- [ ] Profile current SwiftUI behavior under realistic large-thread loads.
+- [ ] Define the first AppKit-backed candidates and their interop boundaries.
+- [ ] Migrate only the highest-value view or views, not the whole UI.
+- [ ] Verify accessibility and keyboard behavior are preserved after migration.
+
+Exit Criteria:
+
+- [ ] Large or noisy sessions remain responsive without regressing the app’s usability.
+
+## Milestone 17: Performance Improvements (Local TTS Engine)
+
+Scope:
+
+- [ ] Add a local speech path as a later performance and resilience enhancement to Milestone 9.
+
+Tickets:
+
+- [ ] Define the local engine strategy and platform constraints.
+- [ ] Compare latency, quality, offline behavior, and integration complexity against hosted speech generation.
+- [ ] Add an abstraction boundary so hosted and local TTS can coexist cleanly.
+- [ ] Expose per-engine selection or fallback policy in app settings if needed.
+- [ ] Verify local playback and generation do not degrade main-app responsiveness.
+
+Exit Criteria:
+
+- [ ] Codax can offer a viable local narration path for supported use cases without breaking the hosted-first speech workflow.

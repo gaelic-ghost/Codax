@@ -1,0 +1,726 @@
+# Transport Schema Report
+
+## Summary
+
+This report maps the transport-facing TypeScript schemas in `~/Workspace/codex-schemas/v0.111.0/` onto the current Swift skeleton in `/Users/galew/Workspace/Codax/Codax.xcodeproj`.
+
+The goal is not to catalog the entire generated schema bundle. It is to identify the subset that defines the actual wire contract for the transport layer, explain how those schemas should map onto the Swift layering already present in this project, and call out the places where the current skeleton is narrower than `v0.111.0`.
+
+The main conclusion is:
+
+- The transport contract is centered on `ClientRequest.ts`, `ServerNotification.ts`, `ServerRequest.ts`, and `RequestId.ts`.
+- The current Swift skeleton already has the right high-level layering:
+  - `CodexTransport` for raw bytes
+  - `CodexConnection` for JSON-RPC framing and routing
+  - `CodexClient` for typed methods
+  - `CodexClient+Envelopes` for semantic lifting of inbound server traffic
+  - `CodaxOrchestrator` for app-facing consumption
+- The current Swift surface is intentionally incomplete but structurally aligned.
+- The biggest gap is not architecture. It is schema coverage: the current envelope enums only represent a subset of the server-driven variants present in `v0.111.0`.
+
+## Xcode And Repo Context
+
+- Xcode is currently pointed at `/Users/galew/Workspace/Codax/Codax.xcodeproj`.
+- `../codex-schemas` is included in the Xcode project as a `PBXFileSystemSynchronizedRootGroup`.
+- That means the schema files are visible from Xcode for reference, but they are not Swift build inputs.
+- The active app target is still just the local `Codax` source tree.
+
+This matters because the schema bundle should be treated as a source-of-truth reference set for manual Swift modeling, not as generated code that Xcode is compiling directly.
+
+## Source-Of-Truth Transport Schemas
+
+### 1. Wire Framing
+
+These are the transport roots that matter first:
+
+- `RequestId.ts`
+  - Defines request identifiers as `string | number`.
+- `ClientRequest.ts`
+  - Defines the client-to-server request union.
+- `ServerNotification.ts`
+  - Defines the server-to-client notification union.
+- `ServerRequest.ts`
+  - Defines server-initiated request/approval flows that require a client response.
+
+These files form the real wire contract for the current transport work. Everything else in the generated schema set is either:
+
+- a payload reachable from one of those unions,
+- a deeper domain/entity type used by one of those payloads,
+- or adjacent functionality that does not directly define the JSON-RPC contract this Swift skeleton is modeling.
+
+### 2. Adjacent But Separate: `EventMsg.ts`
+
+`EventMsg.ts` is transport-adjacent, but it is not the same surface as the JSON-RPC contract implied by `CodexConnection` and `CodexClient+Envelopes`.
+
+It models a broad event stream with variants like:
+
+- `task_started`
+- `task_complete`
+- `agent_message`
+- `exec_command_begin`
+- `request_user_input`
+- `dynamic_tool_call_request`
+- `plan_update`
+
+That is a different abstraction level from:
+
+- request/response calls in `ClientRequest`
+- server push notifications in `ServerNotification`
+- server-initiated approval/input requests in `ServerRequest`
+
+For this project, `EventMsg` should be treated as a future or parallel event-stream model, not as the primary source for the JSON-RPC transport layer being scaffolded now.
+
+## Schema Buckets And Swift Ownership
+
+### 1. Wire Framing
+
+**TS source of truth**
+
+- `RequestId.ts`
+- implied JSON-RPC envelope shape from the request/notification/request unions
+- error payloads such as `CodexErrorInfo.ts` and the corresponding error object type referenced by JSON-RPC failures
+
+**Swift ownership**
+
+- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexTransport.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexConnection+Messages.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexConnection.swift`
+
+**Current alignment**
+
+- `CodexTransport` is correctly defined as bytes only:
+  - `send(_ message: Data)`
+  - `receive() -> Data`
+  - `close()`
+- `JSONRPCID` in `CodexConnection+Messages.swift` already matches the schema intent well:
+  - `.string(String)`
+  - `.int(Int64)`
+- The request/notification/response/error message structs already indicate the right framing split.
+
+**Gaps**
+
+- `CodexConnection+Messages.swift` does not yet expose decoding/routing support for raw inbound unions.
+- `CodexConnection.swift` is stubbed and therefore does not yet implement:
+  - request correlation
+  - response matching
+  - server notification fanout
+  - server-request dispatch to a handler
+
+### 2. Client-Initiated Methods
+
+**TS source of truth**
+
+The current Swift `CodexClient` surface maps to these `ClientRequest.ts` variants:
+
+- `initialize`
+- `thread/start`
+- `thread/resume`
+- `thread/read`
+- `turn/start`
+- `turn/interrupt`
+- `account/read`
+- `account/login/start`
+- `account/login/cancel`
+
+The most relevant payload pairs are:
+
+- `InitializeParams` / `InitializeResponse`
+- `v2/ThreadStartParams` / `v2/ThreadStartResponse`
+- `v2/ThreadResumeParams` / `v2/ThreadResumeResponse`
+- `v2/ThreadReadParams` / `v2/ThreadReadResponse`
+- `v2/TurnStartParams` / `v2/TurnStartResponse`
+- `v2/TurnInterruptParams` / `v2/TurnInterruptResponse`
+- `v2/GetAccountParams` / `v2/GetAccountResponse`
+- `v2/LoginAccountParams` / `v2/LoginAccountResponse`
+- `v2/CancelLoginAccountParams` / `v2/CancelLoginAccountResponse`
+
+**Swift ownership**
+
+- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexClient.swift`
+- backed by `/Users/galew/Workspace/Codax/Codax/Controllers/CodexConnection.swift`
+- shared DTO/entity modeling under `/Users/galew/Workspace/Codax/Codax/Models/`
+
+**Current alignment**
+
+The public methods in `CodexClient.swift` are already a strong first-pass subset of `ClientRequest.ts`:
+
+- `initialize(_:)`
+- `startThread(_:)`
+- `resumeThread(_:)`
+- `readThread(_:)`
+- `startTurn(_:)`
+- `interruptTurn(_:)`
+- `readAccount(_:)`
+- `startLogin(_:)`
+- `cancelLogin(_:)`
+
+This is a good transport-first selection because it covers:
+
+- session establishment
+- thread lifecycle entry points
+- turn lifecycle entry points
+- account/auth bootstrap
+
+**Observed drift**
+
+- `sendInitialized()` exists in Swift, but no matching `"initialized"` method exists in `ClientRequest.ts`.
+  - This likely reflects either an older schema assumption or a planned secondary handshake that is no longer part of `v0.111.0`.
+  - It should be treated as suspect until a schema-backed method exists.
+- The current client surface is intentionally narrower than `ClientRequest.ts`, which also includes:
+  - thread archive/fork/list/rollback metadata operations
+  - skills/app/plugin/config flows
+  - model/feature listing
+  - command execution and other app-control endpoints
+
+That narrower surface is acceptable for a first implementation, but the report should treat it as a deliberate subset, not as full schema coverage.
+
+### 3. Server-Initiated Notifications
+
+**TS source of truth**
+
+`ServerNotification.ts` is the server push union. It includes:
+
+- thread lifecycle:
+  - `thread/started`
+  - `thread/status/changed`
+  - `thread/archived`
+  - `thread/unarchived`
+  - `thread/closed`
+  - `thread/name/updated`
+  - `thread/tokenUsage/updated`
+  - `thread/compacted`
+- turn lifecycle:
+  - `turn/started`
+  - `turn/completed`
+  - `turn/diff/updated`
+  - `turn/plan/updated`
+- item lifecycle:
+  - `item/started`
+  - `item/completed`
+  - `rawResponseItem/completed`
+  - `item/agentMessage/delta`
+  - `item/plan/delta`
+  - `item/commandExecution/outputDelta`
+  - `item/commandExecution/terminalInteraction`
+  - `item/fileChange/outputDelta`
+  - `item/mcpToolCall/progress`
+  - `item/reasoning/summaryTextDelta`
+  - `item/reasoning/summaryPartAdded`
+  - `item/reasoning/textDelta`
+- account/app/platform:
+  - `account/updated`
+  - `account/rateLimits/updated`
+  - `account/login/completed`
+  - `app/list/updated`
+  - `model/rerouted`
+  - `deprecationNotice`
+  - `configWarning`
+- realtime/platform:
+  - `thread/realtime/started`
+  - `thread/realtime/itemAdded`
+  - `thread/realtime/outputAudio/delta`
+  - `thread/realtime/error`
+  - `thread/realtime/closed`
+  - Windows and fuzzy-file-search notifications
+
+**Swift ownership**
+
+- raw routing in `/Users/galew/Workspace/Codax/Codax/Controllers/CodexConnection.swift`
+- semantic lifting in `/Users/galew/Workspace/Codax/Codax/Controllers/CodexClient+Envelopes.swift`
+- consumption in `/Users/galew/Workspace/Codax/Codax/Controllers/CodaxOrchestrator.swift`
+
+**Current alignment**
+
+The current `ServerNotificationEnvelope` already captures a useful starter subset:
+
+- `threadStarted`
+- `turnStarted`
+- `itemStarted`
+- `accountUpdated`
+- `accountLoginCompleted`
+- `reasoningTextDelta`
+- `unknown(method:raw:)`
+
+This is the right shape for the app layer: a curated semantic enum with an `unknown` escape hatch.
+
+**Observed drift**
+
+The current enum is much narrower than the schema. Notable omissions include:
+
+- error notifications
+- turn completion
+- item completion
+- agent message delta
+- plan delta
+- command/file output delta
+- server request resolution
+- account rate limit updates
+- thread status/name/token usage updates
+- deprecation/config warnings
+
+This is not a design flaw. It just means the current semantic envelope should be treated as phase-one coverage, not as a complete schema projection.
+
+### 4. Server-Initiated Requests
+
+**TS source of truth**
+
+`ServerRequest.ts` currently includes:
+
+- `item/commandExecution/requestApproval`
+- `item/fileChange/requestApproval`
+- `item/tool/requestUserInput`
+- `mcpServer/elicitation/request`
+- `item/tool/call`
+- `account/chatgptAuthTokens/refresh`
+- `applyPatchApproval`
+- `execCommandApproval`
+
+Relevant payloads include:
+
+- `v2/CommandExecutionRequestApprovalParams`
+- `v2/FileChangeRequestApprovalParams`
+- `v2/ToolRequestUserInputParams`
+- `v2/McpServerElicitationRequestParams`
+- `v2/DynamicToolCallParams`
+- `v2/ChatgptAuthTokensRefreshParams`
+- `ApplyPatchApprovalParams`
+- `ExecCommandApprovalParams`
+
+**Swift ownership**
+
+- routing in `/Users/galew/Workspace/Codax/Codax/Controllers/CodexConnection.swift`
+- semantic lifting in `/Users/galew/Workspace/Codax/Codax/Controllers/CodexClient+Envelopes.swift`
+- resolution via `/Users/galew/Workspace/Codax/Codax/Controllers/CodexClient+ServerRequestHandler.swift`
+
+**Current alignment**
+
+`ServerRequestEnvelope` already models the most obvious app-facing cases:
+
+- `commandApproval`
+- `fileChangeApproval`
+- `userInput`
+- `chatgptAuthRefresh`
+- `dynamicToolCall`
+- `unknown(method:id:raw:)`
+
+**Observed drift**
+
+The current enum is missing explicit cases for:
+
+- `mcpServer/elicitation/request`
+- `applyPatchApproval`
+- `execCommandApproval`
+
+That mismatch is explicitly visible today and should be resolved before the transport layer is considered schema-complete.
+
+## Method Mapping: Current Swift Client To `ClientRequest.ts`
+
+This is the direct mapping the transport report should preserve.
+
+| Swift API | `ClientRequest.ts` method | Params | Response |
+| --- | --- | --- | --- |
+| `initialize(_:)` | `"initialize"` | `InitializeParams` | `InitializeResponse` |
+| `startThread(_:)` | `"thread/start"` | `v2/ThreadStartParams` | `v2/ThreadStartResponse` |
+| `resumeThread(_:)` | `"thread/resume"` | `v2/ThreadResumeParams` | `v2/ThreadResumeResponse` |
+| `readThread(_:)` | `"thread/read"` | `v2/ThreadReadParams` | `v2/ThreadReadResponse` |
+| `startTurn(_:)` | `"turn/start"` | `v2/TurnStartParams` | `v2/TurnStartResponse` |
+| `interruptTurn(_:)` | `"turn/interrupt"` | `v2/TurnInterruptParams` | `v2/TurnInterruptResponse` |
+| `readAccount(_:)` | `"account/read"` | `v2/GetAccountParams` | `v2/GetAccountResponse` |
+| `startLogin(_:)` | `"account/login/start"` | `v2/LoginAccountParams` | `v2/LoginAccountResponse` |
+| `cancelLogin(_:)` | `"account/login/cancel"` | `v2/CancelLoginAccountParams` | `v2/CancelLoginAccountResponse` |
+
+Additional note:
+
+- `sendInitialized()` currently has no matching `ClientRequest` method in `v0.111.0`.
+
+## Payload Notes That Matter For Swift Modeling
+
+These are the payload details most likely to shape the Swift types.
+
+### Initialization
+
+- `InitializeParams`
+  - `{ clientInfo, capabilities }`
+- `InitializeResponse`
+  - `{ userAgent }`
+
+This is a small, stable request/response pair and a good first endpoint to implement end-to-end.
+
+### Thread Start / Resume / Read
+
+- `ThreadStartParams`
+  - mostly optional configuration overrides
+  - includes required booleans:
+    - `experimentalRawEvents`
+    - `persistExtendedHistory`
+- `ThreadResumeParams`
+  - requires `threadId`
+  - includes optional `history` and `path`
+  - includes required `persistExtendedHistory`
+- `ThreadReadParams`
+  - requires `threadId`
+  - requires `includeTurns`
+- `ThreadStartResponse` and `ThreadResumeResponse`
+  - return `thread` plus runtime settings like `model`, `modelProvider`, `cwd`, `approvalPolicy`, `sandbox`, `reasoningEffort`
+- `ThreadReadResponse`
+  - returns just `thread`
+
+Implication for Swift:
+
+- These should not be treated as thin string-only DTOs.
+- The shared model layer needs real DTO support for thread state, sandbox/approval settings, and reasoning/service-tier values.
+
+### Turn Start / Interrupt
+
+- `TurnStartParams`
+  - requires `threadId`
+  - requires `input: Array<UserInput>`
+  - supports optional overrides for cwd, approval policy, sandbox policy, model, service tier, reasoning, output schema, and collaboration mode
+- `TurnStartResponse`
+  - returns `{ turn }`
+- `TurnInterruptParams`
+  - requires `threadId`, `turnId`
+- `TurnInterruptResponse`
+  - empty object
+
+Implication for Swift:
+
+- `TurnStartParams` is one of the first payloads where schema breadth will matter.
+- `TurnInterruptResponse` should likely decode into a dedicated empty response type, not `Void`.
+
+### Account / Login
+
+- `GetAccountParams`
+  - requires `refreshToken: boolean`
+- `GetAccountResponse`
+  - returns `{ account, requiresOpenaiAuth }`
+- `LoginAccountParams`
+  - tagged union:
+    - `apiKey`
+    - `chatgpt`
+    - `chatgptAuthTokens`
+- `LoginAccountResponse`
+  - tagged union:
+    - `apiKey`
+    - `chatgpt` with `loginId` and `authUrl`
+    - `chatgptAuthTokens`
+- `CancelLoginAccountParams`
+  - requires `loginId`
+- `CancelLoginAccountResponse`
+  - returns `{ status }`
+
+Implication for Swift:
+
+- Auth/login types belong in shared models, not buried inside the connection layer.
+- The union tagging patterns should map to Swift enums with associated values.
+
+### Server Request Payloads
+
+- `CommandExecutionRequestApprovalParams`
+  - rich approval payload with `threadId`, `turnId`, `itemId`, optional `approvalId`, optional `reason`, command metadata, decision lists, and optional policy amendments
+- `FileChangeRequestApprovalParams`
+  - narrower write-access approval payload
+- `ToolRequestUserInputParams`
+  - carries structured question arrays
+- `DynamicToolCallParams`
+  - carries `threadId`, `turnId`, `callId`, `tool`, and JSON arguments
+- `ChatgptAuthTokensRefreshParams`
+  - carries refresh reason plus optional previous account id
+
+Implication for Swift:
+
+- The server-request handler protocol should eventually deal in strongly typed request enums, not raw dictionaries or generic JSON blobs.
+
+## Mapping The Schemas To The Current Swift Skeleton
+
+### Transport Primitives
+
+**Files**
+
+- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexTransport.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexConnection+Messages.swift`
+
+**Role**
+
+- Own raw bytes and JSON-RPC envelope types.
+
+**Recommendation**
+
+- Keep `CodexTransport` byte-oriented only.
+- Keep JSON-RPC envelope structs/enums separate from higher-level payload DTOs.
+- Expand `CodexConnection+Messages.swift` into a true wire-format layer:
+  - request message
+  - notification message
+  - success response
+  - error response
+  - request id
+  - error object
+
+### Connection / Router Layer
+
+**File**
+
+- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexConnection.swift`
+
+**Role**
+
+- Own encoding/decoding, request correlation, response completion, and inbound routing.
+
+**Recommendation**
+
+- `CodexConnection` should be the only layer that understands raw JSON-RPC message directionality.
+- It should:
+  - send requests with generated `JSONRPCID`
+  - await matching success/error responses
+  - decode inbound server notifications
+  - decode inbound server requests
+  - expose a notification stream to higher layers
+  - delegate server requests to `CodexServerRequestHandler`
+
+### Typed Client API Layer
+
+**File**
+
+- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexClient.swift`
+
+**Role**
+
+- Present a schema-backed, app-friendly API surface over `CodexConnection`.
+
+**Recommendation**
+
+- Keep the current method-per-endpoint approach.
+- Each method should bind directly to one schema-backed method string and one param/response pair.
+- Remove or revalidate any methods not backed by `ClientRequest.ts`, starting with `sendInitialized()`.
+
+### Inbound Semantic Lifting
+
+**File**
+
+- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexClient+Envelopes.swift`
+
+**Role**
+
+- Translate raw `ServerNotification` and `ServerRequest` traffic into curated Swift enums.
+
+**Recommendation**
+
+- Preserve the current curated-enum design.
+- Keep `unknown(...)` fallback cases for forward compatibility.
+- Expand coverage to at least the schema variants needed by the orchestrator and any initial auth/approval UX.
+
+### App / Orchestrator Layer
+
+**File**
+
+- `/Users/galew/Workspace/Codax/Codax/Controllers/CodaxOrchestrator.swift`
+
+**Role**
+
+- Consume typed notifications and requests.
+- Update observable app state.
+
+**Recommendation**
+
+- Keep this layer schema-aware only through shared Swift models and envelope enums.
+- Do not let raw JSON-RPC or raw TS-union concerns leak this high.
+
+## Concrete Schema / Skeleton Mismatches Visible Today
+
+### 1. `RequestId` Already Maps Cleanly
+
+- TS: `RequestId = string | number`
+- Swift: `JSONRPCID = .string(String) | .int(Int64)`
+
+This is aligned and should be retained.
+
+### 2. `CodexClient.sendInitialized()` Has No Current Schema Match
+
+- Present in Swift
+- Not present in `ClientRequest.ts`
+
+This is the clearest method-level mismatch currently visible.
+
+### 3. `ServerRequestEnvelope` Is Incomplete Relative To `ServerRequest.ts`
+
+Current explicit Swift cases:
+
+- command approval
+- file change approval
+- user input
+- chatgpt auth refresh
+- dynamic tool call
+
+Missing schema-backed explicit cases:
+
+- MCP elicitation request
+- apply patch approval
+- exec command approval
+
+### 4. `ServerNotificationEnvelope` Is A Narrow Subset
+
+Current explicit Swift cases:
+
+- thread started
+- turn started
+- item started
+- account updated
+- account login completed
+- reasoning text delta
+
+Notable omissions:
+
+- error
+- item completed
+- turn completed
+- message delta
+- plan delta
+- command/file output deltas
+- account rate limits
+- thread status/name/token usage
+- warnings/deprecation/platform notices
+
+### 5. Shared Model Layer Is Mostly Empty
+
+The `Models/` files are placeholders today:
+
+- `Transport.swift`
+- `Client.swift`
+- `Connection.swift`
+- `Auth.swift`
+- `Orchestrator.swift`
+- `Client+ServerRequestHandler.swift`
+
+That is consistent with the current stage of the project, but it means the transport work will need a real DTO/model pass soon after framing is in place.
+
+## Recommended Swift Type Layout For The Next Implementation Step
+
+This is the build map the current repo should use when transport implementation begins.
+
+### `CodexTransport`
+
+Keep responsibility minimal:
+
+- send raw `Data`
+- receive raw `Data`
+- close transport
+
+No schema DTOs should live here.
+
+### `CodexConnection`
+
+Own transport mechanics:
+
+- encode JSON-RPC requests/notifications
+- decode JSON-RPC responses/errors
+- correlate request ids
+- route inbound server notifications
+- route inbound server requests
+- manage receive loop lifecycle
+
+This is the transport engine.
+
+### `CodexClient`
+
+Own typed endpoint methods:
+
+- one Swift method per schema-backed client request
+- no raw method strings outside this layer, except possibly as private constants
+
+This is the schema-backed API facade.
+
+### `ServerNotificationEnvelope` And `ServerRequestEnvelope`
+
+Own curated semantic enums:
+
+- model only the cases the app wants to reason about directly
+- preserve `unknown` fallbacks for forward compatibility
+- grow incrementally as new product features need more server-driven traffic
+
+This is the adaptation boundary between raw transport and app logic.
+
+### `Models/`
+
+Own shared DTOs and domain types:
+
+- `Thread`
+- `Turn`
+- `Account`
+- auth/login enums
+- approval payload DTOs
+- shared supporting enums such as sandbox, approval policy, service tier, reasoning settings
+
+These should be reusable by both client request responses and inbound notification/request payloads.
+
+## Recommended Initial Implementation Order
+
+If transport work starts immediately after this report, the safest order is:
+
+1. Finish wire-format types in `CodexConnection+Messages.swift`.
+2. Implement request/response routing in `CodexConnection.swift`.
+3. Implement `initialize`, `thread/start`, and `turn/start` in `CodexClient.swift`.
+4. Expand `ServerRequestEnvelope` to full current schema coverage.
+5. Expand `ServerNotificationEnvelope` to the minimum set needed by `CodaxOrchestrator`.
+6. Backfill shared DTOs in `Models/` for thread, turn, account, auth, and approval payloads.
+
+This order preserves the current architecture and minimizes rework.
+
+## Validation Checklist
+
+This report was built against the following checks:
+
+- The report is anchored on schemas reachable from `ClientRequest.ts`, `ServerNotification.ts`, `ServerRequest.ts`, and `RequestId.ts`.
+- Every public stubbed method in `CodexClient.swift` was mapped to a concrete schema method and payload pair.
+- `ServerRequestEnvelope` coverage was compared against the full `ServerRequest.ts` union.
+- `ServerNotificationEnvelope` coverage was compared against the full `ServerNotification.ts` union.
+- `EventMsg.ts` was separated from the JSON-RPC transport contract instead of being merged into it.
+- The Xcode reference to `../codex-schemas` was identified as a synchronized reference group, not as compiled Swift input.
+
+## Files Reviewed
+
+Swift skeleton:
+
+- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexTransport.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexConnection+Messages.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexConnection.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexClient.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexClient+Envelopes.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexClient+ServerRequestHandler.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/CodaxOrchestrator.swift`
+- `/Users/galew/Workspace/Codax/Codax.xcodeproj/project.pbxproj`
+
+Primary schema roots:
+
+- `~/Workspace/codex-schemas/v0.111.0/ClientRequest.ts`
+- `~/Workspace/codex-schemas/v0.111.0/ServerNotification.ts`
+- `~/Workspace/codex-schemas/v0.111.0/ServerRequest.ts`
+- `~/Workspace/codex-schemas/v0.111.0/RequestId.ts`
+- `~/Workspace/codex-schemas/v0.111.0/EventMsg.ts`
+
+Key reachable payloads:
+
+- `InitializeParams.ts`
+- `InitializeResponse.ts`
+- `v2/ThreadStartParams.ts`
+- `v2/ThreadStartResponse.ts`
+- `v2/ThreadResumeParams.ts`
+- `v2/ThreadResumeResponse.ts`
+- `v2/ThreadReadParams.ts`
+- `v2/ThreadReadResponse.ts`
+- `v2/TurnStartParams.ts`
+- `v2/TurnStartResponse.ts`
+- `v2/TurnInterruptParams.ts`
+- `v2/TurnInterruptResponse.ts`
+- `v2/GetAccountParams.ts`
+- `v2/GetAccountResponse.ts`
+- `v2/LoginAccountParams.ts`
+- `v2/LoginAccountResponse.ts`
+- `v2/CancelLoginAccountParams.ts`
+- `v2/CancelLoginAccountResponse.ts`
+- `v2/CommandExecutionRequestApprovalParams.ts`
+- `v2/FileChangeRequestApprovalParams.ts`
+- `v2/ToolRequestUserInputParams.ts`
+- `v2/DynamicToolCallParams.ts`
+- `v2/ChatgptAuthTokensRefreshParams.ts`
+- `v2/Thread.ts`
+- `v2/Turn.ts`

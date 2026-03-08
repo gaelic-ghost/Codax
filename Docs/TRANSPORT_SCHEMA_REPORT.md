@@ -8,7 +8,7 @@ The goal is not to catalog the entire generated schema bundle. It is to identify
 
 The main conclusion is:
 
-- The transport contract is centered on `ClientRequest.ts`, `ServerNotification.ts`, `ServerRequest.ts`, and `RequestId.ts`.
+- The transport contract is centered on `ClientRequest.ts`, `ClientNotification.ts`, `ServerNotification.ts`, `ServerRequest.ts`, and `RequestId.ts`.
 - The current Swift skeleton already has the right high-level layering:
   - `CodexTransport` for raw bytes
   - `CodexConnection` for JSON-RPC framing and routing
@@ -27,6 +27,18 @@ The main conclusion is:
 
 This matters because the schema bundle should be treated as a source-of-truth reference set for manual Swift modeling, not as generated code that Xcode is compiling directly.
 
+## Protocol Mechanics
+
+The generated TypeScript schemas are not the whole transport contract. The Codex app-server docs and the `codex-rs/app-server/README.md` protocol notes add wire-level behavior that is not fully represented in the generated unions.
+
+- `stdio` is the supported production transport and uses newline-delimited JSON.
+- `websocket` exists but is marked experimental and unsupported.
+- The protocol uses JSON-RPC 2.0 semantics, but omits `"jsonrpc":"2.0"` on the wire.
+- Each connection must begin with an `initialize` request followed by an `initialized` notification.
+- Requests issued before that handshake are rejected by the server.
+- `InitializeCapabilities` supports both `experimentalApi` and `optOutNotificationMethods`.
+- App-server can reject overloaded ingress with JSON-RPC error code `-32001`, which higher layers should treat as retryable.
+
 ## Source-Of-Truth Transport Schemas
 
 ### 1. Wire Framing
@@ -37,6 +49,8 @@ These are the transport roots that matter first:
   - Defines request identifiers as `string | number`.
 - `ClientRequest.ts`
   - Defines the client-to-server request union.
+- `ClientNotification.ts`
+  - Defines client notifications such as `initialized`.
 - `ServerNotification.ts`
   - Defines the server-to-client notification union.
 - `ServerRequest.ts`
@@ -65,6 +79,7 @@ It models a broad event stream with variants like:
 That is a different abstraction level from:
 
 - request/response calls in `ClientRequest`
+- client notifications in `ClientNotification`
 - server push notifications in `ServerNotification`
 - server-initiated approval/input requests in `ServerRequest`
 
@@ -99,12 +114,15 @@ For this project, `EventMsg` should be treated as a future or parallel event-str
 
 **Gaps**
 
-- `CodexConnection+Messages.swift` does not yet expose decoding/routing support for raw inbound unions.
-- `CodexConnection.swift` is stubbed and therefore does not yet implement:
+- The current implementation now covers the first transport slice:
   - request correlation
   - response matching
   - server notification fanout
   - server-request dispatch to a handler
+- Remaining work is primarily breadth and hardening:
+  - richer notification coverage
+  - retry/backoff policy around server overloads
+  - higher-level orchestration on top of the generic transport
 
 ### 2. Client-Initiated Methods
 
@@ -163,9 +181,8 @@ This is a good transport-first selection because it covers:
 
 **Observed drift**
 
-- `sendInitialized()` exists in Swift, but no matching `"initialized"` method exists in `ClientRequest.ts`.
-  - This likely reflects either an older schema assumption or a planned secondary handshake that is no longer part of `v0.111.0`.
-  - It should be treated as suspect until a schema-backed method exists.
+- `sendInitialized()` is valid, but it maps to `ClientNotification = { "method": "initialized" }`, not to a `ClientRequest.ts` method.
+  - The app-server docs, not `ClientRequest.ts`, are the authoritative source for that handshake rule.
 - The current client surface is intentionally narrower than `ClientRequest.ts`, which also includes:
   - thread archive/fork/list/rollback metadata operations
   - skills/app/plugin/config flows
@@ -231,11 +248,14 @@ That narrower surface is acceptable for a first implementation, but the report s
 
 **Current alignment**
 
-The current `ServerNotificationEnvelope` already captures a useful starter subset:
+The current `ServerNotificationEnvelope` now captures the minimum transport-validation set:
 
+- `error`
 - `threadStarted`
 - `turnStarted`
+- `turnCompleted`
 - `itemStarted`
+- `itemCompleted`
 - `accountUpdated`
 - `accountLoginCompleted`
 - `reasoningTextDelta`
@@ -258,7 +278,7 @@ The current enum is much narrower than the schema. Notable omissions include:
 - thread status/name/token usage updates
 - deprecation/config warnings
 
-This is not a design flaw. It just means the current semantic envelope should be treated as phase-one coverage, not as a complete schema projection.
+This is still phase-one coverage, not a complete schema projection.
 
 ### 4. Server-Initiated Requests
 
@@ -294,24 +314,17 @@ Relevant payloads include:
 
 **Current alignment**
 
-`ServerRequestEnvelope` already models the most obvious app-facing cases:
+`ServerRequestEnvelope` now covers the full current `ServerRequest.ts` union:
 
 - `commandApproval`
 - `fileChangeApproval`
 - `userInput`
+- `mcpServerElicitation`
 - `chatgptAuthRefresh`
 - `dynamicToolCall`
-- `unknown(method:id:raw:)`
-
-**Observed drift**
-
-The current enum is missing explicit cases for:
-
-- `mcpServer/elicitation/request`
 - `applyPatchApproval`
 - `execCommandApproval`
-
-That mismatch is explicitly visible today and should be resolved before the transport layer is considered schema-complete.
+- `unknown(method:id:raw:)`
 
 ## Method Mapping: Current Swift Client To `ClientRequest.ts`
 
@@ -320,6 +333,7 @@ This is the direct mapping the transport report should preserve.
 | Swift API | `ClientRequest.ts` method | Params | Response |
 | --- | --- | --- | --- |
 | `initialize(_:)` | `"initialize"` | `InitializeParams` | `InitializeResponse` |
+| `sendInitialized()` | `"initialized"` notification | none | none |
 | `startThread(_:)` | `"thread/start"` | `v2/ThreadStartParams` | `v2/ThreadStartResponse` |
 | `resumeThread(_:)` | `"thread/resume"` | `v2/ThreadResumeParams` | `v2/ThreadResumeResponse` |
 | `readThread(_:)` | `"thread/read"` | `v2/ThreadReadParams` | `v2/ThreadReadResponse` |
@@ -328,10 +342,6 @@ This is the direct mapping the transport report should preserve.
 | `readAccount(_:)` | `"account/read"` | `v2/GetAccountParams` | `v2/GetAccountResponse` |
 | `startLogin(_:)` | `"account/login/start"` | `v2/LoginAccountParams` | `v2/LoginAccountResponse` |
 | `cancelLogin(_:)` | `"account/login/cancel"` | `v2/CancelLoginAccountParams` | `v2/CancelLoginAccountResponse` |
-
-Additional note:
-
-- `sendInitialized()` currently has no matching `ClientRequest` method in `v0.111.0`.
 
 ## Payload Notes That Matter For Swift Modeling
 
@@ -491,7 +501,7 @@ Implication for Swift:
 
 - Keep the current method-per-endpoint approach.
 - Each method should bind directly to one schema-backed method string and one param/response pair.
-- Remove or revalidate any methods not backed by `ClientRequest.ts`, starting with `sendInitialized()`.
+- Keep `sendInitialized()` as the explicit wrapper for the `initialized` client notification.
 
 ### Inbound Semantic Lifting
 
@@ -534,36 +544,26 @@ Implication for Swift:
 
 This is aligned and should be retained.
 
-### 2. `CodexClient.sendInitialized()` Has No Current Schema Match
+### 2. `CodexClient.sendInitialized()` Is A Client Notification, Not A Client Request
 
 - Present in Swift
-- Not present in `ClientRequest.ts`
+- Backed by `ClientNotification.ts`
+- Required by the app-server handshake docs
 
-This is the clearest method-level mismatch currently visible.
+### 3. `ServerRequestEnvelope` Is Now Aligned With `ServerRequest.ts`
 
-### 3. `ServerRequestEnvelope` Is Incomplete Relative To `ServerRequest.ts`
+The transport slice now includes explicit cases for the full current server-request union, with `unknown(method:id:raw:)` retained for forward compatibility.
 
-Current explicit Swift cases:
-
-- command approval
-- file change approval
-- user input
-- chatgpt auth refresh
-- dynamic tool call
-
-Missing schema-backed explicit cases:
-
-- MCP elicitation request
-- apply patch approval
-- exec command approval
-
-### 4. `ServerNotificationEnvelope` Is A Narrow Subset
+### 4. `ServerNotificationEnvelope` Remains A Curated Subset
 
 Current explicit Swift cases:
 
+- error
 - thread started
 - turn started
+- turn completed
 - item started
+- item completed
 - account updated
 - account login completed
 - reasoning text delta
@@ -652,28 +652,27 @@ Own shared DTOs and domain types:
 
 These should be reusable by both client request responses and inbound notification/request payloads.
 
-## Recommended Initial Implementation Order
+## Recommended Next Implementation Order
 
-If transport work starts immediately after this report, the safest order is:
+With the stdio-first transport slice in place, the safest next order is:
 
-1. Finish wire-format types in `CodexConnection+Messages.swift`.
-2. Implement request/response routing in `CodexConnection.swift`.
-3. Implement `initialize`, `thread/start`, and `turn/start` in `CodexClient.swift`.
-4. Expand `ServerRequestEnvelope` to full current schema coverage.
-5. Expand `ServerNotificationEnvelope` to the minimum set needed by `CodaxOrchestrator`.
-6. Backfill shared DTOs in `Models/` for thread, turn, account, auth, and approval payloads.
-
-This order preserves the current architecture and minimizes rework.
+1. Add retry/backoff policy for retryable JSON-RPC overload errors.
+2. Expand `ServerNotificationEnvelope` toward the next app-facing workflows.
+3. Implement a concrete `CodexServerRequestHandler` for approvals, elicitation, and auth refresh.
+4. Add a test target or package-based harness for automated transport tests.
+5. Lift the transport into `CodaxOrchestrator` for connect/login/thread startup flows.
 
 ## Validation Checklist
 
 This report was built against the following checks:
 
-- The report is anchored on schemas reachable from `ClientRequest.ts`, `ServerNotification.ts`, `ServerRequest.ts`, and `RequestId.ts`.
-- Every public stubbed method in `CodexClient.swift` was mapped to a concrete schema method and payload pair.
+- The report is anchored on schemas reachable from `ClientRequest.ts`, `ClientNotification.ts`, `ServerNotification.ts`, `ServerRequest.ts`, and `RequestId.ts`.
+- Every public method in `CodexClient.swift` was mapped to a concrete schema method or notification.
 - `ServerRequestEnvelope` coverage was compared against the full `ServerRequest.ts` union.
 - `ServerNotificationEnvelope` coverage was compared against the full `ServerNotification.ts` union.
 - `EventMsg.ts` was separated from the JSON-RPC transport contract instead of being merged into it.
+- The app-server docs were used for transport mechanics that are absent from the TS dump, including the `initialize` -> `initialized` handshake and omitted `jsonrpc` field.
+- Websocket was marked experimental and excluded from the first implementation slice.
 - The Xcode reference to `../codex-schemas` was identified as a synchronized reference group, not as compiled Swift input.
 
 ## Files Reviewed
@@ -692,6 +691,7 @@ Swift skeleton:
 Primary schema roots:
 
 - `~/Workspace/codex-schemas/v0.111.0/ClientRequest.ts`
+- `~/Workspace/codex-schemas/v0.111.0/ClientNotification.ts`
 - `~/Workspace/codex-schemas/v0.111.0/ServerNotification.ts`
 - `~/Workspace/codex-schemas/v0.111.0/ServerRequest.ts`
 - `~/Workspace/codex-schemas/v0.111.0/RequestId.ts`

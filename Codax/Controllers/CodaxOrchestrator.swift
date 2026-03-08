@@ -19,10 +19,10 @@ final class CodaxOrchestrator {
 	var connectionState: ConnectionState = .disconnected
 	var loginState: LoginState = .signedOut
 
-	private let client: CodexClient
+	private let client: CodexClient?
 
 	init() {
-
+		self.client = nil
 	}
 
 	func connect() async -> () {
@@ -37,11 +37,11 @@ final class CodaxOrchestrator {
 
 	}
 
-	func startThread(...) async -> () {
+	func startThread() async -> () {
 
 	}
 
-	func startTurn(...) async -> () {
+	func startTurn() async -> () {
 
 	}
 

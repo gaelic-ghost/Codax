@@ -5,4 +5,6 @@
 //  Created by Gale Williams on 3/7/26.
 //
 
-	// MARK: - Orchestration Layer Types
+// MARK: - Orchestration Layer Types
+
+public typealias ThreadSummary = Thread

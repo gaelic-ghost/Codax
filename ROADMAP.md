@@ -271,48 +271,54 @@ Tickets:
 - [ ] Define detection criteria (Presense of `Package.Swift`, `.xcodeproj`, `.xcworkspace`, etc.)
 - [ ] Implement detection which occurs before new thread creation within the project repo.
 - [ ] Add user and agent facing communcation of the active language. For the user, this could include a UI element with language logo.
+- [ ] Consider the next language(s) to add, and create a future milestone for that.
 
 Exit Criteria:
 
-- [ ] Roughly: Swift Package support. Xcode Project support.
+- [ ] Swift Package support. Xcode Project support.
 
 ## Milestone 13: Codax Auto-Steer™ (Language-Aware Automatic Context Adjustment)
 
 Scope:
 
-- [ ] Add a repo-level automatic "context setup" system that uses `Codax Auto-Lang` to ensure the correct context is present, and tools/agent skills are emphasized, for the given project language/ecosystem. for the precense of defined (and copy in, setup-switcher system profiles for various coding languages/tooling/ecosystems, starting with . Use these to implement a system providing the agent with the proper context, tools, and Agent Skills automatically based upon the project being worked on. Start with Swift.
+- [ ] Add a repo-level automatic "context setup" system that uses `Codax Auto-Lang` to ensure the correct context is present, and tools/agent skills are emphasized, for the given project language/ecosystem. Start with Swift, expanding to other languages later on.
 
 Tickets:
 
-- [ ] Add profiles for languages/tooling.
 - [ ] Define proper context (template `AGENTS.md`, etc.) and tooling (local cli/build tools, Agent Skills) for language profiles.
+- [ ] Add profiles for languages/tooling which include tooling options and template context files such as `AGENTS.md`.
+- [ ] Add a UI interface for the user to customize a given language profile.
+- [ ] Add an interface for the agent to customize a given language profile, as well as guidance for the agent, allowing the user to customize via agent interaction.
 - [ ] Add detection for defined context and tools. This should run before new thread creation for the project so issues like "missing `AGENTS.md`" can be automatically corrected ahead of time.
 - [ ] Implement auto-correction of common issues such as "missing `AGENTS.md`".
 - [ ] Add user and agent directed communications of findings, including suggestions to remediate issues that could not be automatically corrected, such as "Xcode MCP not enabled for external agents" and "missing Xcode Command Line Tools".
+- [ ] Consider the next language(s) to add, and create a future milestone for that.
 
 Exit Criteria:
 
-- [ ] TBD.
+- [ ] Defined Swift-specific context and tooling availability is detected, and auto-corrected where possible, before new thread start in a given repo/project directory.
+- [ ] Findings and remediation options are communicated clearly to both user and agent.
+- [ ] Customization of Swift language profile, defined context, and Swift/Xcode tooling is working and available to both user and agent.
 
 ## Milestone 14: Codax Code Axe™ (Chop through the code noise. See the Forest for the Trees)
 
 Scope:
 
-- [ ] Build a language-aware "noise-filter" to facilitate clearer views into, and explaantions of, requested aspects of a file, library, or codebase. Tailored to what matters in the given coding language/ecosystem.
+- [ ] Build a language-aware "noise-filter" to facilitate clearer views into, and explaantions of, requested aspects of a file, library, or codebase. Tailored to what matters in the given coding language/ecosystem. Swift first, other langs later.
 
 Tickets:
 
 - [ ] Define target use cases such as "TBD" or "TBD".
-- [ ] Add structured, language-aware filters for Swift Symbols (other langs later) usign native tooling. COnsider Xcode MCP, swift-syntax, symbol-kit, SourceKit-LSP, etc.
-- [ ] Define idomatic ways to describe symbols, declarations, calls, etc for Swift source (other langs later).
-- [ ] Define familiar, and idiomatic ways to provide views of symbols, declarations, etc. (Swift first, other langs later)
+- [ ] Add structured, language-aware filters for Swift Symbols using native tooling. Consider Xcode MCP, swift-syntax, symbol-kit, SourceKit-LSP, etc.
+- [ ] Define idomatic ways to describe symbols, declarations, calls, etc.
+- [ ] Define familiar, and idiomatic ways to provide views of symbols, declarations, etc.
 - [ ] Generate condensed “what matters” views using Codex/OpenAI-first summarization or classification support.
 - [ ] Let users jump from condensed views back to full underlying context without losing traceability.
-- [ ] TBD.
+- [ ] Consider the next language(s) to add, and create a future milestone for that.
 
 Exit Criteria:
 
-- [ ] Users can reduce a noisy file or codebase to an actionable view (or explanation?) without losing traceability back to raw events.
+- [ ] Users can reduce a noisy Swift file, Package, or Xcode Project to an actionable (optionally filtered) view, or explanation, without losing traceability back to raw events.
 
 ## Milestone 15: Codax Code Axplanation™ (Intelligent, Adaptive Summarization of Codebases)
 

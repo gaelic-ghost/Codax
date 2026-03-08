@@ -23,10 +23,13 @@
 - [ ] Milestone 4: Version Compatibility
 - [ ] Milestone 5: Orchestration
 - [ ] Milestone 6: NavigationSplitView UI
-- [ ] Milestone 7: Codax TTS
-- [ ] Milestone 8: Codax Axplanation™
-- [ ] Milestone 9: Schema Diff-Check Automation
-- [ ] Milestone 10: Performance Improvements (AppKit Views)
+- [ ] Milestone 7: UI/UX Improvements
+- [ ] Milestone 8: Full SwiftUI AX Implementation
+- [ ] Milestone 9: Codax TTS (Codex `Speech Generation Skill` Wrapper)
+- [ ] Milestone 10: Codax Axplanation™ (Intelligent, Adaptive Summarization)
+- [ ] Milestone 11: Schema Diff-Check Automation (Script or SPM/XC Plugin)
+- [ ] Milestone 12: Performance Improvements (AppKit Views)
+- [ ] Milestone 13: Performance Improvements (Local TTS Engine)
 
 ## Milestone 0: Foundation
 
@@ -158,7 +161,7 @@ Exit criteria:
 
 - [ ] The app presents a usable three-panel shell that reflects transport, client, and orchestrator state.
 
-## Milestone 7: Codax TTS
+## Milestone 7: UI/UX Improvements
 
 Scope:
 
@@ -172,7 +175,7 @@ Exit Criteria:
 
 - [ ] TBD.
 
-## Milestone 8: Codax Axplanation
+## Milestone 8: Full SwiftUI AX Implementation
 
 Scope:
 
@@ -186,7 +189,7 @@ Exit Criteria:
 
 - [ ] TBD.
 
-## Milestone 9: Schema Diff-Check Automation
+## Milestone 9: Codax TTS (Codex `Speech Generation Skill` Wrapper)
 
 Scope:
 
@@ -200,7 +203,49 @@ Exit Criteria:
 
 - [ ] TBD.
 
-## Milestone 10: Performance Improvements (AppKit Views)
+## Milestone 10: Codax Axplanation™ (Intelligent, Adaptive Summarization)
+
+Scope:
+
+- [ ] TBD.
+
+Tickets:
+
+- [ ] TBD.
+
+Exit Criteria:
+
+- [ ] TBD.
+
+## Milestone 11: Schema Diff-Check Automation (Script or SPM/XC Plugin)
+
+Scope:
+
+- [ ] TBD.
+
+Tickets:
+
+- [ ] TBD.
+
+Exit Criteria:
+
+- [ ] TBD.
+
+## Milestone 12: Performance Improvements (AppKit Views)
+
+Scope:
+
+- [ ] TBD.
+
+Tickets:
+
+- [ ] TBD.
+
+Exit Criteria:
+
+- [ ] TBD.
+
+## Milestone 13: Performance Improvements (Local TTS Engine)
 
 Scope:
 

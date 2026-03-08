@@ -5,7 +5,7 @@
 - Build an accessible, intuitive, native macOS Codex client that speaks the app-server protocol reliably, uses the end user's existing Codex CLI installation by default, and presents a usable multi-pane desktop interface for managing sessions.
 - Provide a truly accessible interface to agentic coding for the millions left behind by existing tooling from the much bigger, and incredibly well-resourced, vendors.
 - Provide a user experience that involves developers in their work, instead of separating them from it.
-- Provide a UX that works with developers' existing tools, instead of corraling them into an unfamiliar, half-baked, walled-garden of a tool.
+- Provide a UX that works with developers' existing tools, instead of corralling them into an unfamiliar, half-baked, walled-garden of a tool.
 
 ## Product principles
 
@@ -245,7 +245,7 @@ Exit Criteria:
 
 Scope:
 
-- [ ] Add intelligent, adaptive summaries for threads, turns, or selected content. Generate summaries automatically for presentation when users return to a thread later on. Generate summaries via background subagent or similar. Integrate with `Codax TTS`, `Codax Thread Axe`, and a dedicated UI control.
+- [ ] Add intelligent, adaptive summaries for threads, turns, or selected content. Integrate with `Codax TTS`, `Codax Thread Axe`, and a dedicated UI control. Consider generating summaries automatically in the background for presentation when users return to a thread later on.
 
 Tickets:
 
@@ -272,7 +272,7 @@ Tickets:
 
 - [ ] Define detection criteria (Presence of `Package.Swift`, `.xcodeproj`, `.xcworkspace`, etc.)
 - [ ] Implement detection which occurs before new thread creation within the project repo.
-- [ ] Add user and agent facing communcation of the active language. For the user, this could include a UI element with language logo.
+- [ ] Add user and agent facing communication of the active language. For the user, this could include a UI element with language logo.
 - [ ] Consider the next language(s) to add, and create a future milestone for that.
 
 Exit Criteria:
@@ -306,11 +306,11 @@ Exit Criteria:
 
 Scope:
 
-- [ ] Build a language-aware "noise-filter" to facilitate clearer views into, and explaantions of, requested aspects of a file, library, or codebase. Tailored to what matters in the given coding language/ecosystem. Swift first, other langs later.
+- [ ] Build a language-aware "noise-filter" to facilitate clearer views into, and explantions of, requested aspects of a file, library, or codebase. Tailored to what matters in the given coding language/ecosystem. Swift first, other langs later.
 
 Tickets:
 
-- [ ] Define target use cases such as "Which functions take `<symbol>` as a param.
+- [ ] Define target use cases such as "Which functions take `<symbol>` as a param".
 - [ ] Identify other use case examples to define in order to properly steer implementation decisions.
 - [ ] Add structured, language-aware filters for Swift Symbols using native tooling. Consider Xcode MCP, swift-syntax, symbol-kit, SourceKit-LSP, etc.
 - [ ] Define idiomatic ways to describe symbols, declarations, calls, etc.
@@ -327,7 +327,7 @@ Exit Criteria:
 
 Scope:
 
-- [ ] Add intelligent, adaptive, language-aware summaries for codebases, interfaces, libs, and source files. Generate summaries eagerly w/ subagent/similar depending on size of codebase/file. Integrate with `Codax TTS`, `Codax Code Axe`, and a dedicated UI control.
+- [ ] Add intelligent, adaptive, language-aware summaries for codebases, interfaces, libs, and source files. Integrate with `Codax TTS`, `Codax Code Axe`, and a dedicated UI control. Consider option for eager and/or opportunistic background generation of summaries.
 
 Tickets:
 

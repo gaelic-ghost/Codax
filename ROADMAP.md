@@ -29,11 +29,12 @@
 - [ ] Milestone 10: Codax Thread Axe™ (Chop through the thread noise. See the Forest for the Trees)
 - [ ] Milestone 11: Codax Thread Axplanation™ (Intelligent, Adaptive Summarization of Stale Threads)
 - [ ] Milestone 12: Codax Auto-Lang™ (Automatic Environment Detection for Coding Languages)
-- [ ] Milestone 13: Codax Code Axe™ (Chop through the code noise. See the Forest for the Trees)
-- [ ] Milestone 14: Codax Code Axplanation™ (Intelligent, Adaptive Summarization of Codebases)
-- [ ] Milestone 15: Schema Diff-Check Automation (Script or SPM/XC Plugin)
-- [ ] Milestone 16: Performance Improvements (AppKit Views)
-- [ ] Milestone 17: Performance Improvements (Local TTS Engine)
+- [ ] Milestone 13: Codax Auto-Steer™ (Language-Aware Automatic Context Adjustment)
+- [ ] Milestone 14: Codax Code Axe™ (Chop through the code noise. See the Forest for the Trees)
+- [ ] Milestone 15: Codax Code Axplanation™ (Intelligent, Adaptive Summarization of Codebases)
+- [ ] Milestone 16: Schema Diff-Check Automation (Script or SPM/XC Plugin)
+- [ ] Milestone 17: Performance Improvements (AppKit Views)
+- [ ] Milestone 18: Performance Improvements (Local TTS Engine)
 
 ## Milestone 0: Foundation
 
@@ -244,7 +245,7 @@ Exit Criteria:
 
 Scope:
 
-- [ ] Add intelligent, adaptive summaries for threads, turns, or selected content. Generate summaries automatically for presentation when users return to a thread later on. Generate summaries via background subagent (Codex 5.3 Spark, or GPT). Integrate with `Codax TTS`, `Codax Thread Axe`, and a dedicated UI control.
+- [ ] Add intelligent, adaptive summaries for threads, turns, or selected content. Generate summaries automatically for presentation when users return to a thread later on. Generate summaries via background subagent or similar. Integrate with `Codax TTS`, `Codax Thread Axe`, and a dedicated UI control.
 
 Tickets:
 
@@ -263,22 +264,41 @@ Exit Criteria:
 
 Scope:
 
-- [ ] Build automatic project-level coding language detection. Include profiles for various coding languages/tooling/ecosystems. Use these to implement a system providing the agent with the proper context, tools, and Agent Skills automatically based upon the project being worked on. Start with Swift.
+- [ ] Build automatic project-level coding language detection, starting with Swift.
 
 Tickets:
 
 - [ ] Define detection criteria (Presense of `Package.Swift`, `.xcodeproj`, `.xcworkspace`, etc.)
-- [ ] TBD.
+- [ ] Implement detection which occurs before new thread creation within the project repo.
+- [ ] Add user and agent facing communcation of the active language. For the user, this could include a UI element with language logo.
 
 Exit Criteria:
 
 - [ ] Roughly: Swift Package support. Xcode Project support.
 
-## Milestone 13: Codax Code Axe™ (Chop through the code noise. See the Forest for the Trees)
+## Milestone 13: Codax Auto-Steer™ (Language-Aware Automatic Context Adjustment)
 
 Scope:
 
-- [ ] Build a repo-level, language-aware "switcher" to ensure the correct context, tools, and Agent Skills are always top of mind. 
+- [ ] Add a repo-level automatic "context setup" system that uses `Codax Auto-Lang` to ensure the correct context is present, and tools/agent skills are emphasized, for the given project language/ecosystem. for the precense of defined (and copy in, setup-switcher system profiles for various coding languages/tooling/ecosystems, starting with . Use these to implement a system providing the agent with the proper context, tools, and Agent Skills automatically based upon the project being worked on. Start with Swift.
+
+Tickets:
+
+- [ ] Add profiles for languages/tooling.
+- [ ] Define proper context (template `AGENTS.md`, etc.) and tooling (local cli/build tools, Agent Skills) for language profiles.
+- [ ] Add detection for defined context and tools. This should run before new thread creation for the project so issues like "missing `AGENTS.md`" can be automatically corrected ahead of time.
+- [ ] Implement auto-correction of common issues such as "missing `AGENTS.md`".
+- [ ] Add user and agent directed communications of findings, including suggestions to remediate issues that could not be automatically corrected, such as "Xcode MCP not enabled for external agents" and "missing Xcode Command Line Tools".
+
+Exit Criteria:
+
+- [ ] TBD.
+
+## Milestone 14: Codax Code Axe™ (Chop through the code noise. See the Forest for the Trees)
+
+Scope:
+
+- [ ] Build a language-aware "noise-filter" to facilitate clearer views into, and explaantions of, requested aspects of a file, library, or codebase. Tailored to what matters in the given coding language/ecosystem.
 
 Tickets:
 
@@ -294,11 +314,11 @@ Exit Criteria:
 
 - [ ] Users can reduce a noisy file or codebase to an actionable view (or explanation?) without losing traceability back to raw events.
 
-## Milestone 14: Codax Code Axplanation™ (Intelligent, Adaptive Summarization of Codebases)
+## Milestone 15: Codax Code Axplanation™ (Intelligent, Adaptive Summarization of Codebases)
 
 Scope:
 
-- [ ] Add intelligent, adaptive, language-aware summaries for codebases, interfaces, libs, and source files. Generate summaries eagerly w/ subagent (Model depending on size of the codebase/file. Perhaps Codex 5.3 Spark for smaller contexts?). Integrate with `Codax TTS`, `Codax Code Axe`, and a dedicated UI control.
+- [ ] Add intelligent, adaptive, language-aware summaries for codebases, interfaces, libs, and source files. Generate summaries eagerly w/ subagent/similar depending on size of codebase/file. Integrate with `Codax TTS`, `Codax Code Axe`, and a dedicated UI control.
 
 Tickets:
 
@@ -314,7 +334,7 @@ Exit Criteria:
 - [ ] Users can request and consume these summaries via minimal interaction with native UI controls.
 
 
-## Milestone 15: Schema Diff-Check Automation (Script or SPM/XC Plugin)
+## Milestone 16: Schema Diff-Check Automation (Script or SPM/XC Plugin)
 
 Scope:
 
@@ -332,7 +352,7 @@ Exit Criteria:
 
 - [ ] Schema-version drift is detectable and reviewable before protocol mismatches silently ship.
 
-## Milestone 16: Performance Improvements (AppKit Views)
+## Milestone 17: Performance Improvements (AppKit Views)
 
 Scope:
 
@@ -350,7 +370,7 @@ Exit Criteria:
 
 - [ ] Large or noisy sessions remain responsive without regressing the app’s usability.
 
-## Milestone 17: Performance Improvements (Local TTS Engine)
+## Milestone 18: Performance Improvements (Local TTS Engine)
 
 Scope:
 

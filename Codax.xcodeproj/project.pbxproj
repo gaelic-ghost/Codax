@@ -9,18 +9,25 @@
 /* Begin PBXBuildFile section */
 		490E23B72F5CCB0100972F32 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 490E23B62F5CCB0100972F32 /* README.md */; };
 		490E23B92F5CCB1300972F32 /* ROADMAP.md in Resources */ = {isa = PBXBuildFile; fileRef = 490E23B82F5CCB1300972F32 /* ROADMAP.md */; };
+		490E23C32F5CCE8900972F32 /* CONTRIBUTING.md in Resources */ = {isa = PBXBuildFile; fileRef = 490E23C22F5CCE8900972F32 /* CONTRIBUTING.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		490E23A62F5CCA8A00972F32 /* Codax.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Codax.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		490E23B62F5CCB0100972F32 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		490E23B82F5CCB1300972F32 /* ROADMAP.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = ROADMAP.md; sourceTree = "<group>"; };
+		490E23C22F5CCE8900972F32 /* CONTRIBUTING.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CONTRIBUTING.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		490E23A82F5CCA8A00972F32 /* Codax */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Codax;
+			sourceTree = "<group>";
+		};
+		490E2A192F5CE11100972F32 /* codex-app-server-ts-schemas */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "codex-app-server-ts-schemas";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -39,10 +46,12 @@
 		490E239D2F5CCA8A00972F32 = {
 			isa = PBXGroup;
 			children = (
+				490E23C22F5CCE8900972F32 /* CONTRIBUTING.md */,
 				490E23B82F5CCB1300972F32 /* ROADMAP.md */,
 				490E23B62F5CCB0100972F32 /* README.md */,
 				490E23A82F5CCA8A00972F32 /* Codax */,
 				490E23A72F5CCA8A00972F32 /* Products */,
+				490E2A192F5CE11100972F32 /* codex-app-server-ts-schemas */,
 			);
 			sourceTree = "<group>";
 		};
@@ -71,6 +80,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				490E23A82F5CCA8A00972F32 /* Codax */,
+				490E2A192F5CE11100972F32 /* codex-app-server-ts-schemas */,
 			);
 			name = Codax;
 			packageProductDependencies = (
@@ -120,6 +130,7 @@
 			files = (
 				490E23B72F5CCB0100972F32 /* README.md in Resources */,
 				490E23B92F5CCB1300972F32 /* ROADMAP.md in Resources */,
+				490E23C32F5CCE8900972F32 /* CONTRIBUTING.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

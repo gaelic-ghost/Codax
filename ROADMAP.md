@@ -26,6 +26,7 @@
 - [ ] Milestone 7: Codax TTS
 - [ ] Milestone 8: Codax Axplanation™
 - [ ] Milestone 9: Schema Diff-Check Automation
+- [ ] Milestone 10: Performance Improvements (AppKit Views)
 
 ## Milestone 0: Foundation
 
@@ -186,6 +187,20 @@ Exit Criteria:
 - [ ] TBD.
 
 ## Milestone 9: Schema Diff-Check Automation
+
+Scope:
+
+- [ ] TBD.
+
+Tickets:
+
+- [ ] TBD.
+
+Exit Criteria:
+
+- [ ] TBD.
+
+## Milestone 10: Performance Improvements (AppKit Views)
 
 Scope:
 

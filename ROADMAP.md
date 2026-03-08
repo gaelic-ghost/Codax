@@ -26,10 +26,11 @@
 - [ ] Milestone 7: UI/UX Improvements
 - [ ] Milestone 8: Full SwiftUI AX Implementation
 - [ ] Milestone 9: Codax TTS (Codex `Speech Generation Skill` Wrapper)
-- [ ] Milestone 10: Codax Axplanation™ (Intelligent, Adaptive Summarization)
-- [ ] Milestone 11: Schema Diff-Check Automation (Script or SPM/XC Plugin)
-- [ ] Milestone 12: Performance Improvements (AppKit Views)
-- [ ] Milestone 13: Performance Improvements (Local TTS Engine)
+- [ ] Milestone 10: Codax Axe™ (Chop through the noise. See the Forest for the Trees)
+- [ ] Milestone 11: Codax Axplanation™ (Intelligent, Adaptive Summarization)
+- [ ] Milestone 12: Schema Diff-Check Automation (Script or SPM/XC Plugin)
+- [ ] Milestone 13: Performance Improvements (AppKit Views)
+- [ ] Milestone 14: Performance Improvements (Local TTS Engine)
 
 ## Milestone 0: Foundation
 
@@ -179,7 +180,7 @@ Exit Criteria:
 
 Scope:
 
-- [ ] TBD.
+- [ ] In a sentence? Repo-level Auto-env detection for your agent's language awareness.
 
 Tickets:
 
@@ -203,7 +204,7 @@ Exit Criteria:
 
 - [ ] TBD.
 
-## Milestone 10: Codax Axplanation™ (Intelligent, Adaptive Summarization)
+## Milestone 10: Codax Axe™ (Chop through the noise. See the Forest for the Trees)
 
 Scope:
 
@@ -217,7 +218,7 @@ Exit Criteria:
 
 - [ ] TBD.
 
-## Milestone 11: Schema Diff-Check Automation (Script or SPM/XC Plugin)
+## Milestone 11: Codax Axplanation™ (Intelligent, Adaptive Summarization)
 
 Scope:
 
@@ -231,7 +232,7 @@ Exit Criteria:
 
 - [ ] TBD.
 
-## Milestone 12: Performance Improvements (AppKit Views)
+## Milestone 12: Schema Diff-Check Automation (Script or SPM/XC Plugin)
 
 Scope:
 
@@ -245,7 +246,21 @@ Exit Criteria:
 
 - [ ] TBD.
 
-## Milestone 13: Performance Improvements (Local TTS Engine)
+## Milestone 13: Performance Improvements (AppKit Views)
+
+Scope:
+
+- [ ] TBD.
+
+Tickets:
+
+- [ ] TBD.
+
+Exit Criteria:
+
+- [ ] TBD.
+
+## Milestone 14: Performance Improvements (Local TTS Engine)
 
 Scope:
 

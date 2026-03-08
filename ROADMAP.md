@@ -3,7 +3,7 @@
 ## Vision
 
 - Build an accessible, intuitive, native macOS Codex client that speaks the app-server protocol reliably, uses the end user's existing Codex CLI installation by default, and presents a usable multi-pane desktop interface for managing sessions.
-- Provide a truly accessible interface to agentic coding for the millions left behind by exitsing tooling from the much bigger, and incredibly well-resourced, vendors.
+- Provide a truly accessible interface to agentic coding for the millions left behind by existing tooling from the much bigger, and incredibly well-resourced, vendors.
 - Provide a user experience that involves developers in their work, instead of separating them from it.
 - Provide a UX that works with developers' existing tools, instead of corraling them into an unfamiliar, half-baked, walled-garden of a tool.
 
@@ -268,7 +268,7 @@ Scope:
 
 Tickets:
 
-- [ ] Define detection criteria (Presense of `Package.Swift`, `.xcodeproj`, `.xcworkspace`, etc.)
+- [ ] Define detection criteria (Presence of `Package.Swift`, `.xcodeproj`, `.xcworkspace`, etc.)
 - [ ] Implement detection which occurs before new thread creation within the project repo.
 - [ ] Add user and agent facing communcation of the active language. For the user, this could include a UI element with language logo.
 - [ ] Consider the next language(s) to add, and create a future milestone for that.
@@ -310,7 +310,7 @@ Tickets:
 
 - [ ] Define target use cases such as "TBD" or "TBD".
 - [ ] Add structured, language-aware filters for Swift Symbols using native tooling. Consider Xcode MCP, swift-syntax, symbol-kit, SourceKit-LSP, etc.
-- [ ] Define idomatic ways to describe symbols, declarations, calls, etc.
+- [ ] Define idiomatic ways to describe symbols, declarations, calls, etc.
 - [ ] Define familiar, and idiomatic ways to provide views of symbols, declarations, etc.
 - [ ] Generate condensed “what matters” views using Codex/OpenAI-first summarization or classification support.
 - [ ] Let users jump from condensed views back to full underlying context without losing traceability.

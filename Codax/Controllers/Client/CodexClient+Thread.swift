@@ -9,8 +9,6 @@ import Foundation
 
 	// MARK: - Client Layer `Thread` Types
 
-public typealias ThreadResumeResponse = ThreadStartResponse
-
 	// MARK: Base Type
 
 public struct Thread: Sendable, Codable {
@@ -85,6 +83,8 @@ public struct ThreadStartResponse: Sendable, Codable {
 	public var sandbox: SandboxPolicy
 	public var reasoningEffort: ReasoningEffort?
 }
+
+public typealias ThreadResumeResponse = ThreadStartResponse
 
 public struct ThreadReadResponse: Sendable, Codable {
 	public var thread: Thread

@@ -7,10 +7,17 @@
 
 import Foundation
 
+	// MARK: Base Server Notification Type
 
-	// MARK: Account Related
+public struct ErrorNotification: Sendable, Codable {
+	public var error: TurnError
+	public var willRetry: Bool
+	public var threadId: String
+	public var turnId: String
+}
+
+	// MARK: Account Notification Types
 	// See `AuthCoordinator.swift`, `+AuthCoordinator+Types.swift` for related symbols.
-
 
 public struct AccountUpdatedNotification: Sendable, Codable {
 	public var authMode: AuthMode?
@@ -23,6 +30,12 @@ public struct AccountLoginCompletedNotification: Sendable, Codable {
 	public var error: String?
 }
 
+	// MARK: Thread
+
+	// MARK: Turn
+
+	// MARK: Item
+
 public struct ReasoningTextDeltaNotification: Sendable, Codable {
 	public var threadId: String
 	public var turnId: String
@@ -31,9 +44,8 @@ public struct ReasoningTextDeltaNotification: Sendable, Codable {
 	public var contentIndex: Int
 }
 
-public struct ErrorNotification: Sendable, Codable {
-	public var error: TurnError
-	public var willRetry: Bool
-	public var threadId: String
-	public var turnId: String
-}
+	// MARK: Reserved for future use
+
+	// MARK: Reserved for future use
+
+	// MARK: Reserved for future use

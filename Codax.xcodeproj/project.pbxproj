@@ -30,16 +30,6 @@
 		49C635B82F5DA5F900BDA18D /* CodaxTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodaxTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		49C635B32F5DA27E00BDA18D /* Exceptions for "Docs" folder in "Codax" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				TRANSPORT_SCHEMA_REPORT.md,
-			);
-			target = 490E23A52F5CCA8A00972F32 /* Codax */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		490E23A82F5CCA8A00972F32 /* Codax */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -54,9 +44,6 @@
 		};
 		49C635B22F5DA26000BDA18D /* Docs */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				49C635B32F5DA27E00BDA18D /* Exceptions for "Docs" folder in "Codax" target */,
-			);
 			path = Docs;
 			sourceTree = "<group>";
 		};

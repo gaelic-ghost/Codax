@@ -12,51 +12,22 @@ import Foundation
 	// MARK: Server Request Types
 
 public enum ServerRequestResult: Sendable {
-	case commandApproval(CommandExecutionRequestApprovalResponse)
-	case fileChangeApproval(FileChangeRequestApprovalResponse)
-	case userInput(ToolRequestUserInputResponse)
-	case mcpServerElicitation(McpServerElicitationRequestResponse)
-	case dynamicToolCall(DynamicToolCallResponse)
+		// MARK: Auth Refresh
 	case chatgptAuthRefresh(ChatgptAuthTokensRefreshResponse)
+		// MARK: File Change/Apply Patch Approvals
+	case fileChangeApproval(FileChangeRequestApprovalResponse)
 	case applyPatchApproval(ApplyPatchApprovalResponse)
+		// MARK: Tool Reqs/Approvals
+	case userInput(ToolRequestUserInputResponse)
+	case dynamicToolCall(DynamicToolCallResponse)
+	case mcpServerElicitation(McpServerElicitationRequestResponse)
+	case commandApproval(CommandExecutionRequestApprovalResponse)
 	case execCommandApproval(ExecCommandApprovalResponse)
 	case unhandled
 }
 
-	// MARK: File Change, Patch Approval Types
-
-public enum FileChangeApprovalDecision: String, Sendable, Codable {
-	case accept
-	case acceptForSession
-	case decline
-	case cancel
-}
-
-public struct FileChangeRequestApprovalParams: Sendable, Codable {
-	public var threadId: String
-	public var turnId: String
-	public var itemId: String
-	public var reason: String?
-	public var grantRoot: String?
-}
-
-public struct FileChangeRequestApprovalResponse: Sendable, Codable {
-	public var decision: FileChangeApprovalDecision
-}
-
-public struct ApplyPatchApprovalResponse: Sendable, Codable {
-	public var decision: ReviewDecision
-}
-
-public struct ApplyPatchApprovalParams: Sendable, Codable {
-	public var conversationId: String
-	public var callId: String
-	public var fileChanges: [String: JSONValue]
-	public var reason: String?
-	public var grantRoot: String?
-}
-
 	// MARK: Review Decision Types
+	// Relevant for `ApplyPatchApprovalResponse`, `ExecCommandApprovalResponse`,
 
 public enum ReviewDecision: Sendable, Codable {
 	case approved
@@ -92,7 +63,72 @@ public enum ReviewDecision: Sendable, Codable {
 	}
 }
 
+	// MARK: Auth Refresh Types
+
+
+
+	// MARK: File Change & Apply Patch Approval Types
+
+public struct FileChangeRequestApprovalResponse: Sendable, Codable {
+	public var decision: FileChangeApprovalDecision
+}
+
+public enum FileChangeApprovalDecision: String, Sendable, Codable {
+	case accept
+	case acceptForSession
+	case decline
+	case cancel
+}
+
+public struct FileChangeRequestApprovalParams: Sendable, Codable {
+	public var threadId: String
+	public var turnId: String
+	public var itemId: String
+	public var reason: String?
+	public var grantRoot: String?
+}
+
+public struct ApplyPatchApprovalResponse: Sendable, Codable {
+	public var decision: ReviewDecision
+}
+
+public struct ApplyPatchApprovalParams: Sendable, Codable {
+	public var conversationId: String
+	public var callId: String
+	public var fileChanges: [String: JSONValue]
+	public var reason: String?
+	public var grantRoot: String?
+}
+
+	// MARK: Tool Request/Approval Types
+
+public struct ToolRequestUserInputResponse: Sendable, Codable {
+	public var answers: [String: ToolRequestUserInputAnswer]
+}
+
+public struct DynamicToolCallResponse: Sendable, Codable {
+	public var contentItems: [DynamicToolCallOutputContentItem]
+	public var success: Bool
+}
+
+	// MARK: MCP Elicitation Types
+
+public struct McpServerElicitationRequestResponse: Sendable, Codable {
+	public var action: McpServerElicitationAction
+	public var content: JSONValue?
+}
+
+public enum McpServerElicitationAction: String, Sendable, Codable {
+	case accept
+	case decline
+	case cancel
+}
+
 	// MARK: Command Approval Types
+
+public struct CommandExecutionRequestApprovalResponse: Sendable, Codable {
+	public var decision: CommandExecutionApprovalDecision
+}
 
 public enum CommandExecutionApprovalDecision: Sendable, Codable {
 	case accept
@@ -152,37 +188,15 @@ public struct ExecCommandApprovalParams: Sendable, Codable {
 	public var parsedCmd: [JSONValue]
 }
 
-public struct CommandExecutionRequestApprovalResponse: Sendable, Codable {
-	public var decision: CommandExecutionApprovalDecision
-}
-
 public struct ExecCommandApprovalResponse: Sendable, Codable {
 	public var decision: ReviewDecision
 }
 
-// MARK: Tool Action Types
+	// MARK: Reserved for future catagories
 
-public struct ToolRequestUserInputResponse: Sendable, Codable {
-	public var answers: [String: ToolRequestUserInputAnswer]
-}
+	// MARK: Reserved for future catagories
 
-public struct DynamicToolCallResponse: Sendable, Codable {
-	public var contentItems: [DynamicToolCallOutputContentItem]
-	public var success: Bool
-}
-
-// MARK: MCP Action Types
-
-public enum McpServerElicitationAction: String, Sendable, Codable {
-	case accept
-	case decline
-	case cancel
-}
-
-public struct McpServerElicitationRequestResponse: Sendable, Codable {
-	public var action: McpServerElicitationAction
-	public var content: JSONValue?
-}
+	// MARK: Reserved for future catagories
 
 
 

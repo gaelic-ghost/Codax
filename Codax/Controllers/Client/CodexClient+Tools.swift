@@ -34,6 +34,7 @@ public struct DynamicToolCallParams: Sendable, Codable {
 
 	// MARK: Errors
 
+	// MARK: Other?
 
 public struct ToolRequestUserInputQuestion: Sendable, Codable {
 	public var id: String
@@ -43,8 +44,6 @@ public struct ToolRequestUserInputQuestion: Sendable, Codable {
 	public var isSecret: Bool
 	public var options: [JSONValue]?
 }
-
-
 
 public struct ToolRequestUserInputAnswer: Sendable, Codable {
 	public var answers: [String]

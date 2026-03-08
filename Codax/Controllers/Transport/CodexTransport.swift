@@ -7,7 +7,8 @@
 
 import Foundation
 
-// MARK: - Transport Protocol
+	// MARK: - Transport Protocol
+	// Concrete implementation located in: `CodexTransport+Stdio.swift`
 
 public protocol CodexTransport: Sendable {
 	func send(_ message: Data) async throws

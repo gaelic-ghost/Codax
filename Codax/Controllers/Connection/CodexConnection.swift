@@ -7,7 +7,7 @@
 
 import Foundation
 
-public actor CodexConnection {
+public final class CodexConnection {
 	private struct PendingRequest: Sendable {
 		let succeed: @Sendable (Data) -> Void
 		let fail: @Sendable (Error) -> Void
@@ -73,7 +73,7 @@ public actor CodexConnection {
 				do {
 					try await self.trans.send(payload)
 				} catch {
-					await self.failPendingRequest(id: id, error: error)
+					self.failPendingRequest(id: id, error: error)
 				}
 			}
 		}
@@ -106,6 +106,8 @@ public actor CodexConnection {
 		}
 	}
 }
+
+	// MARK: -
 
 private extension CodexConnection {
 	func makeRequestID() -> JSONRPCID {

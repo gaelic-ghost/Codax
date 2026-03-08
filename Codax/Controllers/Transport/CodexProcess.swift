@@ -1,5 +1,5 @@
 //
-//  CodexTransport+Process.swift
+//  CodexProcess.swift
 //  Codax
 //
 //  Created by Gale Williams on 3/7/26.
@@ -7,7 +7,9 @@
 
 import Foundation
 
-public actor CodexProcess {
+	// MARK: - Manager for local Codex process
+
+public final class CodexProcess {
 	private var process: Process?
 	private var transport: (any CodexTransport)?
 

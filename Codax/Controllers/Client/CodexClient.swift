@@ -7,9 +7,24 @@
 
 import Foundation
 
-// MARK: - API Client
+	// MARK: - API Client
 
-public actor CodexClient {
+	// MARK: Related Typealiases
+
+public typealias AskForApproval = JSONValue
+public typealias SandboxMode = JSONValue
+public typealias SandboxPolicy = JSONValue
+public typealias Personality = JSONValue
+public typealias CollaborationMode = JSONValue
+public typealias ThreadItem = JSONValue
+public typealias DynamicToolCallOutputContentItem = JSONValue
+public typealias ServiceTier = String
+public typealias ReasoningEffort = String
+public typealias TurnStatus = String
+
+	// MARK: Concrete Implementation
+
+public final class CodexClient {
 	private let connection: CodexConnection
 
 	public init(connection: CodexConnection) {

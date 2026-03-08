@@ -1,13 +1,13 @@
 //
-//  Transport.swift
+//  CodexTransport+Types.swift
 //  Codax
 //
-//  Created by Gale Williams on 3/7/26.
+//  Created by Gale Williams on 3/8/26.
 //
 
 import Foundation
 
-// MARK: - Transport Layer Types
+	// MARK: - Transport Layer Types
 
 public enum JSONValue: Sendable, Codable {
 	case string(String)
@@ -44,18 +44,18 @@ public enum JSONValue: Sendable, Codable {
 		var container = encoder.singleValueContainer()
 
 		switch self {
-		case let .string(value):
-			try container.encode(value)
-		case let .number(value):
-			try container.encode(value)
-		case let .bool(value):
-			try container.encode(value)
-		case let .object(value):
-			try container.encode(value)
-		case let .array(value):
-			try container.encode(value)
-		case .null:
-			try container.encodeNil()
+			case let .string(value):
+				try container.encode(value)
+			case let .number(value):
+				try container.encode(value)
+			case let .bool(value):
+				try container.encode(value)
+			case let .object(value):
+				try container.encode(value)
+			case let .array(value):
+				try container.encode(value)
+			case .null:
+				try container.encodeNil()
 		}
 	}
 }
@@ -67,12 +67,12 @@ public enum CodexTransportError: Error, LocalizedError, Sendable {
 
 	public var errorDescription: String? {
 		switch self {
-		case .endOfStream:
-			return "The transport closed before another message was received."
-		case .invalidFrame:
-			return "The transport produced an invalid JSONL frame."
-		case .closed:
-			return "The transport is already closed."
+			case .endOfStream:
+				return "The transport closed before another message was received."
+			case .invalidFrame:
+				return "The transport produced an invalid JSONL frame."
+			case .closed:
+				return "The transport is already closed."
 		}
 	}
 }

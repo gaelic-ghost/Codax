@@ -7,5 +7,7 @@
 
 import Foundation
 
+	// MARK: - (Future) Concrete Implementation of the CodexTransport protocol using...
+
 // WebSocket transport is intentionally left for a later slice.
 // The app-server docs mark websocket support as experimental and unsupported.

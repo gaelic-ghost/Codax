@@ -1,13 +1,13 @@
 //
-//  Auth.swift
+//  AuthCoordinator+Types.swift
 //  Codax
 //
-//  Created by Gale Williams on 3/7/26.
+//  Created by Gale Williams on 3/8/26.
 //
 
 import Foundation
 
-// MARK: - Auth Layer Types
+	// MARK: - Auth Layer Types
 
 public enum AuthMode: String, Sendable, Codable {
 	case apikey
@@ -52,25 +52,25 @@ public enum Account: Sendable, Codable {
 	public init(from decoder: any Decoder) throws {
 		let container = try decoder.container(keyedBy: CodingKeys.self)
 		switch try container.decode(Kind.self, forKey: .type) {
-		case .apiKey:
-			self = .apiKey
-		case .chatgpt:
-			self = .chatgpt(
-				email: try container.decode(String.self, forKey: .email),
-				planType: try container.decode(PlanType.self, forKey: .planType)
-			)
+			case .apiKey:
+				self = .apiKey
+			case .chatgpt:
+				self = .chatgpt(
+					email: try container.decode(String.self, forKey: .email),
+					planType: try container.decode(PlanType.self, forKey: .planType)
+				)
 		}
 	}
 
 	public func encode(to encoder: any Encoder) throws {
 		var container = encoder.container(keyedBy: CodingKeys.self)
 		switch self {
-		case .apiKey:
-			try container.encode(Kind.apiKey, forKey: .type)
-		case let .chatgpt(email, planType):
-			try container.encode(Kind.chatgpt, forKey: .type)
-			try container.encode(email, forKey: .email)
-			try container.encode(planType, forKey: .planType)
+			case .apiKey:
+				try container.encode(Kind.apiKey, forKey: .type)
+			case let .chatgpt(email, planType):
+				try container.encode(Kind.chatgpt, forKey: .type)
+				try container.encode(email, forKey: .email)
+				try container.encode(planType, forKey: .planType)
 		}
 	}
 }
@@ -110,32 +110,32 @@ public enum LoginAccountParams: Sendable, Codable {
 	public init(from decoder: any Decoder) throws {
 		let container = try decoder.container(keyedBy: CodingKeys.self)
 		switch try container.decode(Kind.self, forKey: .type) {
-		case .apiKey:
-			self = .apiKey(apiKey: try container.decode(String.self, forKey: .apiKey))
-		case .chatgpt:
-			self = .chatgpt
-		case .chatgptAuthTokens:
-			self = .chatgptAuthTokens(
-				accessToken: try container.decode(String.self, forKey: .accessToken),
-				chatgptAccountId: try container.decode(String.self, forKey: .chatgptAccountId),
-				chatgptPlanType: try container.decodeIfPresent(String.self, forKey: .chatgptPlanType)
-			)
+			case .apiKey:
+				self = .apiKey(apiKey: try container.decode(String.self, forKey: .apiKey))
+			case .chatgpt:
+				self = .chatgpt
+			case .chatgptAuthTokens:
+				self = .chatgptAuthTokens(
+					accessToken: try container.decode(String.self, forKey: .accessToken),
+					chatgptAccountId: try container.decode(String.self, forKey: .chatgptAccountId),
+					chatgptPlanType: try container.decodeIfPresent(String.self, forKey: .chatgptPlanType)
+				)
 		}
 	}
 
 	public func encode(to encoder: any Encoder) throws {
 		var container = encoder.container(keyedBy: CodingKeys.self)
 		switch self {
-		case let .apiKey(apiKey):
-			try container.encode(Kind.apiKey, forKey: .type)
-			try container.encode(apiKey, forKey: .apiKey)
-		case .chatgpt:
-			try container.encode(Kind.chatgpt, forKey: .type)
-		case let .chatgptAuthTokens(accessToken, chatgptAccountId, chatgptPlanType):
-			try container.encode(Kind.chatgptAuthTokens, forKey: .type)
-			try container.encode(accessToken, forKey: .accessToken)
-			try container.encode(chatgptAccountId, forKey: .chatgptAccountId)
-			try container.encodeIfPresent(chatgptPlanType, forKey: .chatgptPlanType)
+			case let .apiKey(apiKey):
+				try container.encode(Kind.apiKey, forKey: .type)
+				try container.encode(apiKey, forKey: .apiKey)
+			case .chatgpt:
+				try container.encode(Kind.chatgpt, forKey: .type)
+			case let .chatgptAuthTokens(accessToken, chatgptAccountId, chatgptPlanType):
+				try container.encode(Kind.chatgptAuthTokens, forKey: .type)
+				try container.encode(accessToken, forKey: .accessToken)
+				try container.encode(chatgptAccountId, forKey: .chatgptAccountId)
+				try container.encodeIfPresent(chatgptPlanType, forKey: .chatgptPlanType)
 		}
 	}
 }
@@ -160,29 +160,29 @@ public enum LoginAccountResponse: Sendable, Codable {
 	public init(from decoder: any Decoder) throws {
 		let container = try decoder.container(keyedBy: CodingKeys.self)
 		switch try container.decode(Kind.self, forKey: .type) {
-		case .apiKey:
-			self = .apiKey
-		case .chatgpt:
-			self = .chatgpt(
-				loginId: try container.decode(String.self, forKey: .loginId),
-				authURL: try container.decode(URL.self, forKey: .authUrl)
-			)
-		case .chatgptAuthTokens:
-			self = .chatgptAuthTokens
+			case .apiKey:
+				self = .apiKey
+			case .chatgpt:
+				self = .chatgpt(
+					loginId: try container.decode(String.self, forKey: .loginId),
+					authURL: try container.decode(URL.self, forKey: .authUrl)
+				)
+			case .chatgptAuthTokens:
+				self = .chatgptAuthTokens
 		}
 	}
 
 	public func encode(to encoder: any Encoder) throws {
 		var container = encoder.container(keyedBy: CodingKeys.self)
 		switch self {
-		case .apiKey:
-			try container.encode(Kind.apiKey, forKey: .type)
-		case let .chatgpt(loginId, authURL):
-			try container.encode(Kind.chatgpt, forKey: .type)
-			try container.encode(loginId, forKey: .loginId)
-			try container.encode(authURL, forKey: .authUrl)
-		case .chatgptAuthTokens:
-			try container.encode(Kind.chatgptAuthTokens, forKey: .type)
+			case .apiKey:
+				try container.encode(Kind.apiKey, forKey: .type)
+			case let .chatgpt(loginId, authURL):
+				try container.encode(Kind.chatgpt, forKey: .type)
+				try container.encode(loginId, forKey: .loginId)
+				try container.encode(authURL, forKey: .authUrl)
+			case .chatgptAuthTokens:
+				try container.encode(Kind.chatgptAuthTokens, forKey: .type)
 		}
 	}
 }

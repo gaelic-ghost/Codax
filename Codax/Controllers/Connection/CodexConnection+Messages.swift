@@ -7,7 +7,7 @@
 
 import Foundation
 
-// MARK: - JSON-RPC Message Types
+	// MARK: - Connection Layer JSON-RPC Message Types
 
 public struct JSONRPCRequestMessage<Params: Encodable>: Encodable, Sendable {
 	public let id: JSONRPCID

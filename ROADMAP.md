@@ -250,6 +250,7 @@ Scope:
 Tickets:
 
 - [ ] Define summary modes such as quick recap, technical summary, handoff summary, and accessible explanation.
+- [ ] Define clear, consistent, context-aware summarization policies for each mode.
 - [ ] Allow summaries for the current turn, full thread, or selected items.
 - [ ] Store or cache generated summaries in app state where appropriate.
 - [ ] Integrate summary generation into the inspector and detail workflow.
@@ -259,6 +260,7 @@ Exit Criteria:
 
 - [ ] Users can request and consume reliable summaries tailored to their current task and reading needs.
 - [ ] Users can request and consume these summaries via minimal interaction with native UI controls.
+- [ ] Summarization policies work consistently, and reliably in common modes and contexts.
 
 ## Milestone 12: Codax Auto-Lang™ (Automatic Environment Detection for Coding Languages)
 
@@ -308,7 +310,8 @@ Scope:
 
 Tickets:
 
-- [ ] Define target use cases such as "TBD" or "TBD".
+- [ ] Define target use cases such as "Which functions take `<symbol>` as a param.
+- [ ] Identify other use case examples to define in order to properly steer implementation decisions.
 - [ ] Add structured, language-aware filters for Swift Symbols using native tooling. Consider Xcode MCP, swift-syntax, symbol-kit, SourceKit-LSP, etc.
 - [ ] Define idiomatic ways to describe symbols, declarations, calls, etc.
 - [ ] Define familiar, and idiomatic ways to provide views of symbols, declarations, etc.
@@ -329,6 +332,7 @@ Scope:
 Tickets:
 
 - [ ] Define summary modes such as quick recap, technical summary, handoff summary, and accessible explanation.
+- [ ] Define clear, consistent, context-aware summarization policies for each mode.	
 - [ ] Allow summaries for a single file, an interface, full framework/sdk, or entire codebase.
 - [ ] Store or cache generated summaries in app state where appropriate.
 - [ ] Integrate summary generation into the inspector and detail workflow.
@@ -338,6 +342,7 @@ Exit Criteria:
 
 - [ ] Users can request and consume reliable summaries tailored to their current task and reading needs.
 - [ ] Users can request and consume these summaries via minimal interaction with native UI controls.
+- [ ] Summarization policies work consistently, and reliably in common modes and contexts.
 
 
 ## Milestone 16: Schema Diff-Check Automation (Script or SPM/XC Plugin)

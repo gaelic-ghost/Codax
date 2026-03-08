@@ -12,9 +12,8 @@ The main conclusion is:
 - The current Swift skeleton already has the right high-level layering:
   - `CodexTransport` for raw bytes
   - `CodexConnection` for JSON-RPC framing and routing
-  - `CodexClient` for typed methods
-  - `CodexClient+Envelopes` for semantic lifting of inbound server traffic
-  - `CodaxOrchestrator` for app-facing consumption
+  - `CodexClient.swift` plus focused `CodexClient+*.swift` files for typed client and inbound semantics
+  - `CodaxOrchestrator.swift` plus `+Types` coordinator files for app-facing consumption
 - The current Swift surface is intentionally incomplete but structurally aligned.
 - The biggest gap is not architecture. It is schema coverage: the current envelope enums only represent a subset of the server-driven variants present in `v0.111.0`.
 
@@ -64,7 +63,7 @@ These files form the real wire contract for the current transport work. Everythi
 
 ### 2. Adjacent But Separate: `EventMsg.ts`
 
-`EventMsg.ts` is transport-adjacent, but it is not the same surface as the JSON-RPC contract implied by `CodexConnection` and `CodexClient+Envelopes`.
+`EventMsg.ts` is transport-adjacent, but it is not the same surface as the JSON-RPC contract implied by `CodexConnection`, `CodexClient+InboundMessage.swift`, and the client envelope files.
 
 It models a broad event stream with variants like:
 
@@ -97,9 +96,13 @@ For this project, `EventMsg` should be treated as a future or parallel event-str
 
 **Swift ownership**
 
-- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexTransport.swift`
-- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexConnection+Messages.swift`
-- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexConnection.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Transport/CodexTransport.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Transport/CodexTransport+Types.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Transport/CodexProcess.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Transport/CodexProcess+Types.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Connection/CodexConnection+Messages.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Connection/CodexConnection+Types.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Connection/CodexConnection.swift`
 
 **Current alignment**
 
@@ -107,7 +110,11 @@ For this project, `EventMsg` should be treated as a future or parallel event-str
   - `send(_ message: Data)`
   - `receive() -> Data`
   - `close()`
-- `JSONRPCID` in `CodexConnection+Messages.swift` already matches the schema intent well:
+- `CodexTransport+Types.swift` now owns transport-scoped shared types like:
+  - `JSONValue`
+  - `CodexTransportError`
+- `CodexProcess.swift` and `CodexProcess+Types.swift` now isolate process-launch concerns from the transport protocol itself.
+- `JSONRPCID` in `Controllers/Connection/CodexConnection+Messages.swift` already matches the schema intent well:
   - `.string(String)`
   - `.int(Int64)`
 - The request/notification/response/error message structs already indicate the right framing split.
@@ -154,9 +161,14 @@ The most relevant payload pairs are:
 
 **Swift ownership**
 
-- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexClient.swift`
-- backed by `/Users/galew/Workspace/Codax/Codax/Controllers/CodexConnection.swift`
-- shared DTO/entity modeling under `/Users/galew/Workspace/Codax/Codax/Models/`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient.swift`
+- backed by `/Users/galew/Workspace/Codax/Codax/Controllers/Connection/CodexConnection.swift`
+- supported by focused client-side type files such as:
+  - `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient+Account.swift`
+  - `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient+Thread.swift`
+  - `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient+Turn.swift`
+  - `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient+Command.swift`
+  - `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient+Initialize.swift`
 
 **Current alignment**
 
@@ -242,9 +254,14 @@ That narrower surface is acceptable for a first implementation, but the report s
 
 **Swift ownership**
 
-- raw routing in `/Users/galew/Workspace/Codax/Codax/Controllers/CodexConnection.swift`
-- semantic lifting in `/Users/galew/Workspace/Codax/Codax/Controllers/CodexClient+Envelopes.swift`
-- consumption in `/Users/galew/Workspace/Codax/Codax/Controllers/CodaxOrchestrator.swift`
+- raw routing in `/Users/galew/Workspace/Codax/Codax/Controllers/Connection/CodexConnection.swift`
+- semantic lifting in:
+  - `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient+InboundMessage.swift`
+  - `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient+ServerNotificationEnvelope.swift`
+  - `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient+ServerNotificationTypes.swift`
+- consumption in:
+  - `/Users/galew/Workspace/Codax/Codax/Controllers/Orchestration/CodaxOrchestrator.swift`
+  - `/Users/galew/Workspace/Codax/Codax/Controllers/Orchestration/CodaxOrchestrator+Types.swift`
 
 **Current alignment**
 
@@ -308,9 +325,10 @@ Relevant payloads include:
 
 **Swift ownership**
 
-- routing in `/Users/galew/Workspace/Codax/Codax/Controllers/CodexConnection.swift`
-- semantic lifting in `/Users/galew/Workspace/Codax/Codax/Controllers/CodexClient+Envelopes.swift`
-- resolution via `/Users/galew/Workspace/Codax/Codax/Controllers/CodexClient+ServerRequestHandler.swift`
+- routing in `/Users/galew/Workspace/Codax/Codax/Controllers/Connection/CodexConnection.swift`
+- semantic lifting in `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient+ServerRequestHandlerEnvelope.swift`
+- response typing in `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient+ServerRequestHandlerTypes.swift`
+- resolution via `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient+ServerRequestHandler.swift`
 
 **Current alignment**
 
@@ -447,8 +465,11 @@ Implication for Swift:
 
 **Files**
 
-- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexTransport.swift`
-- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexConnection+Messages.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Transport/CodexTransport.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Transport/CodexTransport+Types.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Transport/CodexProcess.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Transport/CodexProcess+Types.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Connection/CodexConnection+Messages.swift`
 
 **Role**
 
@@ -470,7 +491,7 @@ Implication for Swift:
 
 **File**
 
-- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexConnection.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Connection/CodexConnection.swift`
 
 **Role**
 
@@ -491,7 +512,7 @@ Implication for Swift:
 
 **File**
 
-- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexClient.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient.swift`
 
 **Role**
 
@@ -505,9 +526,13 @@ Implication for Swift:
 
 ### Inbound Semantic Lifting
 
-**File**
+**Files**
 
-- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexClient+Envelopes.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient+InboundMessage.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient+ServerNotificationEnvelope.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient+ServerNotificationTypes.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient+ServerRequestHandlerEnvelope.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient+ServerRequestHandlerTypes.swift`
 
 **Role**
 
@@ -523,7 +548,10 @@ Implication for Swift:
 
 **File**
 
-- `/Users/galew/Workspace/Codax/Codax/Controllers/CodaxOrchestrator.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Orchestration/CodaxOrchestrator.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Orchestration/CodaxOrchestrator+Types.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Orchestration/AuthCoordinator.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Orchestration/AuthCoordinator+Types.swift`
 
 **Role**
 
@@ -580,18 +608,18 @@ Notable omissions:
 - thread status/name/token usage
 - warnings/deprecation/platform notices
 
-### 5. Shared Model Layer Is Mostly Empty
+### 5. Shared Type Ownership Is Now Layer-Local
 
-The `Models/` files are placeholders today:
+The old shared `Models/` bucket has been replaced by layer-local type holders:
 
-- `Transport.swift`
-- `Client.swift`
-- `Connection.swift`
-- `Auth.swift`
-- `Orchestrator.swift`
-- `Client+ServerRequestHandler.swift`
+- `Controllers/Transport/CodexTransport+Types.swift`
+- `Controllers/Connection/CodexConnection+Types.swift`
+- `Controllers/Client/CodexClient+ServerNotificationTypes.swift`
+- `Controllers/Client/CodexClient+ServerRequestHandlerTypes.swift`
+- `Controllers/Orchestration/CodaxOrchestrator+Types.swift`
+- `Controllers/Orchestration/AuthCoordinator+Types.swift`
 
-That is consistent with the current stage of the project, but it means the transport work will need a real DTO/model pass soon after framing is in place.
+That structure is easier to navigate because the types now live near the behavior that owns them. The current gap is not foldering. It is that many higher-level DTOs are still intentionally thin or `JSONValue`-backed.
 
 ## Recommended Swift Type Layout For The Next Implementation Step
 
@@ -639,18 +667,16 @@ Own curated semantic enums:
 
 This is the adaptation boundary between raw transport and app logic.
 
-### `Models/`
+### Layer-Local `+Types` Files
 
-Own shared DTOs and domain types:
+Own shared DTOs and domain types close to the behavior that uses them:
 
-- `Thread`
-- `Turn`
-- `Account`
-- auth/login enums
-- approval payload DTOs
-- shared supporting enums such as sandbox, approval policy, service tier, reasoning settings
+- transport-scoped types in `CodexTransport+Types.swift`
+- connection-scoped lifecycle and error types in `CodexConnection+Types.swift`
+- client notification/request payloads in `CodexClient+ServerNotificationTypes.swift` and `CodexClient+ServerRequestHandlerTypes.swift`
+- orchestration-facing aliases and state helpers in `CodaxOrchestrator+Types.swift` and `AuthCoordinator+Types.swift`
 
-These should be reusable by both client request responses and inbound notification/request payloads.
+These should stay reusable by both client request responses and inbound notification/request payloads, but the ownership is now per-layer rather than under a global `Models/` directory.
 
 ## Recommended Next Implementation Order
 
@@ -679,13 +705,24 @@ This report was built against the following checks:
 
 Swift skeleton:
 
-- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexTransport.swift`
-- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexConnection+Messages.swift`
-- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexConnection.swift`
-- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexClient.swift`
-- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexClient+Envelopes.swift`
-- `/Users/galew/Workspace/Codax/Codax/Controllers/CodexClient+ServerRequestHandler.swift`
-- `/Users/galew/Workspace/Codax/Codax/Controllers/CodaxOrchestrator.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Transport/CodexTransport.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Transport/CodexTransport+Types.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Transport/CodexProcess.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Transport/CodexProcess+Types.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Connection/CodexConnection+Messages.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Connection/CodexConnection+Types.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Connection/CodexConnection.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient+InboundMessage.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient+ServerNotificationEnvelope.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient+ServerNotificationTypes.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient+ServerRequestHandler.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient+ServerRequestHandlerEnvelope.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient+ServerRequestHandlerTypes.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Orchestration/CodaxOrchestrator.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Orchestration/CodaxOrchestrator+Types.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Orchestration/AuthCoordinator.swift`
+- `/Users/galew/Workspace/Codax/Codax/Controllers/Orchestration/AuthCoordinator+Types.swift`
 - `/Users/galew/Workspace/Codax/Codax.xcodeproj/project.pbxproj`
 
 Primary schema roots:

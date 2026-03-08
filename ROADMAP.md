@@ -23,6 +23,9 @@
 - [ ] Milestone 4: Version Compatibility
 - [ ] Milestone 5: Orchestration
 - [ ] Milestone 6: NavigationSplitView UI
+- [ ] Milestone 7: Codax TTS
+- [ ] Milestone 8: Codax Axplanation™
+- [ ] Milestone 9: Schema Diff-Check Automation
 
 ## Milestone 0: Foundation
 
@@ -153,3 +156,45 @@ Tickets:
 Exit criteria:
 
 - [ ] The app presents a usable three-panel shell that reflects transport, client, and orchestrator state.
+
+## Milestone 7: Codax TTS
+
+Scope:
+
+- [ ] TBD.
+
+Tickets:
+
+- [ ] TBD.
+
+Exit Criteria:
+
+- [ ] TBD.
+
+## Milestone 8: Codax Axplanation
+
+Scope:
+
+- [ ] TBD.
+
+Tickets:
+
+- [ ] TBD.
+
+Exit Criteria:
+
+- [ ] TBD.
+
+## Milestone 9: Schema Diff-Check Automation
+
+Scope:
+
+- [ ] TBD.
+
+Tickets:
+
+- [ ] TBD.
+
+Exit Criteria:
+
+- [ ] TBD.

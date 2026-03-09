@@ -9,7 +9,7 @@ import Foundation
 
 // MARK: - Concrete Implementation of the CodexTransport protocol using JSONL over STDIO
 
-public final class StdioCodexTransport: CodexTransport {
+public actor StdioCodexTransport: CodexTransport {
 	private let input: FileHandle
 	private let output: FileHandle
 	private var partialBuffer = Data()
@@ -23,7 +23,7 @@ public final class StdioCodexTransport: CodexTransport {
 		output.readabilityHandler = { [weak self] handle in
 			let data = handle.availableData
 			Task {
-				self?.ingest(data)
+				await self?.ingest(data)
 			}
 		}
 	}

@@ -5,12 +5,33 @@
 //  Created by Gale Williams on 3/7/26.
 //
 
+import AsyncAlgorithms
 import Foundation
 
-public final class CodexConnection {
-	private struct PendingRequest: Sendable {
-		let succeed: @Sendable (Data) -> Void
-		let fail: @Sendable (Error) -> Void
+public actor CodexConnection {
+	private final class OneShotReply: Sendable {
+		private let channel = AsyncThrowingChannel<Data, Error>()
+
+		func wait() async throws -> Data {
+			var iterator = channel.makeAsyncIterator()
+			guard let data = try await iterator.next() else {
+				throw CodexConnectionError.disconnected
+			}
+			return data
+		}
+
+		func succeed(_ data: Data) async {
+			await channel.send(data)
+			channel.finish()
+		}
+
+		func fail(_ error: Error) {
+			channel.fail(error)
+		}
+
+		func finish() {
+			channel.finish()
+		}
 	}
 
 	private struct RetryConfiguration: Sendable {
@@ -43,10 +64,9 @@ public final class CodexConnection {
 	private let retryConfiguration: RetryConfiguration
 	private let sleep: Sleep
 	private let random: Random
-	private let stateLock = NSLock()
 
 	private var nextNumericRequestID: Int64 = 0
-	private var pendingRequests: [JSONRPCID: PendingRequest] = [:]
+	private var pendingRequests: [JSONRPCID: OneShotReply] = [:]
 	private var receiveLoopTask: Task<Void, Never>?
 	private var notificationContinuations: [UUID: AsyncStream<ServerNotificationEnvelope>.Continuation] = [:]
 	private var status: ConnectionStatus = .idle
@@ -84,43 +104,25 @@ public final class CodexConnection {
 		self.random = random
 	}
 
-		public func start() async {
-			let shouldStart = withStateLock {
-				guard status == .idle else { return false }
-				status = .running
-				let task = Task { [weak self] in
-					guard let self else { return }
-					await self.runReceiveLoop()
-				}
-				receiveLoopTask = task
-				return true
-		}
-
-		if !shouldStart {
-			return
+	public func start() async {
+		guard status == .idle else { return }
+		status = .running
+		receiveLoopTask = Task {
+			await self.runReceiveLoop()
 		}
 	}
 
-		public func stop() async {
-			let (task, pending, continuations) = withStateLock {
-				guard status != .idle else {
-					return (
-						nil as Task<Void, Never>?,
-						[:] as [JSONRPCID: PendingRequest],
-					[] as [AsyncStream<ServerNotificationEnvelope>.Continuation]
-				)
-			}
+	public func stop() async {
+		guard status != .idle else { return }
 
-			status = .stopping
-			let task = receiveLoopTask
-			receiveLoopTask = nil
-			let pending = pendingRequests
-			pendingRequests.removeAll()
-			let continuations = Array(notificationContinuations.values)
-			notificationContinuations.removeAll()
-			status = .idle
-			return (task, pending, continuations)
-		}
+		status = .stopping
+		let task = receiveLoopTask
+		receiveLoopTask = nil
+		let pending = pendingRequests
+		pendingRequests.removeAll()
+		let continuations = Array(notificationContinuations.values)
+		notificationContinuations.removeAll()
+		status = .idle
 
 		task?.cancel()
 		await trans.close()
@@ -149,11 +151,11 @@ public final class CodexConnection {
 				guard attempt < retryConfiguration.maxRetryCount else {
 					throw lastOverloadError ?? error
 				}
-				guard !isStopped else {
+				guard status == .running else {
 					throw CodexConnectionError.disconnected
 				}
 				try await sleep(retryDelayNanos(forAttempt: attempt))
-				guard !isStopped else {
+				guard status == .running else {
 					throw CodexConnectionError.disconnected
 				}
 				attempt += 1
@@ -178,18 +180,15 @@ public final class CodexConnection {
 		try await trans.send(payload)
 	}
 
-	public func notifications() -> AsyncStream<ServerNotificationEnvelope> {
+	public nonisolated func notifications() -> AsyncStream<ServerNotificationEnvelope> {
 		AsyncStream { continuation in
 			let id = UUID()
-			let shouldFinishImmediately = withStateLock {
-				guard status != .stopping else { return true }
-				notificationContinuations[id] = continuation
-				return false
-			}
 
-			if shouldFinishImmediately {
-				continuation.finish()
-				return
+			Task {
+				let shouldFinishImmediately = await self.addNotificationContinuation(continuation, id: id)
+				if shouldFinishImmediately {
+					continuation.finish()
+				}
 			}
 
 			continuation.onTermination = { _ in
@@ -201,63 +200,50 @@ public final class CodexConnection {
 	}
 }
 
-// MARK: - Extension
+// MARK: - Internal Helpers
 
 private extension CodexConnection {
-	var isStopped: Bool {
-		withStateLock { status != .running }
+	private func addNotificationContinuation(
+		_ continuation: AsyncStream<ServerNotificationEnvelope>.Continuation,
+		id: UUID
+	) -> Bool {
+		guard status != .stopping else { return true }
+		notificationContinuations[id] = continuation
+		return false
 	}
 
-	func requestOnce<Params: Encodable, Result: Decodable>(
+	private func requestOnce<Params: Encodable, Result: Decodable>(
 		method: String,
 		params: Params,
 		as resultType: Result.Type
 	) async throws -> Result {
+		guard status == .running else {
+			throw CodexConnectionError.disconnected
+		}
+
 		let id = makeRequestID()
-		let payload = try encoder.encode(JSONRPCRequestMessage(id: id, method: method, params: params))
+		let waiter = OneShotReply()
+		pendingRequests[id] = waiter
 
-		return try await withCheckedThrowingContinuation { continuation in
-			let shouldReject = withStateLock {
-				guard status == .running else { return true }
-				pendingRequests[id] = PendingRequest(
-					succeed: { [decoder] data in
-						do {
-							let result = try decoder.decode(Result.self, from: data)
-							continuation.resume(returning: result)
-						} catch {
-							continuation.resume(throwing: error)
-						}
-					},
-					fail: { error in
-						continuation.resume(throwing: error)
-					}
-				)
-				return false
-			}
-
-			if shouldReject {
-				continuation.resume(throwing: CodexConnectionError.disconnected)
-				return
-			}
-
-			Task {
-				do {
-					try await self.trans.send(payload)
-				} catch {
-					self.failPendingRequest(id: id, error: error)
-				}
-			}
+		do {
+			let payload = try encoder.encode(JSONRPCRequestMessage(id: id, method: method, params: params))
+			try await trans.send(payload)
+			let data = try await waiter.wait()
+			pendingRequests.removeValue(forKey: id)
+			return try decoder.decode(Result.self, from: data)
+		} catch {
+			pendingRequests.removeValue(forKey: id)
+			waiter.finish()
+			throw error
 		}
 	}
 
-	func makeRequestID() -> JSONRPCID {
-		withStateLock {
-			defer { nextNumericRequestID += 1 }
-			return .int(nextNumericRequestID)
-		}
+	private func makeRequestID() -> JSONRPCID {
+		defer { nextNumericRequestID += 1 }
+		return .int(nextNumericRequestID)
 	}
 
-	func retryDelayNanos(forAttempt attempt: Int) -> UInt64 {
+	private func retryDelayNanos(forAttempt attempt: Int) -> UInt64 {
 		let exponent = min(attempt, 16)
 		let multiplier = UInt64(1 << exponent)
 		let cappedBase = retryConfiguration.baseDelayNanos.multipliedReportingOverflow(by: multiplier)
@@ -272,7 +258,7 @@ private extension CodexConnection {
 		return min(UInt64(jittered.rounded()), retryConfiguration.maxDelayNanos)
 	}
 
-	func runReceiveLoop() async {
+	private func runReceiveLoop() async {
 		do {
 			while !Task.isCancelled {
 				let message = try await trans.receive()
@@ -283,35 +269,26 @@ private extension CodexConnection {
 		}
 	}
 
-	func finishReceiveLoop(with error: Error) async {
-		let (shouldClose, pending, continuations) = withStateLock {
-			guard status != .idle else {
-				receiveLoopTask = nil
-				return (
-					false,
-					[:] as [JSONRPCID: PendingRequest],
-					[] as [AsyncStream<ServerNotificationEnvelope>.Continuation]
-				)
-			}
-
-			status = .stopping
+	private func finishReceiveLoop(with error: Error) async {
+		guard status != .idle else {
 			receiveLoopTask = nil
-			let pending = pendingRequests
-			pendingRequests.removeAll()
-			let continuations = Array(notificationContinuations.values)
-			notificationContinuations.removeAll()
-			status = .idle
-			return (true, pending, continuations)
+			return
 		}
 
-		if shouldClose {
-			await trans.close()
-		}
+		status = .stopping
+		receiveLoopTask = nil
+		let pending = pendingRequests
+		pendingRequests.removeAll()
+		let continuations = Array(notificationContinuations.values)
+		notificationContinuations.removeAll()
+		status = .idle
+
+		await trans.close()
 		fail(pending: pending, with: error)
 		finish(continuations: continuations)
 	}
 
-	func handleInboundMessage(_ message: Data) async throws {
+	private func handleInboundMessage(_ message: Data) async throws {
 		guard
 			let object = try JSONSerialization.jsonObject(with: message, options: [.fragmentsAllowed]) as? [String: Any]
 		else {
@@ -329,7 +306,7 @@ private extension CodexConnection {
 			guard let id else {
 				throw CodexConnectionError.invalidMessage
 			}
-			completePendingRequest(id: id, with: try rawData(from: result))
+			await completePendingRequest(id: id, with: try rawData(from: result))
 			return
 		}
 
@@ -344,7 +321,7 @@ private extension CodexConnection {
 		throw CodexConnectionError.invalidMessage
 	}
 
-	func handleInboundMethodObject(_ object: [String: Any]) async throws {
+	private func handleInboundMethodObject(_ object: [String: Any]) async throws {
 		guard let method = object["method"] as? String else {
 			throw CodexConnectionError.invalidMessage
 		}
@@ -370,7 +347,7 @@ private extension CodexConnection {
 		}
 	}
 
-	func handleServerRequest(_ request: ServerRequestEnvelope) async throws {
+	private func handleServerRequest(_ request: ServerRequestEnvelope) async throws {
 		guard let reqHandler else {
 			try await sendErrorResponse(
 				id: request.id,
@@ -404,65 +381,49 @@ private extension CodexConnection {
 		}
 	}
 
-	func sendResponse<Result: Encodable>(id: JSONRPCID, result: Result) async throws {
+	private func sendResponse<Result: Encodable>(id: JSONRPCID, result: Result) async throws {
 		let payload = try encoder.encode(JSONRPCResponseEnvelope(id: id, result: result))
 		try await trans.send(payload)
 	}
 
-	func sendErrorResponse(id: JSONRPCID, error: JSONRPCErrorObject) async throws {
+	private func sendErrorResponse(id: JSONRPCID, error: JSONRPCErrorObject) async throws {
 		let payload = try encoder.encode(JSONRPCErrorEnvelope(id: id, error: error))
 		try await trans.send(payload)
 	}
 
-	func rawData(from value: Any) throws -> Data {
+	private func rawData(from value: Any) throws -> Data {
 		try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed])
 	}
 
-	func completePendingRequest(id: JSONRPCID, with data: Data) {
-		let pending = withStateLock {
-			pendingRequests.removeValue(forKey: id)
-		}
-		pending?.succeed(data)
+	private func completePendingRequest(id: JSONRPCID, with data: Data) async {
+		guard let waiter = pendingRequests.removeValue(forKey: id) else { return }
+		await waiter.succeed(data)
 	}
 
-	func failPendingRequest(id: JSONRPCID, error: Error) {
-		let pending = withStateLock {
-			pendingRequests.removeValue(forKey: id)
-		}
-		pending?.fail(error)
+	private func failPendingRequest(id: JSONRPCID, error: Error) {
+		guard let waiter = pendingRequests.removeValue(forKey: id) else { return }
+		waiter.fail(error)
 	}
 
-	private func fail(pending: [JSONRPCID: PendingRequest], with error: Error) {
-		for request in pending.values {
-			request.fail(error)
+	private func fail(pending: [JSONRPCID: OneShotReply], with error: Error) {
+		for waiter in pending.values {
+			waiter.fail(error)
 		}
 	}
 
-	func yield(notification: ServerNotificationEnvelope) {
-		let continuations = withStateLock {
-			Array(notificationContinuations.values)
-		}
-		for continuation in continuations {
+	private func yield(notification: ServerNotificationEnvelope) {
+		for continuation in notificationContinuations.values {
 			continuation.yield(notification)
 		}
 	}
 
-	func finish(continuations: [AsyncStream<ServerNotificationEnvelope>.Continuation]) {
+	private func finish(continuations: [AsyncStream<ServerNotificationEnvelope>.Continuation]) {
 		for continuation in continuations {
 			continuation.finish()
 		}
 	}
 
-	func removeNotificationContinuation(id: UUID) {
-		withStateLock {
-			notificationContinuations.removeValue(forKey: id)
-		}
-	}
-
-	@discardableResult
-	func withStateLock<Result>(_ body: () -> Result) -> Result {
-		stateLock.lock()
-		defer { stateLock.unlock() }
-		return body()
+	private func removeNotificationContinuation(id: UUID) {
+		notificationContinuations.removeValue(forKey: id)
 	}
 }

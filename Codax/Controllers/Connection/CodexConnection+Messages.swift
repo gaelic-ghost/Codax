@@ -9,42 +9,42 @@ import Foundation
 
 	// MARK: - Connection Layer JSON-RPC Message Types
 
-public struct JSONRPCRequestMessage<Params: Encodable>: Encodable, Sendable {
+nonisolated public struct JSONRPCRequestMessage<Params: Encodable & Sendable>: Encodable, Sendable {
 	public let id: JSONRPCID
 	public let method: String
 	public let params: Params
 }
 
-public struct JSONRPCNotificationMessage<Params: Encodable>: Encodable, Sendable {
+nonisolated public struct JSONRPCNotificationMessage<Params: Encodable & Sendable>: Encodable, Sendable {
 	public let method: String
 	public let params: Params
 }
 
-public struct JSONRPCClientNotificationMessage: Encodable, Sendable {
+nonisolated public struct JSONRPCClientNotificationMessage: Encodable, Sendable {
 	public let method: String
 }
 
-public struct JSONRPCResponseMessage<Result: Decodable>: Decodable, Sendable {
+nonisolated public struct JSONRPCResponseMessage<Result: Decodable & Sendable>: Decodable, Sendable {
 	public let id: JSONRPCID
 	public let result: Result
 }
 
-public struct JSONRPCErrorMessage: Decodable, Sendable {
+nonisolated public struct JSONRPCErrorMessage: Decodable, Sendable {
 	public let id: JSONRPCID?
 	public let error: JSONRPCErrorObject
 }
 
-public struct JSONRPCResponseEnvelope<Result: Encodable>: Encodable, Sendable {
+nonisolated public struct JSONRPCResponseEnvelope<Result: Encodable & Sendable>: Encodable, Sendable {
 	public let id: JSONRPCID
 	public let result: Result
 }
 
-public struct JSONRPCErrorEnvelope: Encodable, Sendable {
+nonisolated public struct JSONRPCErrorEnvelope: Encodable, Sendable {
 	public let id: JSONRPCID?
 	public let error: JSONRPCErrorObject
 }
 
-public struct JSONRPCErrorObject: Sendable, Codable {
+nonisolated public struct JSONRPCErrorObject: Sendable, Codable {
 	public let code: Int
 	public let message: String
 	public let data: JSONValue?
@@ -56,7 +56,7 @@ public struct JSONRPCErrorObject: Sendable, Codable {
 	}
 }
 
-public enum JSONRPCID: Hashable, Sendable, Codable {
+nonisolated public enum JSONRPCID: Hashable, Sendable, Codable {
 	case string(String)
 	case int(Int64)
 

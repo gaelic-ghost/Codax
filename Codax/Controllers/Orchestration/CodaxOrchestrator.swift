@@ -11,6 +11,7 @@ import Observation
 
 // MARK: Concrete Implementation
 
+@MainActor
 @Observable
 final class CodaxOrchestrator {
 

@@ -9,7 +9,7 @@ import Foundation
 
 	// MARK: - Client Layer Server Request Handling Envelopes
 
-public enum ServerRequestEnvelope: Sendable {
+nonisolated public enum ServerRequestEnvelope: Sendable {
 		// MARK: Auth Refresh
 	case chatgptAuthRefresh(ChatgptAuthTokensRefreshParams, id: JSONRPCID)
 		// MARK: File Change/Apply Patch Approvals
@@ -28,7 +28,7 @@ public enum ServerRequestEnvelope: Sendable {
 }
 
 extension ServerRequestEnvelope {
-	static func decode(method: String, id: JSONRPCID, params: Data, decoder: JSONDecoder) throws -> ServerRequestEnvelope {
+	nonisolated static func decode(method: String, id: JSONRPCID, params: Data, decoder: JSONDecoder) throws -> ServerRequestEnvelope {
 		switch method {
 					// MARK: Auth Refresh
 			case "account/chatgptAuthTokens/refresh":
@@ -57,7 +57,7 @@ extension ServerRequestEnvelope {
 		}
 	}
 
-	var id: JSONRPCID {
+	nonisolated var id: JSONRPCID {
 		switch self {
 					// MARK: Auth Refresh
 			case let .chatgptAuthRefresh(_, id),

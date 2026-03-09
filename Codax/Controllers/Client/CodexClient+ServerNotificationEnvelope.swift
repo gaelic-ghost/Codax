@@ -9,7 +9,7 @@ import Foundation
 
 // MARK: - Client Layer Server Notification Envelope
 
-public enum ServerNotificationEnvelope: Sendable {
+nonisolated public enum ServerNotificationEnvelope: Sendable {
 	// MARK: Base
 	case error(ErrorNotification)
 	case serverRequestResolved(ServerRequestResolvedNotification)
@@ -44,7 +44,7 @@ public enum ServerNotificationEnvelope: Sendable {
 }
 
 extension ServerNotificationEnvelope {
-	static func decode(method: String, params: Data, decoder: JSONDecoder) throws -> ServerNotificationEnvelope {
+	nonisolated static func decode(method: String, params: Data, decoder: JSONDecoder) throws -> ServerNotificationEnvelope {
 		switch method {
 		case "error":
 			return .error(try decoder.decode(ErrorNotification.self, from: params))

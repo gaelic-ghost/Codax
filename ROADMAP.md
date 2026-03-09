@@ -35,6 +35,8 @@
 - [ ] Milestone 16: Schema Diff-Check Automation (Script or SPM/XC Plugin)
 - [ ] Milestone 17: Performance Improvements (AppKit Views)
 - [ ] Milestone 18: Performance Improvements (Local TTS Engine)
+- [ ] Milestone 19: DX Improvements (Cleaner Concurrency Impl)
+- [ ] Milestone 20: Reliability/DX Improvements (swift-service-lifecycle)
 
 ## Milestone 0: Foundation
 
@@ -398,3 +400,31 @@ Tickets:
 Exit Criteria:
 
 - [ ] Codax can offer a viable local narration path for supported use cases without breaking the hosted-first speech workflow.
+
+## Milestone 19: DX Improvements (Cleaner Concurrency Impl)
+
+Scope:
+
+- [ ] Bring in some nice, ergonomic helpers from async-alogrithms and the server-side Swift world. Async timer streams, throwing streams, zips and splits, shares, all that good stuff wherever applicable. Already seeing some places where those could work better with less code.
+
+Tickets:
+
+- [ ]
+
+Exit Criteria:
+
+- [ ]
+
+## Milestone 20: Reliability/DX Improvements (swift-service-lifecycle)
+
+Scope:
+
+- [ ] Setup swift-service-lifecycle to handle startup and graceful shutdown of long-lived services, either by wrapping individually in `Service` conformance, or also composing as `ServiceGroup`, depending.
+
+Tickets:
+
+- [ ]
+
+Exit Criteria:
+
+- [ ]

@@ -13,14 +13,43 @@ public final class CodexConnection {
 		let fail: @Sendable (Error) -> Void
 	}
 
+	private struct RetryConfiguration: Sendable {
+		let maxRetryCount: Int
+		let baseDelayNanos: UInt64
+		let maxDelayNanos: UInt64
+		let jitterRatio: Double
+
+		static let `default` = RetryConfiguration(
+			maxRetryCount: 3,
+			baseDelayNanos: 250_000_000,
+			maxDelayNanos: 2_000_000_000,
+			jitterRatio: 0.2
+		)
+	}
+
+	private enum ConnectionStatus {
+		case idle
+		case running
+		case stopping
+	}
+
+	typealias Sleep = @Sendable (UInt64) async throws -> Void
+	typealias Random = @Sendable () -> Double
+
 	let trans: CodexTransport
 	let reqHandler: CodexServerRequestHandler?
 	private let encoder = JSONEncoder()
 	private let decoder = JSONDecoder()
+	private let retryConfiguration: RetryConfiguration
+	private let sleep: Sleep
+	private let random: Random
+	private let stateLock = NSLock()
+
 	private var nextNumericRequestID: Int64 = 0
 	private var pendingRequests: [JSONRPCID: PendingRequest] = [:]
 	private var receiveLoopTask: Task<Void, Never>?
 	private var notificationContinuations: [UUID: AsyncStream<ServerNotificationEnvelope>.Continuation] = [:]
+	private var status: ConnectionStatus = .idle
 
 	public init(
 		transport tr: any CodexTransport,
@@ -28,21 +57,75 @@ public final class CodexConnection {
 	) {
 		self.trans = tr
 		self.reqHandler = rH
+		self.retryConfiguration = .default
+		self.sleep = { try await Task.sleep(nanoseconds: $0) }
+		self.random = { Double.random(in: 0 ..< 1) }
 	}
 
-	public func start() async -> () {
-		guard receiveLoopTask == nil else { return }
-		receiveLoopTask = Task { [weak self] in
-			await self?.runReceiveLoop()
+	internal init(
+		transport tr: any CodexTransport,
+		requestHandler rH: (any CodexServerRequestHandler)? = nil,
+		maxRetryCount: Int,
+		retryBaseDelayNanos: UInt64,
+		retryMaxDelayNanos: UInt64,
+		retryJitterRatio: Double,
+		sleep: @escaping Sleep,
+		random: @escaping Random
+	) {
+		self.trans = tr
+		self.reqHandler = rH
+		self.retryConfiguration = RetryConfiguration(
+			maxRetryCount: maxRetryCount,
+			baseDelayNanos: retryBaseDelayNanos,
+			maxDelayNanos: retryMaxDelayNanos,
+			jitterRatio: retryJitterRatio
+		)
+		self.sleep = sleep
+		self.random = random
+	}
+
+		public func start() async {
+			let shouldStart = withStateLock {
+				guard status == .idle else { return false }
+				status = .running
+				let task = Task { [weak self] in
+					guard let self else { return }
+					await self.runReceiveLoop()
+				}
+				receiveLoopTask = task
+				return true
+		}
+
+		if !shouldStart {
+			return
 		}
 	}
 
-	public func stop() async -> () {
-		receiveLoopTask?.cancel()
-		receiveLoopTask = nil
+		public func stop() async {
+			let (task, pending, continuations) = withStateLock {
+				guard status != .idle else {
+					return (
+						nil as Task<Void, Never>?,
+						[:] as [JSONRPCID: PendingRequest],
+					[] as [AsyncStream<ServerNotificationEnvelope>.Continuation]
+				)
+			}
+
+			status = .stopping
+			let task = receiveLoopTask
+			receiveLoopTask = nil
+			let pending = pendingRequests
+			pendingRequests.removeAll()
+			let continuations = Array(notificationContinuations.values)
+			notificationContinuations.removeAll()
+			status = .idle
+			return (task, pending, continuations)
+		}
+
+		task?.cancel()
 		await trans.close()
-		failAllPending(with: CodexConnectionError.disconnected)
-		finishNotifications()
+		fail(pending: pending, with: CodexConnectionError.disconnected)
+		finish(continuations: continuations)
 	}
 
 	public func request<Params: Encodable, Result: Decodable>(
@@ -51,30 +134,31 @@ public final class CodexConnection {
 		as resultType: Result.Type
 	) async throws -> Result {
 		await start()
-		let id = makeRequestID()
-		let payload = try encoder.encode(JSONRPCRequestMessage(id: id, method: method, params: params))
 
-		return try await withCheckedThrowingContinuation { continuation in
-			pendingRequests[id] = PendingRequest(
-				succeed: { [decoder] data in
-					do {
-						let result = try decoder.decode(Result.self, from: data)
-						continuation.resume(returning: result)
-					} catch {
-						continuation.resume(throwing: error)
-					}
-				},
-				fail: { error in
-					continuation.resume(throwing: error)
-				}
-			)
+		var attempt = 0
+		var lastOverloadError: CodexConnectionError?
 
-			Task {
-				do {
-					try await self.trans.send(payload)
-				} catch {
-					self.failPendingRequest(id: id, error: error)
+		while true {
+			do {
+				return try await requestOnce(method: method, params: params, as: resultType)
+			} catch let error as CodexConnectionError {
+				guard error.isRetryableOverload else {
+					throw error
 				}
+				lastOverloadError = error
+				guard attempt < retryConfiguration.maxRetryCount else {
+					throw lastOverloadError ?? error
+				}
+				guard !isStopped else {
+					throw CodexConnectionError.disconnected
+				}
+				try await sleep(retryDelayNanos(forAttempt: attempt))
+				guard !isStopped else {
+					throw CodexConnectionError.disconnected
+				}
+				attempt += 1
+			} catch {
+				throw error
 			}
 		}
 	}
@@ -82,7 +166,7 @@ public final class CodexConnection {
 	public func notify<Params: Encodable>(
 		method: String,
 		params: Params
-	) async throws -> () {
+	) async throws {
 		await start()
 		let payload = try encoder.encode(JSONRPCNotificationMessage(method: method, params: params))
 		try await trans.send(payload)
@@ -97,7 +181,17 @@ public final class CodexConnection {
 	public func notifications() -> AsyncStream<ServerNotificationEnvelope> {
 		AsyncStream { continuation in
 			let id = UUID()
-			notificationContinuations[id] = continuation
+			let shouldFinishImmediately = withStateLock {
+				guard status != .stopping else { return true }
+				notificationContinuations[id] = continuation
+				return false
+			}
+
+			if shouldFinishImmediately {
+				continuation.finish()
+				return
+			}
+
 			continuation.onTermination = { _ in
 				Task {
 					await self.removeNotificationContinuation(id: id)
@@ -107,12 +201,75 @@ public final class CodexConnection {
 	}
 }
 
-	// MARK: -
+// MARK: - Extension
 
 private extension CodexConnection {
+	var isStopped: Bool {
+		withStateLock { status != .running }
+	}
+
+	func requestOnce<Params: Encodable, Result: Decodable>(
+		method: String,
+		params: Params,
+		as resultType: Result.Type
+	) async throws -> Result {
+		let id = makeRequestID()
+		let payload = try encoder.encode(JSONRPCRequestMessage(id: id, method: method, params: params))
+
+		return try await withCheckedThrowingContinuation { continuation in
+			let shouldReject = withStateLock {
+				guard status == .running else { return true }
+				pendingRequests[id] = PendingRequest(
+					succeed: { [decoder] data in
+						do {
+							let result = try decoder.decode(Result.self, from: data)
+							continuation.resume(returning: result)
+						} catch {
+							continuation.resume(throwing: error)
+						}
+					},
+					fail: { error in
+						continuation.resume(throwing: error)
+					}
+				)
+				return false
+			}
+
+			if shouldReject {
+				continuation.resume(throwing: CodexConnectionError.disconnected)
+				return
+			}
+
+			Task {
+				do {
+					try await self.trans.send(payload)
+				} catch {
+					self.failPendingRequest(id: id, error: error)
+				}
+			}
+		}
+	}
+
 	func makeRequestID() -> JSONRPCID {
-		defer { nextNumericRequestID += 1 }
-		return .int(nextNumericRequestID)
+		withStateLock {
+			defer { nextNumericRequestID += 1 }
+			return .int(nextNumericRequestID)
+		}
+	}
+
+	func retryDelayNanos(forAttempt attempt: Int) -> UInt64 {
+		let exponent = min(attempt, 16)
+		let multiplier = UInt64(1 << exponent)
+		let cappedBase = retryConfiguration.baseDelayNanos.multipliedReportingOverflow(by: multiplier)
+		let rawDelay = cappedBase.overflow
+			? retryConfiguration.maxDelayNanos
+			: min(cappedBase.partialValue, retryConfiguration.maxDelayNanos)
+
+		let jitterScale = max(0, min(1, retryConfiguration.jitterRatio))
+		let offset = (random() * 2) - 1
+		let jitterMultiplier = max(0, 1 + (offset * jitterScale))
+		let jittered = Double(rawDelay) * jitterMultiplier
+		return min(UInt64(jittered.rounded()), retryConfiguration.maxDelayNanos)
 	}
 
 	func runReceiveLoop() async {
@@ -122,9 +279,36 @@ private extension CodexConnection {
 				try await handleInboundMessage(message)
 			}
 		} catch {
-			failAllPending(with: error)
-			finishNotifications()
+			await finishReceiveLoop(with: error)
 		}
+	}
+
+	func finishReceiveLoop(with error: Error) async {
+		let (shouldClose, pending, continuations) = withStateLock {
+			guard status != .idle else {
+				receiveLoopTask = nil
+				return (
+					false,
+					[:] as [JSONRPCID: PendingRequest],
+					[] as [AsyncStream<ServerNotificationEnvelope>.Continuation]
+				)
+			}
+
+			status = .stopping
+			receiveLoopTask = nil
+			let pending = pendingRequests
+			pendingRequests.removeAll()
+			let continuations = Array(notificationContinuations.values)
+			notificationContinuations.removeAll()
+			status = .idle
+			return (true, pending, continuations)
+		}
+
+		if shouldClose {
+			await trans.close()
+		}
+		fail(pending: pending, with: error)
+		finish(continuations: continuations)
 	}
 
 	func handleInboundMessage(_ message: Data) async throws {
@@ -235,37 +419,50 @@ private extension CodexConnection {
 	}
 
 	func completePendingRequest(id: JSONRPCID, with data: Data) {
-		guard let pending = pendingRequests.removeValue(forKey: id) else { return }
-		pending.succeed(data)
+		let pending = withStateLock {
+			pendingRequests.removeValue(forKey: id)
+		}
+		pending?.succeed(data)
 	}
 
 	func failPendingRequest(id: JSONRPCID, error: Error) {
-		guard let pending = pendingRequests.removeValue(forKey: id) else { return }
-		pending.fail(error)
+		let pending = withStateLock {
+			pendingRequests.removeValue(forKey: id)
+		}
+		pending?.fail(error)
 	}
 
-	func failAllPending(with error: Error) {
-		let requests = pendingRequests
-		pendingRequests.removeAll()
-		for request in requests.values {
+	private func fail(pending: [JSONRPCID: PendingRequest], with error: Error) {
+		for request in pending.values {
 			request.fail(error)
 		}
 	}
 
 	func yield(notification: ServerNotificationEnvelope) {
-		for continuation in notificationContinuations.values {
+		let continuations = withStateLock {
+			Array(notificationContinuations.values)
+		}
+		for continuation in continuations {
 			continuation.yield(notification)
 		}
 	}
 
-	func finishNotifications() {
-		for continuation in notificationContinuations.values {
+	func finish(continuations: [AsyncStream<ServerNotificationEnvelope>.Continuation]) {
+		for continuation in continuations {
 			continuation.finish()
 		}
-		notificationContinuations.removeAll()
 	}
 
 	func removeNotificationContinuation(id: UUID) {
-		notificationContinuations.removeValue(forKey: id)
+		withStateLock {
+			notificationContinuations.removeValue(forKey: id)
+		}
+	}
+
+	@discardableResult
+	func withStateLock<Result>(_ body: () -> Result) -> Result {
+		stateLock.lock()
+		defer { stateLock.unlock() }
+		return body()
 	}
 }

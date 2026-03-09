@@ -34,3 +34,10 @@ public enum CodexConnectionError: Error, LocalizedError, Sendable {
 		}
 	}
 }
+
+extension CodexConnectionError {
+	var isRetryableOverload: Bool {
+		guard case let .serverError(error) = self else { return false }
+		return error.code == -32001
+	}
+}

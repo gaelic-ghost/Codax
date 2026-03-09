@@ -70,4 +70,27 @@ public enum JSONRPCID: Hashable, Sendable, Codable {
 			throw CodexConnectionError.invalidMessage
 		}
 	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.singleValueContainer()
+		if let stringValue = try? container.decode(String.self) {
+			self = .string(stringValue)
+			return
+		}
+		if let intValue = try? container.decode(Int64.self) {
+			self = .int(intValue)
+			return
+		}
+		throw CodexConnectionError.invalidMessage
+	}
+
+	public func encode(to encoder: any Encoder) throws {
+		var container = encoder.singleValueContainer()
+		switch self {
+		case let .string(value):
+			try container.encode(value)
+		case let .int(value):
+			try container.encode(value)
+		}
+	}
 }

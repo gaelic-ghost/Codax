@@ -51,9 +51,10 @@ Just as important, the project is being shaped around accessibility from the sta
 The codebase is currently organized into a small set of explicit layers:
 
 - `Transport`
-  - `CodexTransport` defines raw transport behavior.
+  - `CodexTransport` defines raw transport behavior as a protocol.
+  - `CodexTransport+Stdio` is the current actor-based stdio transport implementation.
   - `CodexProcess` launches the local `codex app-server` process.
-  - `StdioCodexTransport` is the current actor-based stdio transport implementation.
+
 - `Connection`
   - `CodexConnection` owns actor-based JSON-RPC framing, request correlation, retry handling, and inbound routing.
 - `Client`
@@ -63,7 +64,7 @@ The codebase is currently organized into a small set of explicit layers:
 - `Views`
   - SwiftUI views currently exist as a minimal shell and will later become the multi-pane desktop interface.
 
-`CodaxTests` also exists as the baseline test target, though meaningful transport and client coverage still needs to be expanded.
+`CodaxTests` exists as the baseline test target, though meaningful transport and client coverage still needs to be expanded.
 
 ## Repository Layout
 
@@ -89,14 +90,14 @@ The main areas of the repository are:
 Codax currently assumes:
 
 - macOS
-- Xcode with SwiftUI app development support
-- a locally installed `codex` CLI that can run the app-server over stdio
+- Xcode
+- `codex` CLI installed locally to run the app-server over stdio
 
 The repository does not currently present itself as a packaged or stable released app.
 
 ## Getting Started
 
-1. Open [Codax.xcodeproj](/Users/galew/Workspace/Codax/Codax.xcodeproj) in Xcode.
+1. Open in Xcode.
 2. Build the `Codax` app target.
 3. Run the app from Xcode.
 
@@ -120,7 +121,7 @@ These documents describe the intended milestone sequencing, the transport and co
 
 ## Roadmap
 
-The roadmap is maintained in [ROADMAP.md](/Users/galew/Workspace/Codax/ROADMAP.md).
+The roadmap is maintained in [ROADMAP.md]().
 
 At a high level, the project is moving in bounded slices:
 
@@ -135,7 +136,7 @@ Later milestones cover compatibility management, thread and code summarization f
 
 ## Contributing
 
-Contribution guidance lives in [CONTRIBUTING.md](/Users/galew/Workspace/Codax/CONTRIBUTING.md).
+Contribution guidance lives in [CONTRIBUTING.md]().
 
 The most useful contributions right now are likely to be in:
 
@@ -147,7 +148,7 @@ The most useful contributions right now are likely to be in:
 
 ## Notes
 
-- Codax is currently an alpha-stage project.
+- Codax is currently an early, pre-alpha project.
 - The API is initially being built around Codex 0.111.0
 - Local Codex version and compatibility handling is still being built out.
 - The repository does not yet document a polished release or distribution workflow.

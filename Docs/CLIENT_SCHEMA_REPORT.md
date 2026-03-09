@@ -348,7 +348,7 @@ The current Swift split models that correctly.
 
 The docs and README both describe `-32001` as a retryable overload error.
 
-Retry policy is not yet implemented in the current code, and it is not fundamentally a `Client`-layer responsibility. But it still matters to the client report because typed client methods are the API surface most likely to expose that error to higher layers today.
+Retry policy is now implemented in the current connection layer, and it is not fundamentally a `Client`-layer responsibility. It still matters to the client report because typed client methods are the API surface most likely to surface that behavior to higher layers today, even though the retry logic lives underneath them.
 
 ### 5. The Client Layer Sits On The Same Protocol Environment
 

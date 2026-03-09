@@ -29,7 +29,7 @@ The project is explicitly accessibility-forward. The long-term goal is a usable,
 The repository already has real protocol-facing work in place:
 
 - transport and process-launch foundations
-- a JSON-RPC connection layer with request and response correlation
+- an actor-based JSON-RPC connection layer with request and response correlation plus tested retry handling for retryable overloads
 - initial typed client wrappers for current app-server methods
 - transport and connection schema reports grounded in pinned Codex schema dumps
 
@@ -53,8 +53,9 @@ The codebase is currently organized into a small set of explicit layers:
 - `Transport`
   - `CodexTransport` defines raw transport behavior.
   - `CodexProcess` launches the local `codex app-server` process.
+  - `StdioCodexTransport` is the current actor-based stdio transport implementation.
 - `Connection`
-  - `CodexConnection` owns JSON-RPC framing, request correlation, and inbound routing.
+  - `CodexConnection` owns actor-based JSON-RPC framing, request correlation, retry handling, and inbound routing.
 - `Client`
   - `CodexClient` provides typed wrappers over the generic connection layer.
 - `Orchestration`

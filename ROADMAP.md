@@ -66,7 +66,7 @@ Tickets:
 
 - [x] Define `CodexTransport`.
 - [x] Implement `CodexProcess` to launch `codex app-server --listen stdio://`.
-- [x] Implement `StdioCodexTransport` with newline-delimited framing and partial-buffer handling.
+- [x] Implement actor-based `StdioCodexTransport` with newline-delimited framing and partial-buffer handling.
 - [x] Document websocket as experimental and unsupported only.
 - [ ] Add transport unit tests for framing, partial reads, EOF, and malformed frames.
 - [ ] Harden process lifecycle, cancellation, and stderr/log handling.
@@ -88,9 +88,9 @@ Tickets:
 - [x] Implement notification streaming via `AsyncStream`.
 - [x] Implement server-request dispatch and JSON-RPC responses.
 - [x] Cover the full current `ServerRequest.ts` union in `ServerRequestEnvelope`.
-- [ ] Add retry and backoff policy for retryable server overload errors (`-32001`).
+- [x] Add retry and backoff policy for retryable server overload errors (`-32001`).
 - [ ] Broaden `ServerNotificationEnvelope` beyond the current validation subset.
-- [ ] Add automated connection tests for success and error correlation, notification delivery, and dispatch behavior.
+- [x] Add automated connection tests for success and error correlation, notification delivery, and dispatch behavior.
 
 Exit criteria:
 
@@ -409,11 +409,14 @@ Scope:
 
 Tickets:
 
-- [ ]
+- [x] Refactor `CodexConnection` to an actor-based core with AsyncAlgorithms-backed request waiters.
+- [x] Refactor `StdioCodexTransport` to an actor-based stdio transport implementation.
+- [ ] Continue reducing concurrency warnings and isolation mismatches in surrounding DTOs and envelopes.
+- [ ] Evaluate additional AsyncAlgorithms operators only where they materially simplify real code paths.
 
 Exit Criteria:
 
-- [ ]
+- [ ] Concurrency-sensitive transport and connection code is actor-isolated, readable, and warning-clean under the project’s modern Swift concurrency settings.
 
 ## Milestone 20: Reliability/DX Improvements (swift-service-lifecycle)
 

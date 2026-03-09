@@ -128,7 +128,6 @@ For this project, `EventMsg` should be treated as a future or parallel event-str
   - server-request dispatch to a handler
 - Remaining work is primarily breadth and hardening:
   - richer notification coverage
-  - retry/backoff policy around server overloads
   - higher-level orchestration on top of the generic transport
 
 ### 2. Client-Initiated Methods
@@ -635,6 +634,8 @@ Keep responsibility minimal:
 
 No schema DTOs should live here.
 
+The current stdio implementation, `StdioCodexTransport`, is now actor-based rather than a mutable transport class, which keeps the framing buffer and receive queue inside Swift concurrency isolation instead of relying on ad hoc shared mutable state.
+
 ### `CodexConnection`
 
 Own transport mechanics:
@@ -682,11 +683,10 @@ These should stay reusable by both client request responses and inbound notifica
 
 With the stdio-first transport slice in place, the safest next order is:
 
-1. Add retry/backoff policy for retryable JSON-RPC overload errors.
-2. Expand `ServerNotificationEnvelope` toward the next app-facing workflows.
-3. Implement a concrete `CodexServerRequestHandler` for approvals, elicitation, and auth refresh.
-4. Add a test target or package-based harness for automated transport tests.
-5. Lift the transport into `CodaxOrchestrator` for connect/login/thread startup flows.
+1. Expand `ServerNotificationEnvelope` toward the next app-facing workflows.
+2. Implement a concrete `CodexServerRequestHandler` for approvals, elicitation, and auth refresh.
+3. Add a test target or package-based harness for automated transport tests.
+4. Lift the transport into `CodaxOrchestrator` for connect/login/thread startup flows.
 
 ## Validation Checklist
 

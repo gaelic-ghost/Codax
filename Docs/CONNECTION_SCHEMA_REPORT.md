@@ -17,9 +17,9 @@ The main conclusion is:
 - `ServerRequestEnvelope` is already aligned with the full current `ServerRequest.ts` union.
 - `ServerNotificationEnvelope` is intentionally incomplete and remains the biggest schema-coverage gap inside the connection slice.
 - The primary remaining connection work is not architectural. It is protocol hardening:
-  - retry/backoff for retryable overloads (`-32001`)
   - broader notification coverage
-  - automated connection-layer tests
+  - isolation and `Sendable` cleanup around surrounding DTOs and envelopes
+  - continued connection-test expansion as the notification surface grows
 
 ## Scope And Boundary
 
@@ -236,7 +236,7 @@ The docs and README both describe bounded ingress behavior for overloaded connec
 - the error message is `"Server overloaded; retry later."`
 - clients should treat this as retryable and use exponential backoff with jitter
 
-This is a true connection-layer gap in the current Swift code. The generic error path exists, but retry policy does not.
+This is now implemented in the Swift connection layer. `CodexConnection.request(...)` performs bounded retry with exponential backoff and jitter for retryable `-32001` overload responses, keeping that protocol behavior inside the generic request path rather than leaking it into typed client wrappers.
 
 ### 5. `serverRequest/resolved`
 
@@ -301,15 +301,16 @@ This file is the connection layer's schema-neutral wire boundary.
 
 - generate numeric request ids
 - encode outbound requests and notifications
-- hold pending request continuations
+- hold actor-owned per-request waiters keyed by id
 - receive raw transport messages
 - split inbound messages into:
   - server method objects
   - success responses
   - error responses
 - route server requests to `CodexServerRequestHandler`
-- stream notifications via `AsyncStream`
+- stream notifications via `AsyncStream` over actor-managed fanout
 - fail pending requests on disconnect or receive-loop failure
+- transparently retry retryable overload errors with bounded backoff
 
 This is the actual connection engine.
 
@@ -379,7 +380,7 @@ That ownership is reasonable. These types are app-facing but still rooted in con
 The current `CodexConnection` implementation already performs the core request lifecycle:
 
 - assigns a new `JSONRPCID`
-- stores a pending continuation keyed by id
+- stores an actor-owned one-shot waiter keyed by id
 - encodes and sends the request
 - completes or fails the pending entry when a matching response arrives
 
@@ -394,7 +395,18 @@ The current code fails all pending requests and finishes notification streams wh
 
 That is the right connection-level behavior for a first implementation because it prevents orphaned request continuations and dangling notification streams.
 
-### 3. Notification Fanout Is Generic And Decoupled
+### 3. Retryable Overload Handling Is Now In Place
+
+The current actor-based implementation now absorbs the documented `-32001` overload behavior directly inside `CodexConnection.request(...)`:
+
+- detect retryable overload server errors
+- apply bounded exponential backoff with jitter
+- preserve disconnect semantics while retrying
+- keep typed client wrappers thin
+
+That is the correct ownership boundary for this protocol behavior.
+
+### 4. Notification Fanout Is Generic And Decoupled
 
 `CodexConnection.notifications()` exposes an `AsyncStream<ServerNotificationEnvelope>`.
 
@@ -404,7 +416,9 @@ That is a sound connection-layer choice because:
 - consumers can subscribe independently
 - higher layers are not forced to understand raw JSON objects
 
-### 4. Server-Request Dispatch Is In The Right Place
+The current implementation uses actor-managed notification continuations behind that public stream API, so fanout stays decoupled without exposing the internal coordination mechanism.
+
+### 5. Server-Request Dispatch Is In The Right Place
 
 `CodexConnection` distinguishes inbound method objects with `id` from those without `id`, decodes server requests through `ServerRequestEnvelope`, and writes either:
 
@@ -413,7 +427,7 @@ That is a sound connection-layer choice because:
 
 That matches the app-server’s approval and elicitation model.
 
-### 5. `ServerRequestEnvelope` Matches The Current Schema Union
+### 6. `ServerRequestEnvelope` Matches The Current Schema Union
 
 Current explicit Swift cases:
 
@@ -511,38 +525,23 @@ Not yet explicitly modeled:
 
 These are not required for the first request-correlation slice, but they are part of the current server-push contract.
 
-### 5. Retry/Backoff Policy
+### 5. Isolation And `Sendable` Cleanup Around DTO Boundaries
 
-The docs and README require retry handling for retryable overloads, but the current connection layer only surfaces generic server errors through:
+The current actor refactor and test pass made the connection internals much cleaner, but the surrounding DTO and envelope layer still needs further concurrency cleanup.
 
-- `CodexConnectionError.serverError(JSONRPCErrorObject)`
-
-That means the protocol error can be observed, but the documented client behavior is not yet implemented.
+The remaining concurrency-focused gap is not request correlation. It is making sure the broader payload types used around notifications, server requests, and client DTOs are explicitly isolated or `Sendable` in a way that will hold up under future Swift 6 tightening.
 
 ## Open Gaps Against Milestone 2
 
 The current open Connection milestone tickets in `/Users/galew/Workspace/Codax/ROADMAP.md` are:
 
-- add retry and backoff policy for retryable server overload errors (`-32001`)
 - broaden `ServerNotificationEnvelope` beyond the current validation subset
-- add automated connection tests for success and error correlation, notification delivery, and dispatch behavior
+- continue expanding connection tests as notification and DTO coverage grows
+- clean up isolation and `Sendable` boundaries around surrounding DTOs and envelopes
 
 Those roadmap items match the repo and schema state well.
 
-### Gap 1: Retryable Overload Handling
-
-Current state:
-
-- generic JSON-RPC error decoding exists
-- no retry policy exists
-
-Expected connection-layer outcome:
-
-- identify retryable `-32001`
-- apply exponential backoff with jitter
-- keep this behavior inside the generic request path rather than leaking it into every typed client method
-
-### Gap 2: Notification Coverage Breadth
+### Gap 1: Notification Coverage Breadth
 
 Current state:
 
@@ -554,20 +553,18 @@ Expected connection-layer outcome:
 - add explicit cases for the next app-facing workflows
 - keep `unknown(method:raw:)` as the forward-compatible fallback
 
-### Gap 3: Automated Tests
+### Gap 2: Isolation And DTO Concurrency Hygiene
 
 Current state:
 
-- the connection actor has meaningful routing logic
-- no automated connection test coverage exists yet
+- the connection and stdio transport internals now use actor-based concurrency
+- core connection tests exist and pass
+- some surrounding DTO and envelope types still need explicit isolation/`Sendable` cleanup to fully align with the modern concurrency direction
 
 Expected connection-layer outcome:
 
-- verify success response correlation
-- verify error response correlation
-- verify notification delivery
-- verify server-request dispatch and response emission
-- verify disconnect behavior for pending requests and streams
+- continue narrowing concurrency warnings around payload types that cross actor and nonisolated boundaries
+- keep the connection actor’s public surface stable while making DTO ownership more explicit
 
 ## Recommended Connection Interpretation For This Repo
 
@@ -618,21 +615,22 @@ The notification side is intentionally partial. That is acceptable for the curre
 
 The next connection-layer priorities are:
 
-1. add retry/backoff handling for documented retryable overload errors
-2. add explicit notification cases for the next real app workflows, especially `serverRequest/resolved` and streamed deltas
-3. add automated tests that lock in request correlation, notification fanout, dispatch, and disconnect behavior
+1. add explicit notification cases for the next real app workflows, especially `serverRequest/resolved` and streamed deltas
+2. keep expanding automated coverage as the lifted notification surface grows
+3. clean up isolation and `Sendable` boundaries around surrounding DTOs and envelopes
 
 ## Validation Checklist
 
 This report was checked against the following repo truths:
 
 - `JSONRPCID` matches `RequestId.ts` as `string | number`.
-- `CodexConnection` is the layer currently responsible for request correlation, receive-loop handling, and inbound routing.
+- `CodexConnection` is the layer currently responsible for request correlation, retry/backoff, receive-loop handling, and inbound routing.
 - `ServerRequestEnvelope` was compared against the full `ServerRequest.ts` union and covers all current variants.
 - `ServerNotificationEnvelope` was compared against the full `ServerNotification.ts` union and is narrower by design.
 - The omitted `jsonrpc` field, stdio JSONL framing, initialize-then-initialized handshake, and `-32001` retry guidance are supported by both the official docs and the upstream README.
+- The current implementation now uses actor-owned request waiters and actor-managed notification fanout rather than lock-backed pending continuations.
 - The `serverRequest/resolved` cleanup semantics are documented upstream and remain an explicit notification-coverage gap in the current Swift layer.
-- The remaining work stated here matches the open Milestone 2 tickets in `/Users/galew/Workspace/Codax/ROADMAP.md`.
+- The remaining work stated here matches the current Milestone 2 focus in `/Users/galew/Workspace/Codax/ROADMAP.md`.
 
 ## Files Reviewed
 

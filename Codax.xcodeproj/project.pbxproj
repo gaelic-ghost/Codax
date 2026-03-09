@@ -39,11 +39,10 @@
 			path = Codax;
 			sourceTree = "<group>";
 		};
-		49C635B02F5D9DD400BDA18D /* codex-schemas */ = {
+		49BD911A2F5F91F9004A63F7 /* codex-schemas */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			name = "codex-schemas";
-			path = "../codex-schemas";
-			sourceTree = SOURCE_ROOT;
+			path = "codex-schemas";
+			sourceTree = "<group>";
 		};
 		49C635B22F5DA26000BDA18D /* Docs */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -86,8 +85,8 @@
 				49C635F82F5DFD1100BDA18D /* LICENSE */,
 				490E23A82F5CCA8A00972F32 /* Codax */,
 				49C635B92F5DA5F900BDA18D /* CodaxTests */,
+				49BD911A2F5F91F9004A63F7 /* codex-schemas */,
 				490E23A72F5CCA8A00972F32 /* Products */,
-				49C635B02F5D9DD400BDA18D /* codex-schemas */,
 			);
 			sourceTree = "<group>";
 		};
@@ -141,6 +140,7 @@
 				49C635BD2F5DA5F900BDA18D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
+				49BD911A2F5F91F9004A63F7 /* codex-schemas */,
 				49C635B92F5DA5F900BDA18D /* CodaxTests */,
 			);
 			name = CodaxTests;

@@ -35,8 +35,7 @@
 - [ ] Milestone 16: Schema Diff-Check Automation (Script or SPM/XC Plugin)
 - [ ] Milestone 17: Performance Improvements (AppKit Views)
 - [ ] Milestone 18: Performance Improvements (Local TTS Engine)
-- [ ] Milestone 19: DX Improvements (Cleaner Concurrency Impl)
-- [ ] Milestone 20: Reliability/DX Improvements (swift-service-lifecycle)
+- [ ] Milestone 19: DX Improvements (Various)
 
 ## Milestone 0: Foundation
 
@@ -403,7 +402,7 @@ Exit Criteria:
 
 - [ ] Codax can offer a viable local narration path for supported use cases without breaking the hosted-first speech workflow.
 
-## Milestone 19: DX Improvements (Cleaner Concurrency Impl)
+## Milestone 19: DX Improvements (Various)
 
 Scope:
 
@@ -415,21 +414,9 @@ Tickets:
 - [x] Refactor `StdioCodexTransport` to an actor-based stdio transport implementation.
 - [ ] Continue reducing concurrency warnings and isolation mismatches in surrounding DTOs and envelopes.
 - [ ] Evaluate additional AsyncAlgorithms operators only where they materially simplify real code paths.
+- [ ] Evaluate whether stderr/log snapshot buffering should remain in `CodexProcess` or move to a narrower diagnostics helper if process ownership grows further.
+- [ ] Evaluate swift-service-lifecycle for handling startup and graceful shutdown of long-lived services, either by wrapping individually in `Service` conformance, or also composing as `ServiceGroup`, depending.
 
 Exit Criteria:
 
 - [ ] Concurrency-sensitive transport and connection code is actor-isolated, readable, and warning-clean under the project’s modern Swift concurrency settings.
-
-## Milestone 20: Reliability/DX Improvements (swift-service-lifecycle)
-
-Scope:
-
-- [ ] Setup swift-service-lifecycle to handle startup and graceful shutdown of long-lived services, either by wrapping individually in `Service` conformance, or also composing as `ServiceGroup`, depending.
-
-Tickets:
-
-- [ ] Evaluate whether stderr/log snapshot buffering should remain in `CodexProcess` or move to a narrower diagnostics helper if process ownership grows further.
-
-Exit Criteria:
-
-- [ ]

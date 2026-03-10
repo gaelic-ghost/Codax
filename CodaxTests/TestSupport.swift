@@ -22,16 +22,21 @@ func waitForCondition(
 
 func makeProbe(
 	versionOutput: CodexCLIProbe.CommandOutput,
-	whichOutput: CodexCLIProbe.CommandOutput
+	resolvedPath: String? = "/usr/local/bin/codex"
 ) -> CodexCLIProbe {
-	CodexCLIProbe { executableURL, arguments in
-		switch (executableURL.path, arguments) {
-			case ("/usr/bin/env", ["codex", "--version"]):
-				return versionOutput
-			case ("/usr/bin/which", ["codex"]):
-				return whichOutput
-			default:
-				throw TestFailure(message: "Unexpected command: \(executableURL.path) \(arguments)")
+	CodexCLIProbe(
+		runCommand: { executableURL, arguments in
+			switch (executableURL.path, arguments) {
+				case let (path, ["--version"]) where path == resolvedPath:
+					return versionOutput
+				case ("/usr/bin/env", ["codex", "--version"]) where resolvedPath == nil:
+					return versionOutput
+				default:
+					throw TestFailure(message: "Unexpected command: \(executableURL.path) \(arguments)")
+			}
+		},
+		resolveExecutablePath: {
+			resolvedPath
 		}
-	}
+	)
 }

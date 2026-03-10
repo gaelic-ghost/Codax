@@ -36,8 +36,9 @@ public actor CodexProcess {
 	private let maxRetainedStderrBytes = 16_384
 
 	public init() {
-		self.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-		self.baseArguments = ["codex", "app-server", "--listen", "stdio://"]
+		let launchCommand = Self.defaultLaunchCommand()
+		self.executableURL = launchCommand.executableURL
+		self.baseArguments = launchCommand.arguments
 		self.makeStdioTransport = { input, output in
 			StdioCodexTransport(input: input, output: output)
 		}
@@ -184,6 +185,20 @@ public actor CodexProcess {
 }
 
 private extension CodexProcess {
+	static func defaultLaunchCommand() -> (executableURL: URL, arguments: [String]) {
+		if let resolvedExecutablePath = CodexCLIProbe.defaultResolveExecutablePath() {
+			return (
+				URL(fileURLWithPath: resolvedExecutablePath),
+				["app-server", "--listen", "stdio://"]
+			)
+		}
+
+		return (
+			URL(fileURLWithPath: "/usr/bin/env"),
+			["codex", "app-server", "--listen", "stdio://"]
+		)
+	}
+
 	func resetDiagnostics() {
 		stderrBuffer.removeAll(keepingCapacity: false)
 		stderrWasTruncated = false

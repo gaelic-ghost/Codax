@@ -41,6 +41,8 @@ public enum CodexCLICompatibility: Sendable, Equatable {
 }
 
 public struct CodexCLIProbe: Sendable {
+	public typealias ExecutableResolver = @Sendable () -> String?
+
 	public struct CommandAttemptResult: Sendable, Equatable {
 		public let executablePath: String
 		public let arguments: [String]
@@ -134,19 +136,22 @@ public struct CodexCLIProbe: Sendable {
 	public typealias CommandRunner = @Sendable (_ executableURL: URL, _ arguments: [String]) async throws -> CommandOutput
 
 	private let runCommand: CommandRunner
+	private let resolveExecutablePath: ExecutableResolver
 
-	public init(runCommand: @escaping CommandRunner = Self.liveRunCommand) {
+	public init(
+		runCommand: @escaping CommandRunner = Self.liveRunCommand,
+		resolveExecutablePath: @escaping ExecutableResolver = Self.defaultResolveExecutablePath
+	) {
 		self.runCommand = runCommand
+		self.resolveExecutablePath = resolveExecutablePath
 	}
 
 	public func probeCompatibility() async -> CodexCLICompatibility {
-		let codexPath = await detectCodexPath()
+		let codexPath = detectCodexPath()
+		let command = versionCommand(for: codexPath)
 
 		do {
-			let output = try await runCommand(
-				URL(fileURLWithPath: "/usr/bin/env"),
-				["codex", "--version"]
-			)
+			let output = try await runCommand(command.executableURL, command.arguments)
 			let text = output.combinedText
 			guard let version = Self.parseFirstSemanticVersion(in: text) else {
 				return .unsupported(
@@ -172,13 +177,15 @@ public struct CodexCLIProbe: Sendable {
 				version: nil,
 				path: codexPath,
 				supportedRange: Self.supportedRangeDescription,
-				reason: "Could not run `codex --version`: \(error.localizedDescription)"
+				reason: codexPath == nil
+					? "Could not find `codex` in the inherited PATH or the supported Homebrew/npm/pnpm install locations."
+					: "Could not run `\(codexPath!) --version`: \(error.localizedDescription)"
 			)
 		}
 	}
 
 	public func debugProbeCompatibility() async -> DebugSnapshot {
-		let codexPath = await detectCodexPath()
+		let codexPath = detectCodexPath()
 		var attempts: [CommandAttemptResult] = []
 
 		let envAttempt = await runAttempt(
@@ -187,7 +194,7 @@ public struct CodexCLIProbe: Sendable {
 		)
 		attempts.append(envAttempt)
 
-		for candidate in Self.directProbeCandidates {
+		for candidate in Self.debugCandidatePaths(resolvedPath: codexPath) {
 			attempts.append(
 				await runAttempt(
 					executableURL: URL(fileURLWithPath: candidate),
@@ -208,10 +215,6 @@ public struct CodexCLIProbe: Sendable {
 
 extension CodexCLIProbe {
 	static let supportedRangeDescription = "0.111.x and 0.112.x"
-	static let directProbeCandidates = [
-		"/opt/homebrew/bin/codex",
-		"/usr/local/bin/codex",
-	]
 
 	static func isSupported(version: CodexCLIVersion) -> Bool {
 		version.major == 0 && (version.minor == 111 || version.minor == 112)
@@ -240,20 +243,101 @@ extension CodexCLIProbe {
 		return CodexCLIVersion(major: major, minor: minor, patch: patch)
 	}
 
-	private func detectCodexPath() async -> String? {
-		do {
-			let output = try await runCommand(
-				URL(fileURLWithPath: "/usr/bin/which"),
-				["codex"]
-			)
-			guard output.status == 0 else { return nil }
-			return output.stdout
-				.split(whereSeparator: \.isNewline)
-				.map(String.init)
-				.first
-		} catch {
-			return nil
+	public static func defaultResolveExecutablePath() -> String? {
+		resolvedExecutablePath()
+	}
+
+	static func resolvedExecutablePath(
+		environment: [String: String] = ProcessInfo.processInfo.environment,
+		homeDirectoryPath: String = NSHomeDirectory(),
+		isExecutableFile: @escaping @Sendable (String) -> Bool = { FileManager.default.isExecutableFile(atPath: $0) },
+		directoryEntries: @escaping @Sendable (String) -> [String] = { path in
+			(try? FileManager.default.contentsOfDirectory(atPath: path)) ?? []
 		}
+	) -> String? {
+		for candidate in executableCandidates(
+			environment: environment,
+			homeDirectoryPath: homeDirectoryPath,
+			directoryEntries: directoryEntries
+		) where isExecutableFile(candidate) {
+			return candidate
+		}
+		return nil
+	}
+
+	static func executableCandidates(
+		environment: [String: String] = ProcessInfo.processInfo.environment,
+		homeDirectoryPath: String = NSHomeDirectory(),
+		directoryEntries: @escaping @Sendable (String) -> [String] = { path in
+			(try? FileManager.default.contentsOfDirectory(atPath: path)) ?? []
+		}
+	) -> [String] {
+		var candidates: [String] = []
+		var seen = Set<String>()
+
+		func append(_ path: String) {
+			guard seen.insert(path).inserted else { return }
+			candidates.append(path)
+		}
+
+		if let path = environment["PATH"] {
+			for directory in path.split(separator: ":").map(String.init) where !directory.isEmpty {
+				append((directory as NSString).appendingPathComponent("codex"))
+			}
+		}
+
+		for directory in [
+			"/opt/homebrew/bin",
+			"/usr/local/bin",
+			(homeDirectoryPath as NSString).appendingPathComponent("Library/pnpm"),
+			(homeDirectoryPath as NSString).appendingPathComponent(".local/share/pnpm"),
+			(homeDirectoryPath as NSString).appendingPathComponent(".npm-global/bin"),
+			(homeDirectoryPath as NSString).appendingPathComponent(".volta/bin"),
+		] {
+			append((directory as NSString).appendingPathComponent("codex"))
+		}
+
+		let nvmVersionsDirectory = (homeDirectoryPath as NSString).appendingPathComponent(".nvm/versions/node")
+		for versionDirectory in directoryEntries(nvmVersionsDirectory).sorted(by: >) {
+			let candidate = ((nvmVersionsDirectory as NSString).appendingPathComponent(versionDirectory) as NSString)
+				.appendingPathComponent("bin/codex")
+			append(candidate)
+		}
+
+		return candidates
+	}
+
+	private func detectCodexPath() -> String? {
+		resolveExecutablePath()
+	}
+
+	private func versionCommand(for resolvedExecutablePath: String?) -> (executableURL: URL, arguments: [String]) {
+		if let resolvedExecutablePath {
+			return (URL(fileURLWithPath: resolvedExecutablePath), ["--version"])
+		}
+
+		return (URL(fileURLWithPath: "/usr/bin/env"), ["codex", "--version"])
+	}
+
+	static func debugCandidatePaths(resolvedPath: String?) -> [String] {
+		var candidates: [String] = []
+		var seen = Set<String>()
+
+		func append(_ path: String) {
+			guard seen.insert(path).inserted else { return }
+			candidates.append(path)
+		}
+
+		if let resolvedPath {
+			append(resolvedPath)
+		}
+		append("/opt/homebrew/bin/codex")
+		append("/usr/local/bin/codex")
+		append((NSHomeDirectory() as NSString).appendingPathComponent("Library/pnpm/codex"))
+		append((NSHomeDirectory() as NSString).appendingPathComponent(".local/share/pnpm/codex"))
+		append((NSHomeDirectory() as NSString).appendingPathComponent(".npm-global/bin/codex"))
+		append((NSHomeDirectory() as NSString).appendingPathComponent(".volta/bin/codex"))
+		return candidates
 	}
 
 	private func runAttempt(executableURL: URL, arguments: [String]) async -> CommandAttemptResult {

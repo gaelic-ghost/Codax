@@ -8,7 +8,7 @@ struct CodaxOrchestratorTests {
 		let orchestrator = CodaxOrchestrator(
 			compatibilityProbe: makeProbe(
 				versionOutput: .init(status: 0, stdout: "codex-cli 0.111.9\n", stderr: ""),
-				whichOutput: .init(status: 0, stdout: "/usr/local/bin/codex\n", stderr: "")
+				resolvedPath: "/usr/local/bin/codex"
 			),
 			runtimeFactory: {
 				throw TestFailure(message: "Runtime factory should not be called.")
@@ -31,7 +31,7 @@ struct CodaxOrchestratorTests {
 		let orchestrator = CodaxOrchestrator(
 			compatibilityProbe: makeProbe(
 				versionOutput: .init(status: 0, stdout: "codex-cli 0.113.0\n", stderr: ""),
-				whichOutput: .init(status: 0, stdout: "/usr/local/bin/codex\n", stderr: "")
+				resolvedPath: "/usr/local/bin/codex"
 			),
 			runtimeFactory: {
 				await factory.markStarted()
@@ -318,7 +318,7 @@ private func makeConnectedOrchestrator(
 	CodaxOrchestrator(
 		compatibilityProbe: makeProbe(
 			versionOutput: .init(status: 0, stdout: "codex-cli 0.112.0\n", stderr: ""),
-			whichOutput: .init(status: 0, stdout: "/usr/local/bin/codex\n", stderr: "")
+			resolvedPath: "/usr/local/bin/codex"
 		),
 		runtimeFactory: {
 			await factory?.markStarted()

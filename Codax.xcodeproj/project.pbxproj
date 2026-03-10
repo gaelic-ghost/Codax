@@ -12,6 +12,7 @@
 		490E23C32F5CCE8900972F32 /* CONTRIBUTING.md in Resources */ = {isa = PBXBuildFile; fileRef = 490E23C22F5CCE8900972F32 /* CONTRIBUTING.md */; };
 		49C635F92F5DFD1100BDA18D /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 49C635F82F5DFD1100BDA18D /* LICENSE */; };
 		49C636062F5E552D00BDA18D /* AsyncAlgorithms in Frameworks */ = {isa = PBXBuildFile; productRef = 49C636052F5E552D00BDA18D /* AsyncAlgorithms */; };
+		49F3396C2F60A3C500287536 /* AGENTS.md in Resources */ = {isa = PBXBuildFile; fileRef = 49F3396B2F60A3C500287536 /* AGENTS.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -32,6 +33,7 @@
 		49C635B82F5DA5F900BDA18D /* CodaxTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodaxTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		49C635F82F5DFD1100BDA18D /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		49F339562F60498700287536 /* Codax.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = Codax.xctestplan; sourceTree = "<group>"; };
+		49F3396B2F60A3C500287536 /* AGENTS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AGENTS.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -79,11 +81,12 @@
 		490E239D2F5CCA8A00972F32 = {
 			isa = PBXGroup;
 			children = (
-				49F339562F60498700287536 /* Codax.xctestplan */,
 				49C635B22F5DA26000BDA18D /* Docs */,
+				49F339562F60498700287536 /* Codax.xctestplan */,
+				49F3396B2F60A3C500287536 /* AGENTS.md */,
 				490E23C22F5CCE8900972F32 /* CONTRIBUTING.md */,
-				490E23B82F5CCB1300972F32 /* ROADMAP.md */,
 				490E23B62F5CCB0100972F32 /* README.md */,
+				490E23B82F5CCB1300972F32 /* ROADMAP.md */,
 				49C635F82F5DFD1100BDA18D /* LICENSE */,
 				490E23A82F5CCA8A00972F32 /* Codax */,
 				49C635B92F5DA5F900BDA18D /* CodaxTests */,
@@ -203,6 +206,7 @@
 				490E23B92F5CCB1300972F32 /* ROADMAP.md in Resources */,
 				49C635F92F5DFD1100BDA18D /* LICENSE in Resources */,
 				490E23C32F5CCE8900972F32 /* CONTRIBUTING.md in Resources */,
+				49F3396C2F60A3C500287536 /* AGENTS.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

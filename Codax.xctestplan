@@ -1,0 +1,30 @@
+{
+  "configurations" : [
+    {
+      "id" : "232D832C-EA46-4777-BA5C-24303CAC2B24",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:Codax.xcodeproj",
+      "identifier" : "490E23A52F5CCA8A00972F32",
+      "name" : "Codax"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : false,
+      "target" : {
+        "containerPath" : "container:Codax.xcodeproj",
+        "identifier" : "49C635B72F5DA5F900BDA18D",
+        "name" : "CodaxTests"
+      }
+    }
+  ],
+  "version" : 1
+}

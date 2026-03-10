@@ -68,8 +68,9 @@ Tickets:
 - [x] Implement `CodexProcess` to launch `codex app-server --listen stdio://`.
 - [x] Implement actor-based `StdioCodexTransport` with newline-delimited framing and partial-buffer handling.
 - [x] Document websocket as experimental and unsupported only.
-- [ ] Add transport unit tests for framing, partial reads, EOF, and malformed frames.
-- [ ] Harden process lifecycle, cancellation, and stderr/log handling.
+- [x] Add transport unit tests for framing, partial reads, EOF, and malformed frames.
+- [x] Harden process lifecycle, cancellation, and stderr/log handling.
+- [ ] If websocket transport is added later, model it as another explicit `CodexProcess`-owned transport implementation rather than reopening a fake-generic transport seam.
 
 Exit criteria:
 
@@ -95,6 +96,7 @@ Tickets:
 Exit criteria:
 
 - [ ] The connection layer can sustain real request and response traffic and route inbound server traffic deterministically under test.
+- [ ] Keep `CodaxTests/` organized by layer so transport, connection, and orchestration coverage stay easy to find; only process-sensitive suites should opt into serialized execution.
 
 ## Milestone 3: Client
 
@@ -426,7 +428,7 @@ Scope:
 
 Tickets:
 
-- [ ]
+- [ ] Evaluate whether stderr/log snapshot buffering should remain in `CodexProcess` or move to a narrower diagnostics helper if process ownership grows further.
 
 Exit Criteria:
 

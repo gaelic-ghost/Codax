@@ -31,6 +31,7 @@
 		490E23C22F5CCE8900972F32 /* CONTRIBUTING.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CONTRIBUTING.md; sourceTree = "<group>"; };
 		49C635B82F5DA5F900BDA18D /* CodaxTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodaxTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		49C635F82F5DFD1100BDA18D /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
+		49F339562F60498700287536 /* Codax.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = Codax.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -78,6 +79,7 @@
 		490E239D2F5CCA8A00972F32 = {
 			isa = PBXGroup;
 			children = (
+				49F339562F60498700287536 /* Codax.xctestplan */,
 				49C635B22F5DA26000BDA18D /* Docs */,
 				490E23C22F5CCE8900972F32 /* CONTRIBUTING.md */,
 				490E23B82F5CCB1300972F32 /* ROADMAP.md */,

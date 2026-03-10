@@ -15,6 +15,7 @@ public actor StdioCodexTransport: CodexTransport {
 	private var partialBuffer = Data()
 	private var queuedMessages: [Data] = []
 	private var waitingReceiver: CheckedContinuation<Data, Error>?
+	private var terminalError: CodexTransportError?
 	private var closed = false
 
 	public init(input: FileHandle, output: FileHandle) {
@@ -49,6 +50,14 @@ public actor StdioCodexTransport: CodexTransport {
 			return queuedMessages.removeFirst()
 		}
 
+		if let terminalError {
+			throw terminalError
+		}
+
+		guard waitingReceiver == nil else {
+			throw CodexTransportError.receiveAlreadyPending
+		}
+
 		return try await withCheckedThrowingContinuation { continuation in
 			waitingReceiver = continuation
 		}
@@ -57,6 +66,9 @@ public actor StdioCodexTransport: CodexTransport {
 	public func close() async {
 		guard !closed else { return }
 		closed = true
+		terminalError = .closed
+		queuedMessages.removeAll()
+		partialBuffer.removeAll(keepingCapacity: false)
 		output.readabilityHandler = nil
 		if let waitingReceiver {
 			self.waitingReceiver = nil
@@ -70,13 +82,11 @@ public actor StdioCodexTransport: CodexTransport {
 		guard !closed else { return }
 
 		if data.isEmpty {
-			if !partialBuffer.isEmpty {
-				queue(partialBuffer)
-				partialBuffer.removeAll(keepingCapacity: false)
-			}
+			terminalError = partialBuffer.isEmpty ? .endOfStream : .invalidFrame
+			partialBuffer.removeAll(keepingCapacity: false)
 			if let waitingReceiver {
 				self.waitingReceiver = nil
-				waitingReceiver.resume(throwing: CodexTransportError.endOfStream)
+				waitingReceiver.resume(throwing: terminalError ?? CodexTransportError.endOfStream)
 			}
 			return
 		}

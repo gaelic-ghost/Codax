@@ -634,7 +634,7 @@ Keep responsibility minimal:
 
 No schema DTOs should live here.
 
-The current stdio implementation, `StdioCodexTransport`, is now actor-based rather than a mutable transport class, which keeps the framing buffer and receive queue inside Swift concurrency isolation instead of relying on ad hoc shared mutable state.
+The current stdio implementation, `StdioCodexTransport`, is now actor-based rather than a mutable transport class, which keeps the framing buffer and receive queue inside Swift concurrency isolation instead of relying on ad hoc shared mutable state. The current hardening pass also makes EOF and closure behavior explicit: clean EOF now terminates receive with `endOfStream`, EOF with a leftover partial frame now fails with `invalidFrame`, and concurrent `receive()` calls are rejected deterministically instead of relying on undefined continuation behavior.
 
 ### `CodexConnection`
 
@@ -685,7 +685,7 @@ With the stdio-first transport slice in place, the safest next order is:
 
 1. Expand `ServerNotificationEnvelope` toward the next app-facing workflows.
 2. Implement a concrete `CodexServerRequestHandler` for approvals, elicitation, and auth refresh.
-3. Add a test target or package-based harness for automated transport tests.
+3. Extend the new `CodaxTests/Transport/` suite as more notification and lifecycle cases become product-relevant.
 4. Lift the transport into `CodaxOrchestrator` for connect/login/thread startup flows.
 
 ## Validation Checklist

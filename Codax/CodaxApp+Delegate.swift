@@ -5,8 +5,9 @@
 //  Created by Gale Williams on 3/10/26.
 //
 
-import Foundation
+import AppKit
+import Combine
 
-final class CodaxAppDelegate {
+final class CodaxAppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
 
 }

@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct DetailView: View {
+	@Environment(\.scenePhase) private var scenePhase
 	@Environment(CodaxOrchestrator.self) private var orchestrator
 	@State private var vm = DetailViewModel()
 

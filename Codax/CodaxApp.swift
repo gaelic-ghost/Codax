@@ -9,7 +9,11 @@ import SwiftUI
 
 @main
 struct CodaxApp: App {
-
+	@NSApplicationDelegateAdaptor private var appDelegate: CodaxAppDelegate
+		// `scenePhase` at `App` level is an aggregate
+		// ...of all scenes.
+		// See docs for more information.
+	@Environment(\.scenePhase) private var aggScenePhase
 	@State private var orchestrator = CodaxOrchestrator()
 	@State private var columnVis = NavigationSplitViewVisibility.automatic
 	@State private var prefferedColumn = NavigationSplitViewColumn.content

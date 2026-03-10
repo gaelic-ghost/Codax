@@ -22,6 +22,10 @@ public struct CodexCLIVersion: Sendable, Codable, Equatable, Comparable, CustomS
 		"\(major).\(minor).\(patch)"
 	}
 
+	public var displayString: String {
+		description
+	}
+
 	public static func < (lhs: CodexCLIVersion, rhs: CodexCLIVersion) -> Bool {
 		if lhs.major != rhs.major { return lhs.major < rhs.major }
 		if lhs.minor != rhs.minor { return lhs.minor < rhs.minor }

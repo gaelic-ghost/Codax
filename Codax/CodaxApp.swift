@@ -9,9 +9,23 @@ import SwiftUI
 
 @main
 struct CodaxApp: App {
+
+	@State private var orchestrator = CodaxOrchestrator()
+	@State private var columnVis = NavigationSplitViewVisibility.automatic
+	@State private var prefferedColumn = NavigationSplitViewColumn.content
+
     var body: some Scene {
 		Window("Codax", id: "main-window") {
-			ContentView()
+			NavigationSplitView(
+				columnVisibility: $columnVis,
+				preferredCompactColumn: $prefferedColumn) {
+					SidebarView()
+				} content: {
+					ContentView()
+				} detail: {
+					DetailView()
+				}
 		}
+		.environment(orchestrator)
     }
 }

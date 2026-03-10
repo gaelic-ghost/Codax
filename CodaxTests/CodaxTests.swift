@@ -397,6 +397,165 @@ struct CodaxTests {
 			}
 		}
 	}
+
+	@Test func parsesSupportedVersionsFromPlainOutput() async throws {
+		#expect(
+			CodexCLIProbe.parseFirstSemanticVersion(in: "codex-cli 0.111.4") ==
+			CodexCLIVersion(major: 0, minor: 111, patch: 4)
+		)
+		#expect(
+			CodexCLIProbe.parseFirstSemanticVersion(in: "codex-cli 0.112.0") ==
+			CodexCLIVersion(major: 0, minor: 112, patch: 0)
+		)
+	}
+
+	@Test func parsesVersionFromNoisyOutput() async throws {
+		let output = """
+		WARNING: proceeding, even though we could not update PATH: Operation not permitted (os error 1)
+		codex-cli 0.112.0
+		"""
+		#expect(
+			CodexCLIProbe.parseFirstSemanticVersion(in: output) ==
+			CodexCLIVersion(major: 0, minor: 112, patch: 0)
+		)
+	}
+
+	@Test func probeReportsSupportedCompatibility() async throws {
+		let probe = makeProbe(
+			versionOutput: .init(status: 0, stdout: "codex-cli 0.112.0\n", stderr: ""),
+			whichOutput: .init(status: 0, stdout: "/usr/local/bin/codex\n", stderr: "")
+		)
+
+		let compatibility = await probe.probeCompatibility()
+		#expect(
+			compatibility ==
+			.supported(
+				version: CodexCLIVersion(major: 0, minor: 112, patch: 0),
+				path: "/usr/local/bin/codex"
+			)
+		)
+	}
+
+	@Test func probeReportsUnsupportedVersion() async throws {
+		let probe = makeProbe(
+			versionOutput: .init(status: 0, stdout: "codex-cli 0.113.0\n", stderr: ""),
+			whichOutput: .init(status: 0, stdout: "/opt/homebrew/bin/codex\n", stderr: "")
+		)
+
+		let compatibility = await probe.probeCompatibility()
+		guard case let .unsupported(version, path, supportedRange, reason) = compatibility else {
+			#expect(Bool(false))
+			return
+		}
+
+		#expect(version == CodexCLIVersion(major: 0, minor: 113, patch: 0))
+		#expect(path == "/opt/homebrew/bin/codex")
+		#expect(supportedRange == "0.111.x and 0.112.x")
+		#expect(reason.contains("supports Codex CLI"))
+	}
+
+	@Test func probeRejectsUnparseableVersionOutput() async throws {
+		let probe = makeProbe(
+			versionOutput: .init(status: 0, stdout: "codex-cli version unknown\n", stderr: ""),
+			whichOutput: .init(status: 0, stdout: "/usr/local/bin/codex\n", stderr: "")
+		)
+
+		let compatibility = await probe.probeCompatibility()
+		guard case let .unsupported(version, path, supportedRange, reason) = compatibility else {
+			#expect(Bool(false))
+			return
+		}
+
+		#expect(version == nil)
+		#expect(path == "/usr/local/bin/codex")
+		#expect(supportedRange == "0.111.x and 0.112.x")
+		#expect(reason.contains("Could not parse"))
+	}
+
+	@Test func probeRejectsMissingCodexCommand() async throws {
+		let probe = CodexCLIProbe { executableURL, arguments in
+			if executableURL.path == "/usr/bin/which" && arguments == ["codex"] {
+				return .init(status: 1, stdout: "", stderr: "")
+			}
+
+			throw NSError(
+				domain: "CodaxTests",
+				code: 1,
+				userInfo: [NSLocalizedDescriptionKey: "No such file or directory"]
+			)
+		}
+
+		let compatibility = await probe.probeCompatibility()
+		guard case let .unsupported(version, path, supportedRange, reason) = compatibility else {
+			#expect(Bool(false))
+			return
+		}
+
+		#expect(version == nil)
+		#expect(path == nil)
+		#expect(supportedRange == "0.111.x and 0.112.x")
+		#expect(reason.contains("Could not run"))
+	}
+
+	@Test func refreshCompatibilityUpdatesOrchestratorState() async throws {
+		let orchestrator = CodaxOrchestrator(
+			compatibilityProbe: makeProbe(
+				versionOutput: .init(status: 0, stdout: "codex-cli 0.111.9\n", stderr: ""),
+				whichOutput: .init(status: 0, stdout: "/usr/local/bin/codex\n", stderr: "")
+			)
+		)
+
+		await orchestrator.refreshCompatibility()
+
+		#expect(
+			orchestrator.compatibility ==
+			.supported(
+				version: CodexCLIVersion(major: 0, minor: 111, patch: 9),
+				path: "/usr/local/bin/codex"
+			)
+		)
+	}
+
+	@Test func connectDoesNotStartSessionWhenCompatibilityIsUnsupported() async throws {
+		let starter = TestSessionStarter()
+		let orchestrator = CodaxOrchestrator(
+			compatibilityProbe: makeProbe(
+				versionOutput: .init(status: 0, stdout: "codex-cli 0.113.0\n", stderr: ""),
+				whichOutput: .init(status: 0, stdout: "/usr/local/bin/codex\n", stderr: "")
+			),
+			sessionStarter: {
+				await starter.markStarted()
+			}
+		)
+
+		await orchestrator.connect()
+
+		#expect(await starter.callCount() == 0)
+		#expect(orchestrator.connectionState == .disconnected)
+		guard case let .unsupported(version, _, _, _) = orchestrator.compatibility else {
+			#expect(Bool(false))
+			return
+		}
+		#expect(version == CodexCLIVersion(major: 0, minor: 113, patch: 0))
+	}
+
+	@Test func connectStartsSessionWhenCompatibilityIsSupported() async throws {
+		let starter = TestSessionStarter()
+		let orchestrator = CodaxOrchestrator(
+			compatibilityProbe: makeProbe(
+				versionOutput: .init(status: 0, stdout: "codex-cli 0.112.0\n", stderr: ""),
+				whichOutput: .init(status: 0, stdout: "/usr/local/bin/codex\n", stderr: "")
+			),
+			sessionStarter: {
+				await starter.markStarted()
+			}
+		)
+
+		await orchestrator.connect()
+
+		#expect(await starter.callCount() == 1)
+		#expect(orchestrator.connectionState == .connected)
+	}
 }
 
 private struct EchoParams: Sendable, Codable {
@@ -449,6 +608,18 @@ private actor TestSleeper {
 	func resumeNext() {
 		guard !continuations.isEmpty else { return }
 		continuations.removeFirst().resume()
+	}
+}
+
+private actor TestSessionStarter {
+	private var starts = 0
+
+	func markStarted() {
+		starts += 1
+	}
+
+	func callCount() -> Int {
+		starts
 	}
 }
 
@@ -547,4 +718,20 @@ private func rawID(from data: Data) throws -> Any {
 		throw TestFailure(message: "Expected id field in JSON-RPC message.")
 	}
 	return id
+}
+
+private func makeProbe(
+	versionOutput: CodexCLIProbe.CommandOutput,
+	whichOutput: CodexCLIProbe.CommandOutput
+) -> CodexCLIProbe {
+	CodexCLIProbe { executableURL, arguments in
+		switch (executableURL.path, arguments) {
+			case ("/usr/bin/env", ["codex", "--version"]):
+				return versionOutput
+			case ("/usr/bin/which", ["codex"]):
+				return whichOutput
+			default:
+				throw TestFailure(message: "Unexpected command: \(executableURL.path) \(arguments)")
+		}
+	}
 }

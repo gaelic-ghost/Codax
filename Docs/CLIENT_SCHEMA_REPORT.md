@@ -18,8 +18,7 @@ The main conclusion is:
   - broader method coverage
   - richer DTO modeling
   - validating current DTOs against real app-server payloads
-- There is also one important ownership drift to correct later:
-  - account and login DTOs used by `CodexClient` currently live under `AuthCoordinator+Types.swift`, not under the `Client` layer itself.
+- Account and login request/response DTO ownership now lives in `CodexClient+Account.swift`, while app-facing auth/account state remains under `Orchestration`.
 
 ## Scope And Boundary
 
@@ -261,39 +260,36 @@ This file is also structurally sound, but still schema-thin in several places:
 
 ### 5. `CodexClient+Account.swift`
 
-**Responsibility in theory**
+**Responsibility**
 
 - account-facing client DTOs
 
-**Current reality**
+**Current alignment**
 
-- the file exists, but it is empty
+- the file owns the account/login client DTOs used by:
+  - `readAccount(_:)`
+  - `startLogin(_:)`
+  - `cancelLogin(_:)`
+  - ChatGPT auth-token refresh request/response handling
 
-This is the clearest client-ownership gap in the current tree. The public account/login methods exist on `CodexClient`, but their params and responses are not owned by the `Client` layer yet.
+That is the correct ownership direction because these are client-facing request and response payloads, not orchestration policy types.
 
-### 6. `AuthCoordinator+Types.swift` Currently Owns Account/Login DTOs
+### 6. `AuthCoordinator+Types.swift` Still Owns App-Facing Auth State
 
 **File**
 
 - `/Users/galew/Workspace/Codax/Codax/Controllers/Orchestration/AuthCoordinator+Types.swift`
 
-**Current reality**
+**Current alignment**
 
-The following client method DTOs currently live under `Orchestration` instead of `Client`:
+This file now remains the home of app-facing auth/account state such as:
 
-- `GetAccountParams`
-- `GetAccountResponse`
-- `LoginAccountParams`
-- `LoginAccountResponse`
-- `CancelLoginAccountParams`
-- `CancelLoginAccountResponse`
+- `AuthMode`
+- `PlanType`
+- `LoginState`
+- `Account`
 
-This works today, but it is a genuine layer-boundary smell:
-
-- `CodexClient` is depending on `Orchestration` types for its own public request surface
-- `CodexClient+Account.swift` exists but does not yet own the account/login DTOs it implies
-
-That ownership drift should be called out explicitly in this report because it affects how trustworthy the current file layout is as a guide to the client contract.
+That remaining split is acceptable because these symbols reflect app-visible state and policy, not raw client request/response ownership.
 
 ## Schema-To-Swift Mapping For The Current Slice
 
@@ -395,14 +391,14 @@ The current client layer still relies on `JSONValue`-based placeholders in sever
 
 This is acceptable for a first slice, but the report should treat these as temporary typing, not as stable endpoint-complete modeling.
 
-### Where Ownership Is Misaligned
+### Where Ownership Is Still Split On Purpose
 
-The most notable ownership issue is account/login DTO placement:
+The account/auth area now has a deliberate split:
 
-- `CodexClient+Account.swift` is empty
-- the actual account/login request and response types live under `AuthCoordinator+Types.swift`
+- request and response DTOs live under `Client`
+- app-facing auth/account state lives under `Orchestration`
 
-That means the public client-facing API is partially modeled outside the `Client` layer, which weakens the clarity of the current file organization.
+That split is reasonable for the current architecture because it keeps wire payloads with `CodexClient` while leaving UI-facing state vocabulary where the orchestrator consumes it.
 
 ## Remaining Gaps And Future Coverage
 
@@ -416,7 +412,6 @@ The primary remaining Milestone 3 work is:
 
 More concretely, that means:
 
-- move account/login DTO ownership fully into the `Client` layer
 - flesh out currently empty or placeholder client files where they represent real method domains
 - decide which uncovered `ClientRequest.ts` groups are next priorities
 - refine nested thread/turn/tool/config payloads away from `JSONValue` where the schema is already stable enough to model directly
@@ -480,7 +475,7 @@ That matches the roadmap exactly. The `Client` layer is no longer conceptual sca
 - every request-style method documented above maps to a real `ClientRequest.ts` variant
 - `sendInitialized()` is correctly treated as `ClientNotification.ts`, not `ClientRequest.ts`
 - `CodexClient+Account.swift` and `CodexClient+Command.swift` are accurately described as empty placeholders
-- `AuthCoordinator+Types.swift` is accurately identified as the current home of account/login DTOs
+- `CodexClient+Account.swift` is now the canonical home of account/login client DTOs
 - `JSONValue`-based placeholder typing is explicitly called out where it materially affects the current client layer
 - layer boundaries stay consistent with `/Users/galew/Workspace/Codax/Docs/TRANSPORT_SCHEMA_REPORT.md`
 - layer boundaries stay consistent with `/Users/galew/Workspace/Codax/Docs/CONNECTION_SCHEMA_REPORT.md`

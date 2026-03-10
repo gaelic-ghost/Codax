@@ -149,7 +149,7 @@ The most useful contributions right now are likely to be in:
 ## Notes
 
 - Codax is currently an early, pre-alpha project.
-- The API is initially being built around Codex 0.111.0
-- Local Codex version and compatibility handling is still being built out.
+- The API was initially built around Codex 0.111.0 and is currently compatibility-gated for Codex CLI 0.111.x and 0.112.x.
+- Local Codex version and compatibility handling is still being built out beyond the current supported range.
 - The repository does not yet document a polished release or distribution workflow.
 - The current README is intentionally contributor-first because the architecture is further along than the end-user product surface.

@@ -192,7 +192,7 @@ That is an intentionally small but useful orchestration boundary. It suggests th
 
 That is a good ownership direction because the orchestrator should decide when auth needs to happen, while a coordinator can own how external auth is handed off.
 
-### 5. `AuthCoordinator+Types.swift` Mixes Auth State With Client DTOs
+### 5. `AuthCoordinator+Types.swift` Owns App-Facing Auth State
 
 This file currently owns:
 
@@ -201,22 +201,9 @@ This file currently owns:
 - `LoginState`
 - `Account`
 
-Those are naturally orchestration-facing types.
+Those are naturally orchestration-facing types and remain a sensible place for app-visible auth/account state.
 
-It also owns:
-
-- `GetAccountParams`
-- `GetAccountResponse`
-- `LoginAccountParams`
-- `LoginAccountResponse`
-- `CancelLoginAccountParams`
-- `CancelLoginAccountResponse`
-- `ChatgptAuthTokensRefreshParams`
-- `ChatgptAuthTokensRefreshResponse`
-
-Those are not purely orchestration types. They are request and response DTOs used by `CodexClient`, which means the current file reflects ownership drift between the `Client` and `Orchestration` layers.
-
-That drift is acceptable as a temporary state in an early repo, but it should be documented as drift rather than treated as the ideal boundary.
+The client-owned account/login request and response DTOs now live under `CodexClient+Account.swift`, which restores the intended boundary between wire payloads and orchestration state.
 
 ## Swift Ownership By Layer
 
@@ -376,16 +363,11 @@ There is currently no implemented behavior for:
 
 That missing behavior is expected in an early alpha, but it is still a major current gap.
 
-### 5. `AuthCoordinator+Types.swift` Contains Client-Layer DTOs
+### 5. Auth And Client Ownership Are Now Better Separated
 
-The client report already called this out, and it matters here too.
+The client-owned account/login DTOs now live under `Client`, while `AuthCoordinator+Types.swift` keeps the app-facing state types used by the orchestrator and notifications.
 
-`AuthCoordinator+Types.swift` currently contains request and response DTOs that are used directly by `CodexClient`. That creates two problems:
-
-- the `Client` layer depends on `Orchestration` types for part of its own public API
-- the orchestration folder looks more implemented than it really is because it contains DTO definitions that are not actually orchestration behavior
-
-This should remain documented as ownership drift, not as intended final structure.
+That is a cleaner boundary and removes one of the earlier ownership drifts between `Client` and `Orchestration`.
 
 ### 6. `ThreadSummary = Thread` Is Only Temporary
 
@@ -399,17 +381,19 @@ It couples app-level sidebar or summary state to:
 
 That shortcut is acceptable for Milestone 5 if it keeps implementation moving, but it should not be mistaken for a finished orchestration model.
 
-### 7. Compatibility Surfacing Is Not Yet Represented
+### 7. Compatibility Surfacing Is Now Seeded But Not Complete
 
 The roadmap places compatibility warnings and errors into `CodaxOrchestrator` or `AuthCoordinator` state as part of the Version Compatibility milestone.
 
-The current orchestration layer has no visible surface for:
+The current orchestration layer now has an initial compatibility-facing state surface, but it is not yet the full product behavior implied by later milestones.
+
+Remaining work still includes:
 
 - local Codex version status
 - unsupported-version blocking
 - compatibility warnings
 
-That is acceptable for the current placeholder state, but it is an upcoming orchestration concern and should be treated as part of the near-future contract.
+That is still an active orchestration concern and should be treated as part of the near-future contract.
 
 ## Recommended Next Slice
 

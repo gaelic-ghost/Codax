@@ -8,49 +8,47 @@
 import SwiftUI
 
 struct DetailView: View {
-	@Environment(\.scenePhase) private var scenePhase
 	@Environment(CodaxOrchestrator.self) private var orchestrator
-	@State private var vm = DetailViewModel()
 
 	var body: some View {
 		List {
 			Section("Compatibility") {
-				Text(vm.compatibilityText)
+				Text(compatibilityText)
 			}
 
 			Section("Thread") {
-				if vm.threadMetadata.isEmpty {
+				if threadMetadata.isEmpty {
 					Text("No active thread")
 						.foregroundStyle(.secondary)
 				} else {
-					ForEach(vm.threadMetadata, id: \.self) { row in
+					ForEach(threadMetadata, id: \.self) { row in
 						Text(row)
 					}
 				}
 			}
 
-			if let tokenUsageText = vm.tokenUsageText {
+			if let tokenUsageText = tokenUsageText {
 				Section("Token Usage") {
 					Text(tokenUsageText)
 				}
 			}
 
-			if !vm.planSteps.isEmpty {
+			if !orchestrator.activeTurnPlan.isEmpty {
 				Section("Plan") {
-					ForEach(Array(vm.planSteps.enumerated()), id: \.offset) { entry in
+					ForEach(Array(orchestrator.activeTurnPlan.enumerated()), id: \.offset) { entry in
 						Text("\(entry.element.step) (\(entry.element.status.rawValue))")
 					}
 				}
 			}
 
-			if let diffText = vm.diffText, !diffText.isEmpty {
+			if let diffText = orchestrator.activeTurnDiff, !diffText.isEmpty {
 				Section("Diff") {
 					Text(diffText)
 						.textSelection(.enabled)
 				}
 			}
 
-			if let activeError = vm.activeError {
+			if let activeError = orchestrator.activeError {
 				Section("Error") {
 					Text(activeError)
 						.foregroundStyle(.red)
@@ -58,9 +56,34 @@ struct DetailView: View {
 			}
 		}
 		.navigationTitle("Details")
-		.task(id: ObjectIdentifier(orchestrator)) {
-			vm.bind(to: orchestrator)
+	}
+
+	private var compatibilityText: String {
+		switch orchestrator.compatibility {
+		case .unknown:
+			return "Compatibility unknown."
+		case .checking:
+			return "Checking compatibility..."
+		case let .supported(version, _):
+			return "Supported: \(version.displayString)"
+		case let .unsupported(version, _, supportedRange, _):
+			return "Unsupported: \(version?.displayString ?? "unknown") (expected \(supportedRange))"
 		}
+	}
+
+	private var threadMetadata: [String] {
+		guard let thread = orchestrator.activeThread else { return [] }
+		return [
+			"Thread ID: \(thread.id)",
+			"Provider: \(thread.modelProvider)",
+			"CWD: \(thread.cwd)",
+			"CLI: \(thread.cliVersion)",
+		]
+	}
+
+	private var tokenUsageText: String? {
+		guard let usage = orchestrator.activeThreadTokenUsage else { return nil }
+		return "Tokens: \(usage.total.totalTokens) total, \(usage.total.inputTokens) input, \(usage.total.outputTokens) output"
 	}
 }
 

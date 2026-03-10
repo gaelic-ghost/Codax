@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct ContentView: View {
-	@Environment(\.scenePhase) private var scenePhase
 	@Environment(CodaxOrchestrator.self) private var orchestrator
 	@State private var vm = ContentViewModel()
 
@@ -16,24 +15,24 @@ struct ContentView: View {
 		@Bindable var bindableVM = vm
 
 		VStack(alignment: .leading, spacing: 16) {
-			Text(vm.connectionLabel)
+			Text(connectionLabel)
 				.font(.headline)
 
-			Text(vm.compatibilityDescription)
+			Text(compatibilityDescription)
 				.font(.subheadline)
 				.foregroundStyle(.secondary)
 
 			HStack {
 				Button("Connect") {
 					Task {
-						await vm.connect()
+						await orchestrator.connect()
 					}
 				}
-				.disabled(!vm.canConnect)
+				.disabled(orchestrator.connectionState != .disconnected)
 
 				Button("Start Thread") {
 					Task {
-						await vm.startThread()
+						await orchestrator.startThread()
 					}
 				}
 				.disabled(orchestrator.connectionState != .connected)
@@ -41,10 +40,10 @@ struct ContentView: View {
 
 			Divider()
 
-			Text(vm.activeThreadTitle)
+			Text(activeThreadTitle)
 				.font(.title3)
 
-			if vm.activeThreadHasTurns {
+			if !(orchestrator.activeThread?.turns.isEmpty ?? true) {
 				Text("Turn history available in the active thread.")
 					.foregroundStyle(.secondary)
 			} else {
@@ -57,12 +56,15 @@ struct ContentView: View {
 
 			Button("Send Turn") {
 				Task {
-					await vm.startTurn()
+					let input = bindableVM.turnInput
+					await orchestrator.startTurn(inputText: input)
+					guard orchestrator.activeError == nil else { return }
+					bindableVM.turnInput = ""
 				}
 			}
 			.disabled(orchestrator.activeThread == nil || bindableVM.turnInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
-			if let error = vm.activeError {
+			if let error = orchestrator.activeError {
 				Text(error)
 					.foregroundStyle(.red)
 			}
@@ -71,9 +73,43 @@ struct ContentView: View {
 		}
 		.padding()
 		.navigationTitle("Session")
-		.task(id: ObjectIdentifier(orchestrator)) {
-			vm.bind(to: orchestrator)
+	}
+
+	private var connectionLabel: String {
+		switch orchestrator.connectionState {
+		case .disconnected:
+			return "Disconnected"
+		case .connecting:
+			return "Connecting..."
+		case .connected:
+			return "Connected"
 		}
+	}
+
+	private var compatibilityDescription: String {
+		switch orchestrator.compatibility {
+		case .unknown:
+			return "Compatibility unknown."
+		case .checking:
+			return "Checking Codex CLI compatibility..."
+		case let .supported(version, path):
+			let location = path.map { " at \($0)" } ?? ""
+			return "Compatible with Codex CLI \(version.displayString)\(location)."
+		case let .unsupported(version, path, supportedRange, reason):
+			let versionText = version?.displayString ?? "unknown version"
+			let location = path.map { " at \($0)" } ?? ""
+			return "Unsupported Codex CLI \(versionText)\(location). Expected \(supportedRange). \(reason)"
+		}
+	}
+
+	private var activeThreadTitle: String {
+		if let name = orchestrator.activeThread?.name, !name.isEmpty {
+			return name
+		}
+		if let preview = orchestrator.activeThread?.preview, !preview.isEmpty {
+			return preview
+		}
+		return "No active thread"
 	}
 }
 

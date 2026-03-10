@@ -19,6 +19,7 @@ struct CodaxApp: App {
 	@State private var prefferedColumn = NavigationSplitViewColumn.content
 
     var body: some Scene {
+		// Primary `Scene` for main three-pane window.
 		Window("Codax", id: "main-window") {
 			NavigationSplitView(
 				columnVisibility: $columnVis,
@@ -31,5 +32,6 @@ struct CodaxApp: App {
 				}
 		}
 		.environment(orchestrator)
+
     }
 }

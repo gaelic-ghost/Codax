@@ -8,13 +8,11 @@
 import SwiftUI
 
 struct SidebarView: View {
-	@Environment(\.scenePhase) private var scenePhase
 	@Environment(CodaxOrchestrator.self) private var orchestrator
-	@State private var vm = SidebarViewModel()
 
 	var body: some View {
 		List(selection: selectionBinding) {
-			if let banner = vm.compatibilityBannerText {
+			if let banner = compatibilityBannerText {
 				Section("Compatibility") {
 					Text(banner)
 						.font(.caption)
@@ -22,13 +20,13 @@ struct SidebarView: View {
 			}
 
 			Section("Threads") {
-				if vm.threads.isEmpty {
+				if orchestrator.threads.isEmpty {
 					Text("No threads yet")
 						.foregroundStyle(.secondary)
 				} else {
-					ForEach(vm.threads, id: \.id) { thread in
-						Button(vm.displayTitle(for: thread)) {
-							vm.selectThread(id: thread.id)
+					ForEach(orchestrator.threads, id: \.id) { thread in
+						Button(displayTitle(for: thread)) {
+							orchestrator.selectThread(id: thread.id)
 						}
 						.buttonStyle(.plain)
 					}
@@ -39,23 +37,35 @@ struct SidebarView: View {
 		.toolbar {
 			Button("New Thread") {
 				Task {
-					await vm.startThread()
+					await orchestrator.startThread()
 				}
 			}
-		}
-		.task(id: ObjectIdentifier(orchestrator)) {
-			vm.bind(to: orchestrator)
 		}
 	}
 
 	private var selectionBinding: Binding<String?> {
 		Binding(
-			get: { vm.selectedThreadID },
+			get: { orchestrator.activeThread?.id },
 			set: { newValue in
 				guard let newValue else { return }
-				vm.selectThread(id: newValue)
+				orchestrator.selectThread(id: newValue)
 			}
 		)
+	}
+
+	private var compatibilityBannerText: String? {
+		guard case let .unsupported(version, _, supportedRange, reason) = orchestrator.compatibility else {
+			return nil
+		}
+		let versionText = version?.displayString ?? "unknown version"
+		return "Unsupported CLI \(versionText). Expected \(supportedRange). \(reason)"
+	}
+
+	private func displayTitle(for thread: ThreadSummary) -> String {
+		if let name = thread.name, !name.isEmpty {
+			return name
+		}
+		return thread.preview
 	}
 }
 

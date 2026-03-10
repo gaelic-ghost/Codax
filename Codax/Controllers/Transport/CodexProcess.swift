@@ -98,20 +98,20 @@ public actor CodexProcess {
 			}
 		}
 
-		do {
-			try process.run()
-		} catch {
-			stderrHandle.readabilityHandler = nil
-			drainStandardError(from: stderrHandle)
-			self.process = nil
-			standardErrorHandle = nil
-			phase = .failedLaunch
-			lifecycleState = .failedLaunch
-			let command = ([executableURL.path] + baseArguments + arguments).joined(separator: " ")
-			throw CodexProcessError.launchFailed(
-				command: command,
-				reason: error.localizedDescription,
-				stderrSnapshot: stderrSnapshot()
+			do {
+				try process.run()
+			} catch {
+				stderrHandle.readabilityHandler = nil
+				phase = .failedLaunch
+				lifecycleState = .failedLaunch
+				self.process = nil
+				self.transport = nil
+				standardErrorHandle = nil
+				let command = ([executableURL.path] + baseArguments + arguments).joined(separator: " ")
+				throw CodexProcessError.launchFailed(
+					command: command,
+					reason: error.localizedDescription,
+					stderrSnapshot: stderrSnapshot()
 			)
 		}
 

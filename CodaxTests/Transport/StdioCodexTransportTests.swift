@@ -226,16 +226,22 @@ struct StdioCodexTransportTests {
 			}
 		}
 
-		try await waitForCondition {
+		var secondReceiveError: CodexTransportError?
+		for _ in 0..<10 {
+			await Task.yield()
 			do {
 				_ = try await transport.receive()
-				return false
+				#expect(Bool(false))
 			} catch let error as CodexTransportError {
-				return error == .receiveAlreadyPending
+				if error == .receiveAlreadyPending {
+					secondReceiveError = error
+					break
+				}
 			} catch {
-				return false
+				#expect(Bool(false))
 			}
 		}
+		#expect(secondReceiveError == .receiveAlreadyPending)
 
 		await transport.close()
 		_ = await first.value

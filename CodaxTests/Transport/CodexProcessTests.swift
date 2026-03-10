@@ -47,6 +47,27 @@ struct CodexProcessTests {
 		}
 	}
 
+	@Test func launchFailureDoesNotBlockTerminationOrStateReads() async throws {
+		let process = CodexProcess(
+			executableURL: URL(fileURLWithPath: "/definitely/missing/codex"),
+			baseArguments: []
+		)
+
+		do {
+			_ = try await process.launchBundledCodex(arguments: [])
+			#expect(Bool(false))
+		} catch let error as CodexProcessError {
+			guard case .launchFailed = error else {
+				#expect(Bool(false))
+				return
+			}
+		}
+
+		#expect(await process.state() == .failedLaunch)
+		await process.terminate()
+		#expect(await process.state() == .idle)
+	}
+
 	@Test func terminateIsSafeBeforeAndAfterLaunch() async throws {
 		let process = makeSleepProcess()
 

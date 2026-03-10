@@ -70,7 +70,7 @@ struct CodaxOrchestratorTests {
 		await orchestrator.connect()
 		await orchestrator.startThread()
 
-		#expect(orchestrator.activeThread?.id == "thread-1")
+		#expect(orchestrator.activeThread?.codexId == "thread-1")
 		#expect(orchestrator.threads.count == 1)
 		#expect(await transport.sentMethods() == ["initialize", "initialized", "thread/start"])
 	}
@@ -84,7 +84,7 @@ struct CodaxOrchestratorTests {
 		await orchestrator.startTurn(inputText: "Hello, Codax")
 
 		#expect(orchestrator.activeThread?.turns.count == 1)
-		#expect(orchestrator.activeThread?.turns.first?.id == "turn-1")
+		#expect(orchestrator.activeThread?.turns.first?.codexId == "turn-1")
 		#expect(await transport.sentMethods() == ["initialize", "initialized", "thread/start", "turn/start"])
 	}
 
@@ -100,7 +100,7 @@ struct CodaxOrchestratorTests {
 
 		await orchestrator.loadThreads()
 
-		#expect(orchestrator.activeThread?.id == "thread-1")
+		#expect(orchestrator.activeThread?.codexId == "thread-1")
 		#expect(orchestrator.threads.count == 1)
 		#expect(await transport.sentMethods() == ["initialize", "initialized", "thread/start", "thread/read"])
 	}
@@ -123,7 +123,7 @@ struct CodaxOrchestratorTests {
 		orchestrator.handle(
 			.threadStatusChanged(
 				ThreadStatusChangedNotification(
-					threadId: "thread-1",
+					threadCodexId: "thread-1",
 					status: .active(activeFlags: [.waitingOnApproval])
 				)
 			)
@@ -131,8 +131,8 @@ struct CodaxOrchestratorTests {
 		orchestrator.handle(
 			.turnPlanUpdated(
 				TurnPlanUpdatedNotification(
-					threadId: "thread-1",
-					turnId: "turn-1",
+					threadCodexId: "thread-1",
+					turnCodexId: "turn-1",
 					explanation: "Testing",
 					plan: [TurnPlanStep(step: "Ship first slice", status: .inProgress)]
 				)
@@ -141,8 +141,8 @@ struct CodaxOrchestratorTests {
 		orchestrator.handle(
 			.turnDiffUpdated(
 				TurnDiffUpdatedNotification(
-					threadId: "thread-1",
-					turnId: "turn-1",
+					threadCodexId: "thread-1",
+					turnCodexId: "turn-1",
 					diff: "M ContentView.swift"
 				)
 			)
@@ -199,9 +199,11 @@ private actor OrchestratorTestTransport: CodexTransport {
 						"thread": thread,
 						"model": "gpt-5",
 						"modelProvider": "openai",
+						"serviceTier": NSNull(),
 						"cwd": "/tmp",
-						"approvalPolicy": NSNull(),
-						"sandbox": NSNull(),
+						"approvalPolicy": "on-request",
+						"sandbox": ["type": "dangerFullAccess"],
+						"reasoningEffort": NSNull(),
 					],
 				])
 			)

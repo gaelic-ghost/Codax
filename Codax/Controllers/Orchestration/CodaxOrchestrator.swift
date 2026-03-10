@@ -38,7 +38,7 @@ final class CodaxOrchestrator {
 	private var connection: CodexConnection?
 	private var client: CodexClient?
 	private var notificationTask: Task<Void, Never>?
-	private var activeThreadID: String?
+	private var activeThreadCodexId: String?
 
 	init() {
 		self.compatibilityProbe = CodexCLIProbe()
@@ -116,7 +116,7 @@ final class CodaxOrchestrator {
 		isLoadingThreads = true
 		defer { isLoadingThreads = false }
 
-		guard let threadID = activeThreadID ?? activeThread?.id else {
+		guard let threadCodexId = activeThreadCodexId ?? activeThread?.codexId else {
 			if let activeThread {
 				upsertThread(activeThread)
 			} else {
@@ -127,8 +127,8 @@ final class CodaxOrchestrator {
 		}
 
 		do {
-			let response = try await client.readThread(ThreadReadParams(threadId: threadID, includeTurns: true))
-			activeThreadID = response.thread.id
+			let response = try await client.readThread(ThreadReadParams(threadCodexId: threadCodexId, includeTurns: true))
+			activeThreadCodexId = response.thread.codexId
 			activeThread = response.thread
 			upsertThread(response.thread)
 		} catch {
@@ -160,7 +160,7 @@ final class CodaxOrchestrator {
 					persistExtendedHistory: false
 				)
 			)
-			activeThreadID = response.thread.id
+			activeThreadCodexId = response.thread.codexId
 			activeThread = response.thread
 			activeThreadTokenUsage = nil
 			activeTurnPlan = []
@@ -173,7 +173,7 @@ final class CodaxOrchestrator {
 
 	func startTurn(inputText: String) async {
 		guard let client, connectionState == .connected else { return }
-		guard let threadID = activeThread?.id ?? activeThreadID else { return }
+		guard let threadCodexId = activeThread?.codexId ?? activeThreadCodexId else { return }
 
 		let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
 		guard !trimmed.isEmpty else { return }
@@ -183,8 +183,8 @@ final class CodaxOrchestrator {
 		do {
 			let response = try await client.startTurn(
 				TurnStartParams(
-					threadId: threadID,
-					input: [.string(trimmed)],
+					threadCodexId: threadCodexId,
+					input: [.text(text: trimmed, textElements: [])],
 					cwd: nil,
 					approvalPolicy: nil,
 					sandboxPolicy: nil,
@@ -197,15 +197,15 @@ final class CodaxOrchestrator {
 					collaborationMode: nil
 				)
 			)
-			merge(turn: response.turn, intoThreadID: threadID)
+			merge(turn: response.turn, intoThreadCodexId: threadCodexId)
 		} catch {
 			activeError = error.localizedDescription
 		}
 	}
 
-	func selectThread(id: String) {
-		activeThreadID = id
-		if let thread = threads.first(where: { $0.id == id }) {
+	func selectThread(codexId: String) {
+		activeThreadCodexId = codexId
+		if let thread = threads.first(where: { $0.codexId == codexId }) {
 			activeThread = thread
 		}
 	}
@@ -214,7 +214,7 @@ final class CodaxOrchestrator {
 		switch notification {
 		case let .error(error):
 			activeError = error.error.message
-			merge(turnError: error.error, intoThreadID: error.threadId, turnID: error.turnId)
+			merge(turnError: error.error, intoThreadCodexId: error.threadCodexId, turnCodexId: error.turnCodexId)
 
 		case let .accountUpdated(notification):
 			if let authMode = notification.authMode {
@@ -235,31 +235,31 @@ final class CodaxOrchestrator {
 			}
 
 		case let .threadStarted(notification):
-			activeThreadID = notification.thread.id
+			activeThreadCodexId = notification.thread.codexId
 			activeThread = notification.thread
 			upsertThread(notification.thread)
 
 		case let .threadStatusChanged(notification):
-			updateThread(id: notification.threadId) { thread in
+			updateThread(codexId: notification.threadCodexId) { thread in
 				thread.status = notification.status
 			}
 
 		case let .threadTokenUsageUpdated(notification):
-			guard notification.threadId == activeThreadID || notification.threadId == activeThread?.id else { return }
+			guard notification.threadCodexId == activeThreadCodexId || notification.threadCodexId == activeThread?.codexId else { return }
 			activeThreadTokenUsage = notification.tokenUsage
 
 		case let .turnStarted(notification):
-			merge(turn: notification.turn, intoThreadID: notification.threadId)
+			merge(turn: notification.turn, intoThreadCodexId: notification.threadCodexId)
 
 		case let .turnCompleted(notification):
-			merge(turn: notification.turn, intoThreadID: notification.threadId)
+			merge(turn: notification.turn, intoThreadCodexId: notification.threadCodexId)
 
 		case let .turnPlanUpdated(notification):
-			guard notification.threadId == activeThreadID || notification.threadId == activeThread?.id else { return }
+			guard notification.threadCodexId == activeThreadCodexId || notification.threadCodexId == activeThread?.codexId else { return }
 			activeTurnPlan = notification.plan
 
 		case let .turnDiffUpdated(notification):
-			guard notification.threadId == activeThreadID || notification.threadId == activeThread?.id else { return }
+			guard notification.threadCodexId == activeThreadCodexId || notification.threadCodexId == activeThread?.codexId else { return }
 			activeTurnDiff = notification.diff
 
 		case .serverRequestResolved,
@@ -361,33 +361,33 @@ private extension CodaxOrchestrator {
 	}
 
 	func upsertThread(_ thread: Thread) {
-		if let index = threads.firstIndex(where: { $0.id == thread.id }) {
+		if let index = threads.firstIndex(where: { $0.codexId == thread.codexId }) {
 			threads[index] = thread
 		} else {
 			threads.append(thread)
 		}
 	}
 
-	func updateThread(id: String, mutation: (inout Thread) -> Void) {
-		if var activeThread, activeThread.id == id {
+	func updateThread(codexId: String, mutation: (inout Thread) -> Void) {
+		if var activeThread, activeThread.codexId == codexId {
 			mutation(&activeThread)
 			self.activeThread = activeThread
 			upsertThread(activeThread)
 			return
 		}
 
-		guard let index = threads.firstIndex(where: { $0.id == id }) else { return }
+		guard let index = threads.firstIndex(where: { $0.codexId == codexId }) else { return }
 		var thread = threads[index]
 		mutation(&thread)
 		threads[index] = thread
-		if activeThreadID == id {
+		if activeThreadCodexId == codexId {
 			activeThread = thread
 		}
 	}
 
-	func merge(turn: Turn, intoThreadID threadID: String) {
-		updateThread(id: threadID) { thread in
-			if let index = thread.turns.firstIndex(where: { $0.id == turn.id }) {
+	func merge(turn: Turn, intoThreadCodexId threadCodexId: String) {
+		updateThread(codexId: threadCodexId) { thread in
+			if let index = thread.turns.firstIndex(where: { $0.codexId == turn.codexId }) {
 				thread.turns[index] = turn
 			} else {
 				thread.turns.append(turn)
@@ -395,9 +395,9 @@ private extension CodaxOrchestrator {
 		}
 	}
 
-	func merge(turnError: TurnError, intoThreadID threadID: String, turnID: String) {
-		updateThread(id: threadID) { thread in
-			guard let index = thread.turns.firstIndex(where: { $0.id == turnID }) else { return }
+	func merge(turnError: TurnError, intoThreadCodexId threadCodexId: String, turnCodexId: String) {
+		updateThread(codexId: threadCodexId) { thread in
+			guard let index = thread.turns.firstIndex(where: { $0.codexId == turnCodexId }) else { return }
 			thread.turns[index].error = turnError
 		}
 	}

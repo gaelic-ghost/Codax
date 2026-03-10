@@ -9,17 +9,6 @@ import Foundation
 
 	// MARK: - Client Layer Server Response Types
 
-	// MARK: Client Typealiases
-
-public typealias AskForApproval = JSONValue
-public typealias SandboxMode = JSONValue
-public typealias SandboxPolicy = JSONValue
-public typealias Personality = JSONValue
-public typealias CollaborationMode = JSONValue
-public typealias DynamicToolCallOutputContentItem = JSONValue
-public typealias ServiceTier = String
-public typealias ReasoningEffort = String
-
 	// MARK: Client Inbound Message Envelopes
 
 public enum CodexInboundMessage: Sendable {

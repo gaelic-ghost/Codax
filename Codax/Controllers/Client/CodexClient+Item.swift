@@ -2,45 +2,43 @@
 //  CodexClient+Item.swift
 //  Codax
 //
-//  Created by Gale Williams on 3/8/26.
+//  Created by Codex on 3/10/26.
 //
 
 import Foundation
 
-	// MARK: - Client Layer `Item` Types
-
-public enum MessagePhase: String, Sendable, Codable, Equatable {
+public enum MessagePhase: String, Sendable, Codable, Equatable, Hashable {
 	case commentary
 	case finalAnswer = "final_answer"
 }
 
-public enum CommandExecutionStatus: String, Sendable, Codable, Equatable {
+public enum CommandExecutionStatus: String, Sendable, Codable, Equatable, Hashable {
 	case inProgress
 	case completed
 	case failed
 	case declined
 }
 
-public enum PatchApplyStatus: String, Sendable, Codable, Equatable {
+public enum PatchApplyStatus: String, Sendable, Codable, Equatable, Hashable {
 	case inProgress
 	case completed
 	case failed
 	case declined
 }
 
-public enum McpToolCallStatus: String, Sendable, Codable, Equatable {
+public enum McpToolCallStatus: String, Sendable, Codable, Equatable, Hashable {
 	case inProgress
 	case completed
 	case failed
 }
 
-public enum DynamicToolCallStatus: String, Sendable, Codable, Equatable {
+public enum DynamicToolCallStatus: String, Sendable, Codable, Equatable, Hashable {
 	case inProgress
 	case completed
 	case failed
 }
 
-public enum PatchChangeKind: Sendable, Codable, Equatable {
+public enum PatchChangeKind: Sendable, Codable, Equatable, Hashable {
 	case add
 	case delete
 	case update(movePath: String?)
@@ -82,7 +80,7 @@ public enum PatchChangeKind: Sendable, Codable, Equatable {
 	}
 }
 
-public enum WebSearchAction: Sendable, Codable, Equatable {
+public enum WebSearchAction: Sendable, Codable, Equatable, Hashable {
 	case search(query: String?, queries: [String]?)
 	case openPage(url: String?)
 	case findInPage(url: String?, pattern: String?)
@@ -143,103 +141,579 @@ public enum WebSearchAction: Sendable, Codable, Equatable {
 	}
 }
 
-public struct UserMessageItem: Sendable, Codable, Equatable {
-	public var id: String
-	public var content: [JSONValue]
+public enum CommandAction: Sendable, Codable, Equatable, Hashable {
+	case read(command: String, name: String, path: String)
+	case listFiles(command: String, path: String?)
+	case search(command: String, query: String?, path: String?)
+	case unknown(command: String)
+
+	private enum CodingKeys: String, CodingKey {
+		case type
+		case command
+		case name
+		case path
+		case query
+	}
+
+	private enum Kind: String, Codable {
+		case read
+		case listFiles
+		case search
+		case unknown
+	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		switch try container.decode(Kind.self, forKey: .type) {
+		case .read:
+			self = .read(
+				command: try container.decode(String.self, forKey: .command),
+				name: try container.decode(String.self, forKey: .name),
+				path: try container.decode(String.self, forKey: .path)
+			)
+		case .listFiles:
+			self = .listFiles(
+				command: try container.decode(String.self, forKey: .command),
+				path: try container.decodeIfPresent(String.self, forKey: .path)
+			)
+		case .search:
+			self = .search(
+				command: try container.decode(String.self, forKey: .command),
+				query: try container.decodeIfPresent(String.self, forKey: .query),
+				path: try container.decodeIfPresent(String.self, forKey: .path)
+			)
+		case .unknown:
+			self = .unknown(command: try container.decode(String.self, forKey: .command))
+		}
+	}
+
+	public func encode(to encoder: any Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		switch self {
+		case let .read(command, name, path):
+			try container.encode(Kind.read, forKey: .type)
+			try container.encode(command, forKey: .command)
+			try container.encode(name, forKey: .name)
+			try container.encode(path, forKey: .path)
+		case let .listFiles(command, path):
+			try container.encode(Kind.listFiles, forKey: .type)
+			try container.encode(command, forKey: .command)
+			try container.encode(path, forKey: .path)
+		case let .search(command, query, path):
+			try container.encode(Kind.search, forKey: .type)
+			try container.encode(command, forKey: .command)
+			try container.encode(query, forKey: .query)
+			try container.encode(path, forKey: .path)
+		case let .unknown(command):
+			try container.encode(Kind.unknown, forKey: .type)
+			try container.encode(command, forKey: .command)
+		}
+	}
 }
 
-public struct AgentMessageItem: Sendable, Codable, Equatable {
-	public var id: String
+public enum CollabAgentStatus: String, Sendable, Codable, Equatable, Hashable {
+	case pendingInit
+	case running
+	case completed
+	case errored
+	case shutdown
+	case notFound
+}
+
+public struct CollabAgentState: Sendable, Codable, Equatable, Hashable {
+	public var status: CollabAgentStatus
+	public var message: String?
+}
+
+public enum CollabAgentTool: String, Sendable, Codable, Equatable, Hashable {
+	case spawnAgent
+	case sendInput
+	case resumeAgent
+	case wait
+	case closeAgent
+}
+
+public enum CollabAgentToolCallStatus: String, Sendable, Codable, Equatable, Hashable {
+	case inProgress
+	case completed
+	case failed
+}
+
+private protocol CodexItemIdentity {
+	var codexId: String { get }
+	var id: UUID { get set }
+}
+
+private extension CodexItemIdentity {
+	mutating func assignIdentity(using makeID: (String) -> UUID) {
+		id = makeID(codexId)
+	}
+}
+
+public struct UserMessageItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+	public var id: UUID
+	public var codexId: String
+	public var content: [UserInput]
+
+	private enum CodingKeys: String, CodingKey {
+		case codexId = "id"
+		case content
+	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		codexId = try container.decode(String.self, forKey: .codexId)
+		id = ClientIdentity.userMessageItem(codexId)
+		content = try container.decode([UserInput].self, forKey: .content)
+	}
+
+	public func encode(to encoder: any Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		try container.encode(codexId, forKey: .codexId)
+		try container.encode(content, forKey: .content)
+	}
+}
+
+public struct AgentMessageItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+	public var id: UUID
+	public var codexId: String
 	public var text: String
 	public var phase: MessagePhase?
+
+	private enum CodingKeys: String, CodingKey {
+		case codexId = "id"
+		case text
+		case phase
+	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		codexId = try container.decode(String.self, forKey: .codexId)
+		id = ClientIdentity.agentMessageItem(codexId)
+		text = try container.decode(String.self, forKey: .text)
+		phase = try container.decodeIfPresent(MessagePhase.self, forKey: .phase)
+	}
+
+	public func encode(to encoder: any Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		try container.encode(codexId, forKey: .codexId)
+		try container.encode(text, forKey: .text)
+		try container.encode(phase, forKey: .phase)
+	}
 }
 
-public struct PlanItem: Sendable, Codable, Equatable {
-	public var id: String
+public struct PlanItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+	public var id: UUID
+	public var codexId: String
 	public var text: String
+
+	private enum CodingKeys: String, CodingKey {
+		case codexId = "id"
+		case text
+	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		codexId = try container.decode(String.self, forKey: .codexId)
+		id = ClientIdentity.planItem(codexId)
+		text = try container.decode(String.self, forKey: .text)
+	}
+
+	public func encode(to encoder: any Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		try container.encode(codexId, forKey: .codexId)
+		try container.encode(text, forKey: .text)
+	}
 }
 
-public struct ReasoningItem: Sendable, Codable, Equatable {
-	public var id: String
+public struct ReasoningItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+	public var id: UUID
+	public var codexId: String
 	public var summary: [String]
 	public var content: [String]
+
+	private enum CodingKeys: String, CodingKey {
+		case codexId = "id"
+		case summary
+		case content
+	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		codexId = try container.decode(String.self, forKey: .codexId)
+		id = ClientIdentity.reasoningItem(codexId)
+		summary = try container.decode([String].self, forKey: .summary)
+		content = try container.decode([String].self, forKey: .content)
+	}
+
+	public func encode(to encoder: any Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		try container.encode(codexId, forKey: .codexId)
+		try container.encode(summary, forKey: .summary)
+		try container.encode(content, forKey: .content)
+	}
 }
 
-public struct CommandExecutionItem: Sendable, Codable, Equatable {
-	public var id: String
+public struct CommandExecutionItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+	public var id: UUID
+	public var codexId: String
 	public var command: String
 	public var cwd: String
 	public var processId: String?
 	public var status: CommandExecutionStatus
-	public var commandActions: [JSONValue]
+	public var commandActions: [CommandAction]
 	public var aggregatedOutput: String?
 	public var exitCode: Int?
 	public var durationMs: Int?
+
+	private enum CodingKeys: String, CodingKey {
+		case codexId = "id"
+		case command
+		case cwd
+		case processId
+		case status
+		case commandActions
+		case aggregatedOutput
+		case exitCode
+		case durationMs
+	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		codexId = try container.decode(String.self, forKey: .codexId)
+		id = ClientIdentity.commandExecutionItem(codexId)
+		command = try container.decode(String.self, forKey: .command)
+		cwd = try container.decode(String.self, forKey: .cwd)
+		processId = try container.decodeIfPresent(String.self, forKey: .processId)
+		status = try container.decode(CommandExecutionStatus.self, forKey: .status)
+		commandActions = try container.decode([CommandAction].self, forKey: .commandActions)
+		aggregatedOutput = try container.decodeIfPresent(String.self, forKey: .aggregatedOutput)
+		exitCode = try container.decodeIfPresent(Int.self, forKey: .exitCode)
+		durationMs = try container.decodeIfPresent(Int.self, forKey: .durationMs)
+	}
+
+	public func encode(to encoder: any Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		try container.encode(codexId, forKey: .codexId)
+		try container.encode(command, forKey: .command)
+		try container.encode(cwd, forKey: .cwd)
+		try container.encode(processId, forKey: .processId)
+		try container.encode(status, forKey: .status)
+		try container.encode(commandActions, forKey: .commandActions)
+		try container.encode(aggregatedOutput, forKey: .aggregatedOutput)
+		try container.encode(exitCode, forKey: .exitCode)
+		try container.encode(durationMs, forKey: .durationMs)
+	}
 }
 
-public struct FileUpdateChange: Sendable, Codable, Equatable {
+public struct FileUpdateChange: Sendable, Codable, Equatable, Hashable {
 	public var path: String
 	public var kind: PatchChangeKind
 	public var diff: String
 }
 
-public struct FileChangeItem: Sendable, Codable, Equatable {
-	public var id: String
+public struct FileChangeItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+	public var id: UUID
+	public var codexId: String
 	public var changes: [FileUpdateChange]
 	public var status: PatchApplyStatus
+
+	private enum CodingKeys: String, CodingKey {
+		case codexId = "id"
+		case changes
+		case status
+	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		codexId = try container.decode(String.self, forKey: .codexId)
+		id = ClientIdentity.fileChangeItem(codexId)
+		changes = try container.decode([FileUpdateChange].self, forKey: .changes)
+		status = try container.decode(PatchApplyStatus.self, forKey: .status)
+	}
+
+	public func encode(to encoder: any Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		try container.encode(codexId, forKey: .codexId)
+		try container.encode(changes, forKey: .changes)
+		try container.encode(status, forKey: .status)
+	}
 }
 
-public struct McpToolCallResult: Sendable, Codable, Equatable {
-	public var content: [JSONValue]
-	public var structuredContent: JSONValue?
+public struct McpToolCallResult: Sendable, Codable, Equatable, Hashable {
+	public var content: [CodexValue]
+	public var structuredContent: CodexValue?
 }
 
-public struct McpToolCallError: Sendable, Codable, Equatable {
+public struct McpToolCallError: Sendable, Codable, Equatable, Hashable {
 	public var message: String
 }
 
-public struct McpToolCallItem: Sendable, Codable, Equatable {
-	public var id: String
+public struct McpToolCallItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+	public var id: UUID
+	public var codexId: String
 	public var server: String
 	public var tool: String
 	public var status: McpToolCallStatus
-	public var arguments: JSONValue
+	public var arguments: CodexValue
 	public var result: McpToolCallResult?
 	public var error: McpToolCallError?
 	public var durationMs: Int?
+
+	private enum CodingKeys: String, CodingKey {
+		case codexId = "id"
+		case server
+		case tool
+		case status
+		case arguments
+		case result
+		case error
+		case durationMs
+	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		codexId = try container.decode(String.self, forKey: .codexId)
+		id = ClientIdentity.mcpToolCallItem(codexId)
+		server = try container.decode(String.self, forKey: .server)
+		tool = try container.decode(String.self, forKey: .tool)
+		status = try container.decode(McpToolCallStatus.self, forKey: .status)
+		arguments = try container.decode(CodexValue.self, forKey: .arguments)
+		result = try container.decodeIfPresent(McpToolCallResult.self, forKey: .result)
+		error = try container.decodeIfPresent(McpToolCallError.self, forKey: .error)
+		durationMs = try container.decodeIfPresent(Int.self, forKey: .durationMs)
+	}
+
+	public func encode(to encoder: any Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		try container.encode(codexId, forKey: .codexId)
+		try container.encode(server, forKey: .server)
+		try container.encode(tool, forKey: .tool)
+		try container.encode(status, forKey: .status)
+		try container.encode(arguments, forKey: .arguments)
+		try container.encode(result, forKey: .result)
+		try container.encode(error, forKey: .error)
+		try container.encode(durationMs, forKey: .durationMs)
+	}
 }
 
-public struct DynamicToolCallItem: Sendable, Codable, Equatable {
-	public var id: String
+public struct DynamicToolCallItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+	public var id: UUID
+	public var codexId: String
 	public var tool: String
-	public var arguments: JSONValue
+	public var arguments: CodexValue
 	public var status: DynamicToolCallStatus
-	public var contentItems: [JSONValue]?
+	public var contentItems: [DynamicToolCallOutputContentItem]?
 	public var success: Bool?
 	public var durationMs: Int?
+
+	private enum CodingKeys: String, CodingKey {
+		case codexId = "id"
+		case tool
+		case arguments
+		case status
+		case contentItems
+		case success
+		case durationMs
+	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		codexId = try container.decode(String.self, forKey: .codexId)
+		id = ClientIdentity.dynamicToolCallItem(codexId)
+		tool = try container.decode(String.self, forKey: .tool)
+		arguments = try container.decode(CodexValue.self, forKey: .arguments)
+		status = try container.decode(DynamicToolCallStatus.self, forKey: .status)
+		contentItems = try container.decodeIfPresent([DynamicToolCallOutputContentItem].self, forKey: .contentItems)
+		success = try container.decodeIfPresent(Bool.self, forKey: .success)
+		durationMs = try container.decodeIfPresent(Int.self, forKey: .durationMs)
+	}
+
+	public func encode(to encoder: any Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		try container.encode(codexId, forKey: .codexId)
+		try container.encode(tool, forKey: .tool)
+		try container.encode(arguments, forKey: .arguments)
+		try container.encode(status, forKey: .status)
+		try container.encode(contentItems, forKey: .contentItems)
+		try container.encode(success, forKey: .success)
+		try container.encode(durationMs, forKey: .durationMs)
+	}
 }
 
-public struct WebSearchItem: Sendable, Codable, Equatable {
-	public var id: String
+public struct CollabAgentToolCallItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+	public var id: UUID
+	public var codexId: String
+	public var tool: CollabAgentTool
+	public var status: CollabAgentToolCallStatus
+	public var senderThreadCodexId: String
+	public var receiverThreadCodexIds: [String]
+	public var prompt: String?
+	public var agentStates: [String: CollabAgentState]
+
+	private enum CodingKeys: String, CodingKey {
+		case codexId = "id"
+		case tool
+		case status
+		case senderThreadCodexId = "senderThreadId"
+		case receiverThreadCodexIds = "receiverThreadIds"
+		case prompt
+		case agentStates = "agentsStates"
+	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		codexId = try container.decode(String.self, forKey: .codexId)
+		id = ClientIdentity.collabAgentToolCallItem(codexId)
+		tool = try container.decode(CollabAgentTool.self, forKey: .tool)
+		status = try container.decode(CollabAgentToolCallStatus.self, forKey: .status)
+		senderThreadCodexId = try container.decode(String.self, forKey: .senderThreadCodexId)
+		receiverThreadCodexIds = try container.decode([String].self, forKey: .receiverThreadCodexIds)
+		prompt = try container.decodeIfPresent(String.self, forKey: .prompt)
+		agentStates = try container.decode([String: CollabAgentState].self, forKey: .agentStates)
+	}
+
+	public func encode(to encoder: any Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		try container.encode(codexId, forKey: .codexId)
+		try container.encode(tool, forKey: .tool)
+		try container.encode(status, forKey: .status)
+		try container.encode(senderThreadCodexId, forKey: .senderThreadCodexId)
+		try container.encode(receiverThreadCodexIds, forKey: .receiverThreadCodexIds)
+		try container.encode(prompt, forKey: .prompt)
+		try container.encode(agentStates, forKey: .agentStates)
+	}
+}
+
+public struct WebSearchItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+	public var id: UUID
+	public var codexId: String
 	public var query: String
 	public var action: WebSearchAction?
+
+	private enum CodingKeys: String, CodingKey {
+		case codexId = "id"
+		case query
+		case action
+	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		codexId = try container.decode(String.self, forKey: .codexId)
+		id = ClientIdentity.webSearchItem(codexId)
+		query = try container.decode(String.self, forKey: .query)
+		action = try container.decodeIfPresent(WebSearchAction.self, forKey: .action)
+	}
+
+	public func encode(to encoder: any Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		try container.encode(codexId, forKey: .codexId)
+		try container.encode(query, forKey: .query)
+		try container.encode(action, forKey: .action)
+	}
 }
 
-public struct ImageViewItem: Sendable, Codable, Equatable {
-	public var id: String
+public struct ImageViewItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+	public var id: UUID
+	public var codexId: String
 	public var path: String
+
+	private enum CodingKeys: String, CodingKey {
+		case codexId = "id"
+		case path
+	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		codexId = try container.decode(String.self, forKey: .codexId)
+		id = ClientIdentity.imageViewItem(codexId)
+		path = try container.decode(String.self, forKey: .path)
+	}
+
+	public func encode(to encoder: any Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		try container.encode(codexId, forKey: .codexId)
+		try container.encode(path, forKey: .path)
+	}
 }
 
-public struct ReviewModeItem: Sendable, Codable, Equatable {
-	public var id: String
+public struct ImageGenerationItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+	public var id: UUID
+	public var codexId: String
+	public var status: String
+	public var revisedPrompt: String?
+	public var result: String
+
+	private enum CodingKeys: String, CodingKey {
+		case codexId = "id"
+		case status
+		case revisedPrompt
+		case result
+	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		codexId = try container.decode(String.self, forKey: .codexId)
+		id = ClientIdentity.imageGenerationItem(codexId)
+		status = try container.decode(String.self, forKey: .status)
+		revisedPrompt = try container.decodeIfPresent(String.self, forKey: .revisedPrompt)
+		result = try container.decode(String.self, forKey: .result)
+	}
+
+	public func encode(to encoder: any Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		try container.encode(codexId, forKey: .codexId)
+		try container.encode(status, forKey: .status)
+		try container.encode(revisedPrompt, forKey: .revisedPrompt)
+		try container.encode(result, forKey: .result)
+	}
+}
+
+public struct ReviewModeItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+	public var id: UUID
+	public var codexId: String
 	public var review: String
+
+	private enum CodingKeys: String, CodingKey {
+		case codexId = "id"
+		case review
+	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		codexId = try container.decode(String.self, forKey: .codexId)
+		id = ClientIdentity.reviewModeItem(codexId)
+		review = try container.decode(String.self, forKey: .review)
+	}
+
+	public func encode(to encoder: any Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		try container.encode(codexId, forKey: .codexId)
+		try container.encode(review, forKey: .review)
+	}
 }
 
-public struct ContextCompactionItem: Sendable, Codable, Equatable {
-	public var id: String
+public struct ContextCompactionItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+	public var id: UUID
+	public var codexId: String
+
+	private enum CodingKeys: String, CodingKey {
+		case codexId = "id"
+	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		codexId = try container.decode(String.self, forKey: .codexId)
+		id = ClientIdentity.contextCompactionItem(codexId)
+	}
+
+	public func encode(to encoder: any Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		try container.encode(codexId, forKey: .codexId)
+	}
 }
 
-public enum ThreadItem: Sendable, Codable, Equatable {
+public enum ThreadItem: Sendable, Codable, Equatable, Hashable {
 	case userMessage(UserMessageItem)
 	case agentMessage(AgentMessageItem)
 	case plan(PlanItem)
@@ -248,557 +722,114 @@ public enum ThreadItem: Sendable, Codable, Equatable {
 	case fileChange(FileChangeItem)
 	case mcpToolCall(McpToolCallItem)
 	case dynamicToolCall(DynamicToolCallItem)
+	case collabAgentToolCall(CollabAgentToolCallItem)
 	case webSearch(WebSearchItem)
 	case imageView(ImageViewItem)
+	case imageGeneration(ImageGenerationItem)
 	case enteredReviewMode(ReviewModeItem)
 	case exitedReviewMode(ReviewModeItem)
 	case contextCompaction(ContextCompactionItem)
-	case unknown(raw: JSONValue)
+	case unknown(raw: CodexValue)
 
 	private enum CodingKeys: String, CodingKey {
 		case type
 	}
 
+	private enum Kind: String, Codable {
+		case userMessage
+		case agentMessage
+		case plan
+		case reasoning
+		case commandExecution
+		case fileChange
+		case mcpToolCall
+		case dynamicToolCall
+		case collabAgentToolCall
+		case webSearch
+		case imageView
+		case imageGeneration
+		case enteredReviewMode
+		case exitedReviewMode
+		case contextCompaction
+	}
+
 	public init(from decoder: any Decoder) throws {
-		let rawValue = try JSONValue(from: decoder)
+		let fallback = try CodexValue(from: decoder)
 		guard
-			case let .object(object) = rawValue,
-			case let .string(type)? = object["type"]
+			case let .object(object) = fallback,
+			case let .string(type)? = object["type"],
+			let kind = Kind(rawValue: type)
 		else {
-			self = .unknown(raw: rawValue)
+			self = .unknown(raw: fallback)
 			return
 		}
 
-		let nestedDecoder = ThreadItemDecoder(rawValue: rawValue)
-		switch type {
-		case "userMessage":
-			self = .userMessage(try UserMessageItem(from: nestedDecoder))
-		case "agentMessage":
-			self = .agentMessage(try AgentMessageItem(from: nestedDecoder))
-		case "plan":
-			self = .plan(try PlanItem(from: nestedDecoder))
-		case "reasoning":
-			self = .reasoning(try ReasoningItem(from: nestedDecoder))
-		case "commandExecution":
-			self = .commandExecution(try CommandExecutionItem(from: nestedDecoder))
-		case "fileChange":
-			self = .fileChange(try FileChangeItem(from: nestedDecoder))
-		case "mcpToolCall":
-			self = .mcpToolCall(try McpToolCallItem(from: nestedDecoder))
-		case "dynamicToolCall":
-			self = .dynamicToolCall(try DynamicToolCallItem(from: nestedDecoder))
-		case "webSearch":
-			self = .webSearch(try WebSearchItem(from: nestedDecoder))
-		case "imageView":
-			self = .imageView(try ImageViewItem(from: nestedDecoder))
-		case "enteredReviewMode":
-			self = .enteredReviewMode(try ReviewModeItem(from: nestedDecoder))
-		case "exitedReviewMode":
-			self = .exitedReviewMode(try ReviewModeItem(from: nestedDecoder))
-		case "contextCompaction":
-			self = .contextCompaction(try ContextCompactionItem(from: nestedDecoder))
-		default:
-			self = .unknown(raw: rawValue)
+		switch kind {
+		case .userMessage: self = .userMessage(try Self.decode(UserMessageItem.self, from: fallback))
+		case .agentMessage: self = .agentMessage(try Self.decode(AgentMessageItem.self, from: fallback))
+		case .plan: self = .plan(try Self.decode(PlanItem.self, from: fallback))
+		case .reasoning: self = .reasoning(try Self.decode(ReasoningItem.self, from: fallback))
+		case .commandExecution: self = .commandExecution(try Self.decode(CommandExecutionItem.self, from: fallback))
+		case .fileChange: self = .fileChange(try Self.decode(FileChangeItem.self, from: fallback))
+		case .mcpToolCall: self = .mcpToolCall(try Self.decode(McpToolCallItem.self, from: fallback))
+		case .dynamicToolCall: self = .dynamicToolCall(try Self.decode(DynamicToolCallItem.self, from: fallback))
+		case .collabAgentToolCall: self = .collabAgentToolCall(try Self.decode(CollabAgentToolCallItem.self, from: fallback))
+		case .webSearch: self = .webSearch(try Self.decode(WebSearchItem.self, from: fallback))
+		case .imageView: self = .imageView(try Self.decode(ImageViewItem.self, from: fallback))
+		case .imageGeneration: self = .imageGeneration(try Self.decode(ImageGenerationItem.self, from: fallback))
+		case .enteredReviewMode: self = .enteredReviewMode(try Self.decode(ReviewModeItem.self, from: fallback))
+		case .exitedReviewMode: self = .exitedReviewMode(try Self.decode(ReviewModeItem.self, from: fallback))
+		case .contextCompaction: self = .contextCompaction(try Self.decode(ContextCompactionItem.self, from: fallback))
 		}
 	}
 
 	public func encode(to encoder: any Encoder) throws {
 		switch self {
-		case let .userMessage(item):
-			try Self.jsonValue(for: item).encode(to: encoder)
-		case let .agentMessage(item):
-			try Self.jsonValue(for: item).encode(to: encoder)
-		case let .plan(item):
-			try Self.jsonValue(for: item).encode(to: encoder)
-		case let .reasoning(item):
-			try Self.jsonValue(for: item).encode(to: encoder)
-		case let .commandExecution(item):
-			try Self.jsonValue(for: item).encode(to: encoder)
-		case let .fileChange(item):
-			try Self.jsonValue(for: item).encode(to: encoder)
-		case let .mcpToolCall(item):
-			try Self.jsonValue(for: item).encode(to: encoder)
-		case let .dynamicToolCall(item):
-			try Self.jsonValue(for: item).encode(to: encoder)
-		case let .webSearch(item):
-			try Self.jsonValue(for: item).encode(to: encoder)
-		case let .imageView(item):
-			try Self.jsonValue(for: item).encode(to: encoder)
-		case let .enteredReviewMode(item):
-			try Self.jsonValue(for: item, type: "enteredReviewMode").encode(to: encoder)
-		case let .exitedReviewMode(item):
-			try Self.jsonValue(for: item, type: "exitedReviewMode").encode(to: encoder)
-		case let .contextCompaction(item):
-			try Self.jsonValue(for: item).encode(to: encoder)
-		case let .unknown(raw):
-			try raw.encode(to: encoder)
+		case let .userMessage(item): try item.encode(to: encoder)
+		case let .agentMessage(item): try item.encode(to: encoder)
+		case let .plan(item): try item.encode(to: encoder)
+		case let .reasoning(item): try item.encode(to: encoder)
+		case let .commandExecution(item): try item.encode(to: encoder)
+		case let .fileChange(item): try item.encode(to: encoder)
+		case let .mcpToolCall(item): try item.encode(to: encoder)
+		case let .dynamicToolCall(item): try item.encode(to: encoder)
+		case let .collabAgentToolCall(item): try item.encode(to: encoder)
+		case let .webSearch(item): try item.encode(to: encoder)
+		case let .imageView(item): try item.encode(to: encoder)
+		case let .imageGeneration(item): try item.encode(to: encoder)
+		case let .enteredReviewMode(item): try item.encode(to: encoder)
+		case let .exitedReviewMode(item): try item.encode(to: encoder)
+		case let .contextCompaction(item): try item.encode(to: encoder)
+		case let .unknown(raw): try raw.encode(to: encoder)
 		}
 	}
 
-	private static func jsonValue(for item: UserMessageItem) -> JSONValue {
-		.object([
-			"type": .string("userMessage"),
-			"id": .string(item.id),
-			"content": .array(item.content),
-		])
-	}
-
-	private static func jsonValue(for item: AgentMessageItem) -> JSONValue {
-		.object([
-			"type": .string("agentMessage"),
-			"id": .string(item.id),
-			"text": .string(item.text),
-			"phase": item.phase.map { .string($0.rawValue) } ?? .null,
-		])
-	}
-
-	private static func jsonValue(for item: PlanItem) -> JSONValue {
-		.object([
-			"type": .string("plan"),
-			"id": .string(item.id),
-			"text": .string(item.text),
-		])
-	}
-
-	private static func jsonValue(for item: ReasoningItem) -> JSONValue {
-		.object([
-			"type": .string("reasoning"),
-			"id": .string(item.id),
-			"summary": .array(item.summary.map(JSONValue.string)),
-			"content": .array(item.content.map(JSONValue.string)),
-		])
-	}
-
-	private static func jsonValue(for item: CommandExecutionItem) -> JSONValue {
-		.object([
-			"type": .string("commandExecution"),
-			"id": .string(item.id),
-			"command": .string(item.command),
-			"cwd": .string(item.cwd),
-			"processId": item.processId.map { .string($0) } ?? .null,
-			"status": .string(item.status.rawValue),
-			"commandActions": .array(item.commandActions),
-			"aggregatedOutput": item.aggregatedOutput.map { .string($0) } ?? .null,
-			"exitCode": item.exitCode.map { .number(Double($0)) } ?? .null,
-			"durationMs": item.durationMs.map { .number(Double($0)) } ?? .null,
-		])
-	}
-
-	private static func jsonValue(for item: FileChangeItem) -> JSONValue {
-		.object([
-			"type": .string("fileChange"),
-			"id": .string(item.id),
-			"changes": .array(item.changes.map(jsonValue)),
-			"status": .string(item.status.rawValue),
-		])
-	}
-
-	private static func jsonValue(for change: FileUpdateChange) -> JSONValue {
-		.object([
-			"path": .string(change.path),
-			"kind": jsonValue(for: change.kind),
-			"diff": .string(change.diff),
-		])
-	}
-
-	private static func jsonValue(for kind: PatchChangeKind) -> JSONValue {
-		switch kind {
-		case .add:
-			return .object(["type": .string("add")])
-		case .delete:
-			return .object(["type": .string("delete")])
-		case let .update(movePath):
-			return .object([
-				"type": .string("update"),
-				"move_path": movePath.map { .string($0) } ?? .null,
-			])
-		}
-	}
-
-	private static func jsonValue(for item: McpToolCallItem) -> JSONValue {
-		.object([
-			"type": .string("mcpToolCall"),
-			"id": .string(item.id),
-			"server": .string(item.server),
-			"tool": .string(item.tool),
-			"status": .string(item.status.rawValue),
-			"arguments": item.arguments,
-			"result": item.result.map(jsonValue) ?? .null,
-			"error": item.error.map(jsonValue) ?? .null,
-			"durationMs": item.durationMs.map { .number(Double($0)) } ?? .null,
-		])
-	}
-
-	private static func jsonValue(for result: McpToolCallResult) -> JSONValue {
-		.object([
-			"content": .array(result.content),
-			"structuredContent": result.structuredContent ?? .null,
-		])
-	}
-
-	private static func jsonValue(for error: McpToolCallError) -> JSONValue {
-		.object(["message": .string(error.message)])
-	}
-
-	private static func jsonValue(for item: DynamicToolCallItem) -> JSONValue {
-		.object([
-			"type": .string("dynamicToolCall"),
-			"id": .string(item.id),
-			"tool": .string(item.tool),
-			"arguments": item.arguments,
-			"status": .string(item.status.rawValue),
-			"contentItems": item.contentItems.map { .array($0) } ?? .null,
-			"success": item.success.map { .bool($0) } ?? .null,
-			"durationMs": item.durationMs.map { .number(Double($0)) } ?? .null,
-		])
-	}
-
-	private static func jsonValue(for item: WebSearchItem) -> JSONValue {
-		.object([
-			"type": .string("webSearch"),
-			"id": .string(item.id),
-			"query": .string(item.query),
-			"action": item.action.map(jsonValue) ?? .null,
-		])
-	}
-
-	private static func jsonValue(for action: WebSearchAction) -> JSONValue {
-		switch action {
-		case let .search(query, queries):
-			return .object([
-				"type": .string("search"),
-				"query": query.map { .string($0) } ?? .null,
-				"queries": queries.map { .array($0.map(JSONValue.string)) } ?? .null,
-			])
-		case let .openPage(url):
-			return .object([
-				"type": .string("openPage"),
-				"url": url.map { .string($0) } ?? .null,
-			])
-		case let .findInPage(url, pattern):
-			return .object([
-				"type": .string("findInPage"),
-				"url": url.map { .string($0) } ?? .null,
-				"pattern": pattern.map { .string($0) } ?? .null,
-			])
-		case .other:
-			return .object(["type": .string("other")])
-		}
-	}
-
-	private static func jsonValue(for item: ImageViewItem) -> JSONValue {
-		.object([
-			"type": .string("imageView"),
-			"id": .string(item.id),
-			"path": .string(item.path),
-		])
-	}
-
-	private static func jsonValue(for item: ReviewModeItem, type: String) -> JSONValue {
-		.object([
-			"type": .string(type),
-			"id": .string(item.id),
-			"review": .string(item.review),
-		])
-	}
-
-	private static func jsonValue(for item: ContextCompactionItem) -> JSONValue {
-		.object([
-			"type": .string("contextCompaction"),
-			"id": .string(item.id),
-		])
+	private static func decode<T: Decodable>(_ type: T.Type, from value: CodexValue) throws -> T {
+		let data = try JSONEncoder().encode(value)
+		return try JSONDecoder().decode(T.self, from: data)
 	}
 }
 
-	// MARK: Notifications
-
 public struct ItemStartedNotification: Sendable, Codable, Equatable {
 	public var item: ThreadItem
-	public var threadId: String
-	public var turnId: String
+	public var threadCodexId: String
+	public var turnCodexId: String
+
+	private enum CodingKeys: String, CodingKey {
+		case item
+		case threadCodexId = "threadId"
+		case turnCodexId = "turnId"
+	}
 }
 
 public struct ItemCompletedNotification: Sendable, Codable, Equatable {
 	public var item: ThreadItem
-	public var threadId: String
-	public var turnId: String
-}
+	public var threadCodexId: String
+	public var turnCodexId: String
 
-private struct ThreadItemDecoder: Decoder {
-	let rawValue: JSONValue
-
-	var codingPath: [any CodingKey] { [] }
-	var userInfo: [CodingUserInfoKey: Any] { [:] }
-
-	func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> where Key : CodingKey {
-		let decoder = JSONValueDecoder(rawValue: rawValue)
-		return try decoder.container(keyedBy: type)
-	}
-
-	func unkeyedContainer() throws -> any UnkeyedDecodingContainer {
-		try JSONValueDecoder(rawValue: rawValue).unkeyedContainer()
-	}
-
-	func singleValueContainer() throws -> any SingleValueDecodingContainer {
-		try JSONValueDecoder(rawValue: rawValue).singleValueContainer()
-	}
-}
-
-private struct JSONValueDecoder: Decoder {
-	let rawValue: JSONValue
-
-	var codingPath: [any CodingKey] { [] }
-	var userInfo: [CodingUserInfoKey: Any] { [:] }
-
-	func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> where Key : CodingKey {
-		guard case let .object(object) = rawValue else {
-			throw DecodingError.typeMismatch(
-				[String: JSONValue].self,
-				.init(codingPath: codingPath, debugDescription: "Expected object.")
-			)
-		}
-		return KeyedDecodingContainer(JSONValueKeyedDecodingContainer(object: object))
-	}
-
-	func unkeyedContainer() throws -> any UnkeyedDecodingContainer {
-		guard case let .array(array) = rawValue else {
-			throw DecodingError.typeMismatch(
-				[JSONValue].self,
-				.init(codingPath: codingPath, debugDescription: "Expected array.")
-			)
-		}
-		return JSONValueUnkeyedDecodingContainer(array: array)
-	}
-
-	func singleValueContainer() throws -> any SingleValueDecodingContainer {
-		JSONValueSingleValueDecodingContainer(rawValue: rawValue)
-	}
-}
-
-private struct JSONValueKeyedDecodingContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
-	let object: [String: JSONValue]
-
-	var codingPath: [any CodingKey] { [] }
-	var allKeys: [Key] { object.keys.compactMap(Key.init(stringValue:)) }
-
-	func contains(_ key: Key) -> Bool {
-		object[key.stringValue] != nil
-	}
-
-	func decodeNil(forKey key: Key) throws -> Bool {
-		object[key.stringValue] == .null
-	}
-
-	func decode<T>(_ type: T.Type, forKey key: Key) throws -> T where T : Decodable {
-		guard let value = object[key.stringValue] else {
-			throw DecodingError.keyNotFound(key, .init(codingPath: codingPath, debugDescription: "Missing key \(key.stringValue)."))
-		}
-		return try T(from: JSONValueDecoder(rawValue: value))
-	}
-
-	func decodeIfPresent<T>(_ type: T.Type, forKey key: Key) throws -> T? where T : Decodable {
-		guard let value = object[key.stringValue], value != .null else {
-			return nil
-		}
-		return try T(from: JSONValueDecoder(rawValue: value))
-	}
-
-	func nestedContainer<NestedKey>(
-		keyedBy keyType: NestedKey.Type,
-		forKey key: Key
-	) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey {
-		guard let value = object[key.stringValue] else {
-			throw DecodingError.keyNotFound(key, .init(codingPath: codingPath, debugDescription: "Missing key \(key.stringValue)."))
-		}
-		return try JSONValueDecoder(rawValue: value).container(keyedBy: keyType)
-	}
-
-	func nestedUnkeyedContainer(forKey key: Key) throws -> any UnkeyedDecodingContainer {
-		guard let value = object[key.stringValue] else {
-			throw DecodingError.keyNotFound(key, .init(codingPath: codingPath, debugDescription: "Missing key \(key.stringValue)."))
-		}
-		return try JSONValueDecoder(rawValue: value).unkeyedContainer()
-	}
-
-	func superDecoder() throws -> any Decoder {
-		JSONValueDecoder(rawValue: .object(object))
-	}
-
-	func superDecoder(forKey key: Key) throws -> any Decoder {
-		JSONValueDecoder(rawValue: object[key.stringValue] ?? .null)
-	}
-}
-
-private struct JSONValueUnkeyedDecodingContainer: UnkeyedDecodingContainer {
-	let array: [JSONValue]
-	var codingPath: [any CodingKey] = []
-	var currentIndex = 0
-
-	var count: Int? { array.count }
-	var isAtEnd: Bool { currentIndex >= array.count }
-
-	mutating func decodeNil() throws -> Bool {
-		guard !isAtEnd else {
-			throw DecodingError.valueNotFound(
-				JSONValue.self,
-				.init(codingPath: codingPath, debugDescription: "Unkeyed container is at end.")
-			)
-		}
-		if array[currentIndex] == .null {
-			currentIndex += 1
-			return true
-		}
-		return false
-	}
-
-	mutating func decode<T>(_ type: T.Type) throws -> T where T : Decodable {
-		guard !isAtEnd else {
-			throw DecodingError.valueNotFound(
-				T.self,
-				.init(codingPath: codingPath, debugDescription: "Unkeyed container is at end.")
-			)
-		}
-		let value = array[currentIndex]
-		currentIndex += 1
-		return try T(from: JSONValueDecoder(rawValue: value))
-	}
-
-	mutating func nestedContainer<NestedKey>(keyedBy keyType: NestedKey.Type) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey {
-		guard !isAtEnd else {
-			throw DecodingError.valueNotFound(
-				[NestedKey: JSONValue].self,
-				.init(codingPath: codingPath, debugDescription: "Unkeyed container is at end.")
-			)
-		}
-		let value = array[currentIndex]
-		currentIndex += 1
-		return try JSONValueDecoder(rawValue: value).container(keyedBy: keyType)
-	}
-
-	mutating func nestedUnkeyedContainer() throws -> any UnkeyedDecodingContainer {
-		guard !isAtEnd else {
-			throw DecodingError.valueNotFound(
-				[JSONValue].self,
-				.init(codingPath: codingPath, debugDescription: "Unkeyed container is at end.")
-			)
-		}
-		let value = array[currentIndex]
-		currentIndex += 1
-		return try JSONValueDecoder(rawValue: value).unkeyedContainer()
-	}
-
-	mutating func superDecoder() throws -> any Decoder {
-		guard !isAtEnd else {
-			throw DecodingError.valueNotFound(
-				JSONValue.self,
-				.init(codingPath: codingPath, debugDescription: "Unkeyed container is at end.")
-			)
-		}
-		let value = array[currentIndex]
-		currentIndex += 1
-		return JSONValueDecoder(rawValue: value)
-	}
-}
-
-private struct JSONValueSingleValueDecodingContainer: SingleValueDecodingContainer {
-	let rawValue: JSONValue
-	var codingPath: [any CodingKey] { [] }
-
-	func decodeNil() -> Bool {
-		rawValue == .null
-	}
-
-	func decode(_ type: Bool.Type) throws -> Bool {
-		guard case let .bool(value) = rawValue else {
-			throw typeMismatch(type)
-		}
-		return value
-	}
-
-	func decode(_ type: String.Type) throws -> String {
-		guard case let .string(value) = rawValue else {
-			throw typeMismatch(type)
-		}
-		return value
-	}
-
-	func decode(_ type: Double.Type) throws -> Double {
-		guard case let .number(value) = rawValue else {
-			throw typeMismatch(type)
-		}
-		return value
-	}
-
-	func decode(_ type: Float.Type) throws -> Float {
-		Float(try decode(Double.self))
-	}
-
-	func decode(_ type: Int.Type) throws -> Int {
-		try integerValue(type)
-	}
-
-	func decode(_ type: Int8.Type) throws -> Int8 {
-		try integerValue(type)
-	}
-
-	func decode(_ type: Int16.Type) throws -> Int16 {
-		try integerValue(type)
-	}
-
-	func decode(_ type: Int32.Type) throws -> Int32 {
-		try integerValue(type)
-	}
-
-	func decode(_ type: Int64.Type) throws -> Int64 {
-		try integerValue(type)
-	}
-
-	func decode(_ type: UInt.Type) throws -> UInt {
-		try unsignedIntegerValue(type)
-	}
-
-	func decode(_ type: UInt8.Type) throws -> UInt8 {
-		try unsignedIntegerValue(type)
-	}
-
-	func decode(_ type: UInt16.Type) throws -> UInt16 {
-		try unsignedIntegerValue(type)
-	}
-
-	func decode(_ type: UInt32.Type) throws -> UInt32 {
-		try unsignedIntegerValue(type)
-	}
-
-	func decode(_ type: UInt64.Type) throws -> UInt64 {
-		try unsignedIntegerValue(type)
-	}
-
-	func decode<T>(_ type: T.Type) throws -> T where T : Decodable {
-		if type == JSONValue.self {
-			return rawValue as! T
-		}
-		return try T(from: JSONValueDecoder(rawValue: rawValue))
-	}
-
-	private func integerValue<T: FixedWidthInteger>(_ type: T.Type) throws -> T {
-		guard case let .number(value) = rawValue else {
-			throw typeMismatch(type)
-		}
-		let rounded = value.rounded()
-		guard rounded == value, let integer = T(exactly: rounded) else {
-			throw typeMismatch(type)
-		}
-		return integer
-	}
-
-	private func unsignedIntegerValue<T: FixedWidthInteger & UnsignedInteger>(_ type: T.Type) throws -> T {
-		try integerValue(type)
-	}
-
-	private func typeMismatch<T>(_ type: T.Type) -> DecodingError {
-		DecodingError.typeMismatch(
-			type,
-			.init(codingPath: codingPath, debugDescription: "Could not decode \(type) from JSONValue.")
-		)
+	private enum CodingKeys: String, CodingKey {
+		case item
+		case threadCodexId = "threadId"
+		case turnCodexId = "turnId"
 	}
 }

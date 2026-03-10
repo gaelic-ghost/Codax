@@ -104,13 +104,25 @@ extension ServerNotificationEnvelope {
 public struct ErrorNotification: Sendable, Codable {
 	public var error: TurnError
 	public var willRetry: Bool
-	public var threadId: String
-	public var turnId: String
+	public var threadCodexId: String
+	public var turnCodexId: String
+
+	private enum CodingKeys: String, CodingKey {
+		case error
+		case willRetry
+		case threadCodexId = "threadId"
+		case turnCodexId = "turnId"
+	}
 }
 
 public struct ServerRequestResolvedNotification: Sendable, Codable {
-	public var threadId: String
+	public var threadCodexId: String
 	public var requestId: JSONRPCID
+
+	private enum CodingKeys: String, CodingKey {
+		case threadCodexId = "threadId"
+		case requestId
+	}
 }
 
 // MARK: Account
@@ -134,7 +146,7 @@ public enum ThreadActiveFlag: String, Sendable, Codable, Equatable {
 	case waitingOnUserInput
 }
 
-public enum ThreadStatus: Sendable, Codable, Equatable {
+public enum ThreadStatus: Sendable, Codable, Equatable, Hashable {
 	case notLoaded
 	case idle
 	case systemError
@@ -183,8 +195,13 @@ public enum ThreadStatus: Sendable, Codable, Equatable {
 }
 
 public struct ThreadStatusChangedNotification: Sendable, Codable {
-	public var threadId: String
+	public var threadCodexId: String
 	public var status: ThreadStatus
+
+	private enum CodingKeys: String, CodingKey {
+		case threadCodexId = "threadId"
+		case status
+	}
 }
 
 public struct TokenUsageBreakdown: Sendable, Codable {
@@ -202,17 +219,29 @@ public struct ThreadTokenUsage: Sendable, Codable {
 }
 
 public struct ThreadTokenUsageUpdatedNotification: Sendable, Codable {
-	public var threadId: String
-	public var turnId: String
+	public var threadCodexId: String
+	public var turnCodexId: String
 	public var tokenUsage: ThreadTokenUsage
+
+	private enum CodingKeys: String, CodingKey {
+		case threadCodexId = "threadId"
+		case turnCodexId = "turnId"
+		case tokenUsage
+	}
 }
 
 // MARK: Turn
 
 public struct TurnDiffUpdatedNotification: Sendable, Codable {
-	public var threadId: String
-	public var turnId: String
+	public var threadCodexId: String
+	public var turnCodexId: String
 	public var diff: String
+
+	private enum CodingKeys: String, CodingKey {
+		case threadCodexId = "threadId"
+		case turnCodexId = "turnId"
+		case diff
+	}
 }
 
 public enum TurnPlanStepStatus: String, Sendable, Codable {
@@ -227,54 +256,105 @@ public struct TurnPlanStep: Sendable, Codable {
 }
 
 public struct TurnPlanUpdatedNotification: Sendable, Codable {
-	public var threadId: String
-	public var turnId: String
+	public var threadCodexId: String
+	public var turnCodexId: String
 	public var explanation: String?
 	public var plan: [TurnPlanStep]
+
+	private enum CodingKeys: String, CodingKey {
+		case threadCodexId = "threadId"
+		case turnCodexId = "turnId"
+		case explanation
+		case plan
+	}
 }
 
 // MARK: Item
 
 public struct AgentMessageDeltaNotification: Sendable, Codable {
-	public var threadId: String
-	public var turnId: String
-	public var itemId: String
+	public var threadCodexId: String
+	public var turnCodexId: String
+	public var itemCodexId: String
 	public var delta: String
+
+	private enum CodingKeys: String, CodingKey {
+		case threadCodexId = "threadId"
+		case turnCodexId = "turnId"
+		case itemCodexId = "itemId"
+		case delta
+	}
 }
 
 public struct CommandExecutionOutputDeltaNotification: Sendable, Codable {
-	public var threadId: String
-	public var turnId: String
-	public var itemId: String
+	public var threadCodexId: String
+	public var turnCodexId: String
+	public var itemCodexId: String
 	public var delta: String
+
+	private enum CodingKeys: String, CodingKey {
+		case threadCodexId = "threadId"
+		case turnCodexId = "turnId"
+		case itemCodexId = "itemId"
+		case delta
+	}
 }
 
 public struct FileChangeOutputDeltaNotification: Sendable, Codable {
-	public var threadId: String
-	public var turnId: String
-	public var itemId: String
+	public var threadCodexId: String
+	public var turnCodexId: String
+	public var itemCodexId: String
 	public var delta: String
+
+	private enum CodingKeys: String, CodingKey {
+		case threadCodexId = "threadId"
+		case turnCodexId = "turnId"
+		case itemCodexId = "itemId"
+		case delta
+	}
 }
 
 public struct ReasoningTextDeltaNotification: Sendable, Codable {
-	public var threadId: String
-	public var turnId: String
-	public var itemId: String
+	public var threadCodexId: String
+	public var turnCodexId: String
+	public var itemCodexId: String
 	public var delta: String
 	public var contentIndex: Int
+
+	private enum CodingKeys: String, CodingKey {
+		case threadCodexId = "threadId"
+		case turnCodexId = "turnId"
+		case itemCodexId = "itemId"
+		case delta
+		case contentIndex
+	}
 }
 
 public struct ReasoningSummaryTextDeltaNotification: Sendable, Codable {
-	public var threadId: String
-	public var turnId: String
-	public var itemId: String
+	public var threadCodexId: String
+	public var turnCodexId: String
+	public var itemCodexId: String
 	public var delta: String
 	public var summaryIndex: Int
+
+	private enum CodingKeys: String, CodingKey {
+		case threadCodexId = "threadId"
+		case turnCodexId = "turnId"
+		case itemCodexId = "itemId"
+		case delta
+		case summaryIndex
+	}
 }
 
 public struct ReasoningSummaryPartAddedNotification: Sendable, Codable {
-	public var threadId: String
-	public var turnId: String
-	public var itemId: String
+	public var threadCodexId: String
+	public var turnCodexId: String
+	public var itemCodexId: String
 	public var summaryIndex: Int
+
+	private enum CodingKeys: String, CodingKey {
+		case threadCodexId = "threadId"
+		case turnCodexId = "turnId"
+		case itemCodexId = "itemId"
+		case summaryIndex
+	}
 }

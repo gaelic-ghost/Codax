@@ -29,7 +29,8 @@ struct CodexClientModelsTests {
 		)
 
 		#expect(thread.status == .active(activeFlags: [.waitingOnApproval]))
-		#expect(thread.source == .subAgent(.object(["other": .string("test")])))
+		#expect(thread.codexId == "thread-1")
+		#expect(thread.source == .subAgent(.other("test")))
 		#expect(thread.gitInfo == GitInfo(sha: "abc123", branch: "main", originUrl: "https://example.com/repo.git"))
 	}
 
@@ -47,6 +48,7 @@ struct CodexClientModelsTests {
 		)
 
 		#expect(turn.status == status)
+		#expect(turn.codexId == "turn-1")
 	}
 
 	@Test func turnErrorDecodesNullableFields() throws {
@@ -87,6 +89,9 @@ struct CodexClientModelsTests {
 			Issue.record("Expected agentMessage item.")
 			return
 		}
+		#expect(notification.threadCodexId == "thread-1")
+		#expect(notification.turnCodexId == "turn-1")
+		#expect(item.codexId == "item-1")
 		#expect(item.phase == .commentary)
 		#expect(item.text == "Hello from Codex")
 	}
@@ -118,6 +123,9 @@ struct CodexClientModelsTests {
 			Issue.record("Expected commandExecution item.")
 			return
 		}
+		#expect(notification.threadCodexId == "thread-1")
+		#expect(notification.turnCodexId == "turn-1")
+		#expect(item.codexId == "item-2")
 		#expect(item.status == .completed)
 		#expect(item.exitCode == 0)
 	}
@@ -149,6 +157,9 @@ struct CodexClientModelsTests {
 			Issue.record("Expected fileChange item.")
 			return
 		}
+		#expect(notification.threadCodexId == "thread-1")
+		#expect(notification.turnCodexId == "turn-1")
+		#expect(item.codexId == "item-3")
 		#expect(item.status == .completed)
 		#expect(item.changes.first?.kind == .update(movePath: nil))
 	}
@@ -174,6 +185,9 @@ struct CodexClientModelsTests {
 			Issue.record("Expected reasoning item.")
 			return
 		}
+		#expect(notification.threadCodexId == "thread-1")
+		#expect(notification.turnCodexId == "turn-1")
+		#expect(item.codexId == "item-4")
 		#expect(item.summary == ["First"])
 		#expect(item.content == ["Second"])
 	}
@@ -197,7 +211,9 @@ struct CodexClientModelsTests {
 			Issue.record("Expected contextCompaction item.")
 			return
 		}
-		#expect(item.id == "item-5")
+		#expect(notification.threadCodexId == "thread-1")
+		#expect(notification.turnCodexId == "turn-1")
+		#expect(item.codexId == "item-5")
 	}
 
 	@Test func unknownThreadItemVariantFallsBackToRawPayload() throws {

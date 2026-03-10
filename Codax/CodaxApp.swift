@@ -25,7 +25,20 @@ struct CodaxApp: App {
 				columnVisibility: $columnVis,
 				preferredCompactColumn: $prefferedColumn) {
 						// sidebar:
-					SidebarView(selection: orchestrator.activeThread)
+					SidebarView(
+						selection: Binding(
+							get: { orchestrator.activeThread?.id },
+							set: { selectedID in
+								guard
+									let selectedID,
+									let thread = orchestrator.threads.first(where: { $0.id == selectedID })
+								else {
+									return
+								}
+								orchestrator.selectThread(codexId: thread.codexId)
+							}
+						)
+					)
 				} content: {
 					ContentView()
 				} detail: {

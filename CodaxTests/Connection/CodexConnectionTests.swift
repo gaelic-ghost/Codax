@@ -148,7 +148,7 @@ struct CodexConnectionTests {
 			#expect(Bool(false))
 			return
 		}
-		#expect(notification.threadId == "thread-1")
+		#expect(notification.threadCodexId == "thread-1")
 		guard case let .active(activeFlags) = notification.status else {
 			#expect(Bool(false))
 			return
@@ -170,6 +170,9 @@ struct CodexConnectionTests {
 			#expect(Bool(false))
 			return
 		}
+		#expect(notification.threadCodexId == "thread-1")
+		#expect(notification.turnCodexId == "turn-1")
+		#expect(notification.itemCodexId == "item-1")
 		#expect(notification.delta == "Hello")
 
 		try await transport.enqueueReceive(data: encodedJSONObject([

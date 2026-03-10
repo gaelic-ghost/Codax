@@ -9,10 +9,10 @@ import SwiftUI
 
 struct SidebarView: View {
 	@Environment(CodaxOrchestrator.self) private var orchestrator
-	@Bindable private var selection
+	@Binding var selection: UUID?
 
 	var body: some View {
-		List(selection: ) {
+		List(selection: $selection) {
 			if let banner = compatibilityBannerText {
 				Section("Compatibility") {
 					Text(banner)
@@ -26,10 +26,8 @@ struct SidebarView: View {
 						.foregroundStyle(.secondary)
 				} else {
 					ForEach(orchestrator.threads, id: \.id) { thread in
-						Button(displayTitle(for: thread)) {
-							orchestrator.selectThread(id: thread.id)
-						}
-						.buttonStyle(.plain)
+						Text(displayTitle(for: thread))
+							.tag(thread.id)
 					}
 				}
 			}
@@ -54,7 +52,7 @@ struct SidebarView: View {
 		return "Unsupported CLI \(versionText). Expected \(supportedRange). \(reason)"
 	}
 
-	private func displayTitle(for thread: ThreadSummary) -> String {
+	private func displayTitle(for thread: Thread) -> String {
 		if let name = thread.name, !name.isEmpty {
 			return name
 		}
@@ -63,6 +61,6 @@ struct SidebarView: View {
 }
 
 #Preview {
-	SidebarView()
+	SidebarView(selection: .constant(nil))
 		.environment(CodaxOrchestrator())
 }

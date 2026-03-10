@@ -9,6 +9,37 @@ import Foundation
 
 	// MARK: - API Client
 
+	// MARK: Client Inbound Message Envelopes
+
+public enum CodexInboundMessage: Sendable {
+	case response(JSONRPCID, Data)
+	case error(JSONRPCID?, JSONRPCErrorObject)
+	case serverNotification(ServerNotificationEnvelope)
+	case serverRequest(ServerRequestEnvelope)
+}
+
+	// MARK: Initialization/Startup Types
+
+public struct ClientInfo: Sendable, Codable {
+	public var name: String
+	public var title: String?
+	public var version: String
+}
+
+public struct InitializeCapabilities: Sendable, Codable {
+	public var experimentalApi: Bool
+	public var optOutNotificationMethods: [String]?
+}
+
+public struct InitializeParams: Sendable, Codable {
+	public var clientInfo: ClientInfo
+	public var capabilities: InitializeCapabilities?
+}
+
+public struct InitializeResponse: Sendable, Codable {
+	public var userAgent: String
+}
+
 	// MARK: Concrete Implementation
 	// Client Layer Server Response Handling
 

@@ -9,49 +9,8 @@ import Foundation
 
 	// MARK: - API Client
 
-	// MARK: Related Typealiases
-
-public typealias AskForApproval = JSONValue
-public typealias SandboxMode = JSONValue
-public typealias SandboxPolicy = JSONValue
-public typealias Personality = JSONValue
-public typealias CollaborationMode = JSONValue
-public typealias DynamicToolCallOutputContentItem = JSONValue
-public typealias ServiceTier = String
-public typealias ReasoningEffort = String
-
-	// MARK: Inbound Message Envelopes
-
-public enum CodexInboundMessage: Sendable {
-	case response(JSONRPCID, Data)
-	case error(JSONRPCID?, JSONRPCErrorObject)
-	case serverNotification(ServerNotificationEnvelope)
-	case serverRequest(ServerRequestEnvelope)
-}
-
-	// MARK: Initialization/Startup
-
-public struct ClientInfo: Sendable, Codable {
-	public var name: String
-	public var title: String?
-	public var version: String
-}
-
-public struct InitializeCapabilities: Sendable, Codable {
-	public var experimentalApi: Bool
-	public var optOutNotificationMethods: [String]?
-}
-
-public struct InitializeParams: Sendable, Codable {
-	public var clientInfo: ClientInfo
-	public var capabilities: InitializeCapabilities?
-}
-
-public struct InitializeResponse: Sendable, Codable {
-	public var userAgent: String
-}
-
 	// MARK: Concrete Implementation
+	// Client Layer Server Response Handling
 
 public final class CodexClient {
 	private let connection: CodexConnection

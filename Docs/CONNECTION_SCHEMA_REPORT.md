@@ -2,7 +2,7 @@
 
 ## Summary
 
-This report maps the connection-facing TypeScript schemas in `~/Workspace/codex-schemas/v0.111.0/` onto the current Swift connection skeleton in `/Users/galew/Workspace/Codax/Codax.xcodeproj`.
+This report maps the connection-facing TypeScript schemas in `~/Workspace/codex-schemas/v0.112.0/` onto the current Swift connection skeleton in `/Users/galew/Workspace/Codax/Codax.xcodeproj`.
 
 It is intentionally narrower than the broader transport writeup. The goal here is to define the actual Connection-layer contract in this repo: JSON-RPC envelope handling, request correlation, inbound routing, notification fanout, and server-request dispatch.
 
@@ -59,10 +59,10 @@ This report was grounded in three sources:
 
 Primary schema roots:
 
-- `~/Workspace/codex-schemas/v0.111.0/RequestId.ts`
-- `~/Workspace/codex-schemas/v0.111.0/ServerRequest.ts`
-- `~/Workspace/codex-schemas/v0.111.0/ServerNotification.ts`
-- `~/Workspace/codex-schemas/v0.111.0/ClientRequest.ts`
+- `~/Workspace/codex-schemas/v0.112.0/RequestId.ts`
+- `~/Workspace/codex-schemas/v0.112.0/ServerRequest.ts`
+- `~/Workspace/codex-schemas/v0.112.0/ServerNotification.ts`
+- `~/Workspace/codex-schemas/v0.112.0/ClientRequest.ts`
 
 These define the concrete wire methods and payload roots that matter most for the connection layer.
 
@@ -605,7 +605,7 @@ The current work does not need an architectural rewrite.
 
 ### 2. `ServerRequestEnvelope` Is In Good Shape
 
-The server-request side of the connection layer is already aligned with the full current `v0.111.0` schema union and matches the documented app-server approval and elicitation model.
+The server-request side of the connection layer is already aligned with the full current `v0.112.0` schema union and matches the documented app-server approval and elicitation model.
 
 ### 3. `ServerNotificationEnvelope` Is The Main Schema Gap
 
@@ -631,6 +631,7 @@ This report was checked against the following repo truths:
 - The current implementation now uses actor-owned request waiters and actor-managed notification fanout rather than lock-backed pending continuations.
 - The `serverRequest/resolved` cleanup semantics are documented upstream and remain an explicit notification-coverage gap in the current Swift layer.
 - The remaining work stated here matches the current Milestone 2 focus in `/Users/galew/Workspace/Codax/ROADMAP.md`.
+- The `v0.111.0 -> v0.112.0` diff was reviewed separately, and the wire roots central to the current connection slice were unchanged.
 
 ## Files Reviewed
 
@@ -662,10 +663,10 @@ Adjacent context:
 
 Primary schema roots:
 
-- `~/Workspace/codex-schemas/v0.111.0/RequestId.ts`
-- `~/Workspace/codex-schemas/v0.111.0/ServerRequest.ts`
-- `~/Workspace/codex-schemas/v0.111.0/ServerNotification.ts`
-- `~/Workspace/codex-schemas/v0.111.0/ClientRequest.ts`
+- `~/Workspace/codex-schemas/v0.112.0/RequestId.ts`
+- `~/Workspace/codex-schemas/v0.112.0/ServerRequest.ts`
+- `~/Workspace/codex-schemas/v0.112.0/ServerNotification.ts`
+- `~/Workspace/codex-schemas/v0.112.0/ClientRequest.ts`
 
 Primary external references:
 

@@ -48,7 +48,8 @@ Tickets:
 - [x] Create the app target and source tree.
 - [x] Add `codex-schemas` as an Xcode reference group.
 - [x] Add the `CodaxTests` test target and keep it runnable locally.
-- [ ] Add meaningful transport and client coverage to `CodaxTests`.
+- [x] Add meaningful transport and connection coverage to `CodaxTests`.
+- [x] Organize `CodaxTests/` by layer so transport, connection, and orchestration coverage stay easy to find.
 - [ ] Normalize placeholder docs and the app shell beyond the current scaffolding.
 
 Exit criteria:
@@ -73,7 +74,7 @@ Tickets:
 
 Exit criteria:
 
-- [ ] A local `codex` process can be launched, spoken to over stdio, and shut down predictably under automated coverage.
+- [x] A local `codex` process can be launched, spoken to over stdio, and shut down predictably under automated coverage.
 
 ## Milestone 2: Connection
 
@@ -95,7 +96,8 @@ Tickets:
 Exit criteria:
 
 - [ ] The connection layer can sustain real request and response traffic and route inbound server traffic deterministically under test.
-- [ ] Keep `CodaxTests/` organized by layer so transport, connection, and orchestration coverage stay easy to find; only process-sensitive suites should opt into serialized execution.
+- [x] Keep `CodaxTests/` organized by layer so transport, connection, and orchestration coverage stay easy to find; only process-sensitive suites should opt into serialized execution.
+- [x] Keep the repo test plan configured so the `CodaxTests` target does not rely on target-level parallel execution.
 
 ## Milestone 3: Client
 
@@ -111,6 +113,7 @@ Tickets:
 - [ ] Validate all current DTO shapes against real app-server payloads.
 - [ ] Add remaining typed client methods for thread management, listing, metadata, and other supported endpoints as needed.
 - [ ] Reduce generic `JSONValue` placeholders where stable DTOs are known.
+- [x] Keep account and login request/response DTO ownership in `Client`, with app-facing auth state remaining in `Orchestration`.
 
 Exit criteria:
 
@@ -124,11 +127,12 @@ Scope:
 
 Tickets:
 
-- [ ] Detect the installed `codex` binary path and version at startup.
-- [ ] Define the supported version policy for Codax relative to the pinned schema artifacts and the transport or connection reports.
-- [ ] Fail clearly for unsupported or unknown versions.
-- [ ] Surface compatibility warnings or errors into `CodaxOrchestrator` or `AuthCoordinator` state for the UI layer.
-- [ ] Document compatibility behavior in the roadmap, reports, and startup flow.
+- [x] Detect the installed `codex` binary path and version at startup.
+- [x] Define the supported version policy for Codax relative to the pinned schema artifacts and the transport or connection reports.
+- [x] Fail clearly for unsupported or unknown versions.
+- [x] Surface compatibility warnings or errors into `CodaxOrchestrator` state for the current UI-facing layer.
+- [x] Document compatibility behavior in the roadmap, reports, and startup flow.
+- [x] Frame the current layer reports against `v0.112.0`, with the dedicated diff report retained for version-change tracking.
 
 Exit criteria:
 

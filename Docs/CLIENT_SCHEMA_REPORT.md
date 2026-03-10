@@ -2,7 +2,7 @@
 
 ## Summary
 
-This report maps the client-facing TypeScript schemas in `~/Workspace/codex-schemas/v0.111.0/` onto the current Swift `Client` layer in `/Users/galew/Workspace/Codax/Codax.xcodeproj`.
+This report maps the client-facing TypeScript schemas in `~/Workspace/codex-schemas/v0.112.0/` onto the current Swift `Client` layer in `/Users/galew/Workspace/Codax/Codax.xcodeproj`.
 
 It is intentionally current-slice-first. The goal is not to inventory every request in `ClientRequest.ts`. The goal is to define the actual `Client`-layer contract in this repo today: the typed Swift facade over generic request routing, the params and response DTOs currently modeled in Swift, and the specific gaps that still separate the current `CodexClient` from the broader app-server surface.
 
@@ -69,11 +69,11 @@ This report was grounded in three sources.
 
 Primary schema roots:
 
-- `~/Workspace/codex-schemas/v0.111.0/ClientRequest.ts`
-- `~/Workspace/codex-schemas/v0.111.0/ClientNotification.ts`
-- `~/Workspace/codex-schemas/v0.111.0/InitializeParams.ts`
-- `~/Workspace/codex-schemas/v0.111.0/InitializeResponse.ts`
-- `~/Workspace/codex-schemas/v0.111.0/InitializeCapabilities.ts`
+- `~/Workspace/codex-schemas/v0.112.0/ClientRequest.ts`
+- `~/Workspace/codex-schemas/v0.112.0/ClientNotification.ts`
+- `~/Workspace/codex-schemas/v0.112.0/InitializeParams.ts`
+- `~/Workspace/codex-schemas/v0.112.0/InitializeResponse.ts`
+- `~/Workspace/codex-schemas/v0.112.0/InitializeCapabilities.ts`
 - the relevant `v2/*Params.ts` and `v2/*Response.ts` files for currently modeled methods
 
 For the current Swift slice, the most relevant `v2` roots include:
@@ -370,8 +370,8 @@ Those are not re-owned by `CodexClient`, but they shape how the client surface s
 
 - the current Swift `Client` layer covers only a small subset of `ClientRequest.ts`
 - most of the broader app-server method surface is not yet represented by typed Swift methods
-- several domain files exist only as placeholders or partial placeholders:
-  - `CodexClient+Account.swift`
+- several domain files still remain partial or placeholder-level:
+  - `CodexClient+Account.swift` is now real but still narrow relative to the broader account surface
   - `CodexClient+Command.swift`
 
 ### Where Typing Is Still Thin
@@ -474,9 +474,10 @@ That matches the roadmap exactly. The `Client` layer is no longer conceptual sca
 - every method documented above exists on `CodexClient`
 - every request-style method documented above maps to a real `ClientRequest.ts` variant
 - `sendInitialized()` is correctly treated as `ClientNotification.ts`, not `ClientRequest.ts`
-- `CodexClient+Account.swift` and `CodexClient+Command.swift` are accurately described as empty placeholders
+- `CodexClient+Command.swift` remains accurately described as an empty placeholder
 - `CodexClient+Account.swift` is now the canonical home of account/login client DTOs
 - `JSONValue`-based placeholder typing is explicitly called out where it materially affects the current client layer
 - layer boundaries stay consistent with `/Users/galew/Workspace/Codax/Docs/TRANSPORT_SCHEMA_REPORT.md`
 - layer boundaries stay consistent with `/Users/galew/Workspace/Codax/Docs/CONNECTION_SCHEMA_REPORT.md`
 - remaining-work conclusions match Milestone 3 in `/Users/galew/Workspace/Codax/ROADMAP.md`
+- the `v0.111.0 -> v0.112.0` diff was reviewed separately, and the client-facing wire roots used here were unchanged

@@ -10,10 +10,11 @@ Codax is currently a native macOS Codex client under active development.
 
 What is already real:
 
-- transport and process-launch foundations
+- transport and process-launch hardening
 - a JSON-RPC `Connection` layer
-- initial typed `Client` wrappers
-- transport and connection reports grounded in pinned Codex schema dumps
+- initial typed `Client` wrappers, including client-owned account and login DTOs
+- initial compatibility gating for Codex CLI `0.111.x` and `0.112.x`
+- layer reports grounded in the current `v0.112.0` schema baseline
 
 What is still early or incomplete:
 
@@ -21,7 +22,7 @@ What is still early or incomplete:
 - the planned `NavigationSplitView` shell
 - broader UX polish
 - the full accessibility pass
-- compatibility detection and hardening
+- broader notification coverage and deeper client DTO validation
 
 Please do not assume unfinished layers are stable just because the repo is public.
 
@@ -50,9 +51,8 @@ For this repo in particular, that applies strongly to work spanning `Transport`,
 
 The highest-value contribution areas right now are:
 
-- transport and connection test coverage
 - schema and report alignment
-- protocol hardening and compatibility detection
+- broader notification coverage and client DTO validation
 - `Orchestration` scaffolding
 - accessibility-first UI groundwork
 - documentation cleanup and consistency fixes
@@ -62,6 +62,8 @@ If you want deeper implementation context before changing protocol-facing code, 
 - [ROADMAP.md](/Users/galew/Workspace/Codax/ROADMAP.md)
 - [TRANSPORT_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/TRANSPORT_SCHEMA_REPORT.md)
 - [CONNECTION_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/CONNECTION_SCHEMA_REPORT.md)
+- [CLIENT_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/CLIENT_SCHEMA_REPORT.md)
+- [ORCHESTRATION_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/ORCHESTRATION_SCHEMA_REPORT.md)
 
 ## Development Workflow
 
@@ -77,6 +79,7 @@ A few practical expectations:
 - prefer small PRs over broad mixed changes
 - keep naming and terminology aligned with the existing `Transport`, `Connection`, `Client`, and `Orchestration` vocabulary
 - if your change crosses layer boundaries, explain why that boundary shift is necessary
+- keep docs aligned with current roadmap milestones, layer boundaries, and schema-version framing
 - treat accessibility regressions, protocol drift, and untested behavior changes as high-risk
 
 ## Checks Before Opening a PR
@@ -85,8 +88,10 @@ Run the checks that are real today:
 
 ```bash
 xcodebuild -project Codax.xcodeproj -scheme Codax -sdk macosx build
-xcodebuild -project Codax.xcodeproj -scheme CodaxTests -sdk macosx test
+xcodebuild -project Codax.xcodeproj -scheme Codax -destination 'platform=macOS' test
 ```
+
+The default `Codax` scheme test workflow uses the repo's `Codax.xctestplan`, with target-level parallelization disabled for the `CodaxTests` target.
 
 This repo does not currently have documented CI workflows, issue templates, or PR templates. Please do not assume hidden automation is going to catch missing verification for you.
 

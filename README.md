@@ -2,7 +2,7 @@
 
 An accessibility-forward native macOS Codex client that uses your locally installed `codex` & subscription via `codex app-server`.
 
-Codax is in early alpha. The protocol and architecture layers are already taking shape, but the app shell and UI are placeholder at best. This repo is best read today (March 8, 2026) as an active construction site. More "in-development contributor-facing project" than "polished end-user app". But hey, it's day two of development, we'll get there pretty soon at this pace.
+Codax is in early alpha. The protocol and architecture layers are ahead of the app shell and UI, which are still placeholder-level. This repo is best read today (March 10, 2026) as an active construction site: more contributor-facing project than polished end-user app.
 
 ## Table of Contents
 
@@ -28,17 +28,19 @@ The project is explicitly accessibility-forward. The long-term goal is a usable,
 
 The repository already has real protocol-facing work in place:
 
-- transport and process-launch foundations
+- hardened stdio transport and local process-launch foundations
 - an actor-based JSON-RPC connection layer with request and response correlation plus tested retry handling for retryable overloads
-- initial typed client wrappers for current app-server methods
-- transport and connection schema reports grounded in pinned Codex schema dumps
+- initial typed client wrappers for current app-server methods, including client-owned account and login DTOs
+- startup compatibility gating for Codex CLI `0.111.x` and `0.112.x`
+- layer reports grounded in the current `v0.112.0` schema baseline, with an explicit `v0.111.0 -> v0.112.0` diff report
 
 The app-facing layers are still early:
 
 - orchestration is not complete yet
 - the `NavigationSplitView` shell is still planned work. The design is locked down, implementation is roadmapped after completing the orchestration layer.
 - the current SwiftUI app launches from a minimal placeholder view
-- compatibility detection, UX polish, and the full accessibility pass are still in progress, or roadmapped for the near future.
+- UX polish and the full accessibility pass are still in progress, or roadmapped for the near future.
+- transport, connection, orchestration, and compatibility coverage now exist under `CodaxTests`, while deeper client DTO validation and broader notification coverage remain open.
 
 ## Why This Project Exists
 
@@ -53,7 +55,8 @@ The codebase is currently organized into a small set of explicit layers:
 - `Transport`
   - `CodexTransport` defines raw transport behavior as a protocol.
   - `CodexTransport+Stdio` is the current actor-based stdio transport implementation.
-  - `CodexProcess` launches the local `codex app-server` process.
+  - `CodexProcess` launches the local `codex app-server` process and owns the hardened stdio lifecycle.
+  - `CodexCLIProbe` detects the installed CLI path and compatibility range before connect flows proceed.
 
 - `Connection`
   - `CodexConnection` owns actor-based JSON-RPC framing, request correlation, retry handling, and inbound routing.
@@ -64,14 +67,14 @@ The codebase is currently organized into a small set of explicit layers:
 - `Views`
   - SwiftUI views currently exist as a minimal shell and will later become the multi-pane desktop interface.
 
-`CodaxTests` exists as the baseline test target, though meaningful transport and client coverage still needs to be expanded.
+`CodaxTests` is now organized by layer, with transport, connection, and orchestration suites split under dedicated directories.
 
 ## Repository Layout
 
 The main areas of the repository are:
 
 - `Codax/Controllers/Transport`
-  - transport protocols, stdio transport, websocket placeholder support, and process-launch types
+  - transport protocols, stdio transport, CLI probing, websocket placeholder support, and process-launch types
 - `Codax/Controllers/Connection`
   - JSON-RPC message types, connection state, and request-routing behavior
 - `Codax/Controllers/Client`
@@ -81,7 +84,7 @@ The main areas of the repository are:
 - `Codax/Views`
   - the current SwiftUI shell
 - `CodaxTests`
-  - baseline test target
+  - layer-organized test target with `Transport`, `Connection`, and `Orchestration` suites
 - `Docs`
   - schema and protocol reports used to ground the implementation
 
@@ -116,12 +119,15 @@ Project docs currently worth reading first:
 - [ROADMAP.md](/Users/galew/Workspace/Codax/ROADMAP.md)
 - [TRANSPORT_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/TRANSPORT_SCHEMA_REPORT.md)
 - [CONNECTION_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/CONNECTION_SCHEMA_REPORT.md)
+- [CLIENT_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/CLIENT_SCHEMA_REPORT.md)
+- [ORCHESTRATION_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/ORCHESTRATION_SCHEMA_REPORT.md)
+- [SCHEMA_DIFF_REPORT_v0.111.0_to_v0.112.0.md](/Users/galew/Workspace/Codax/Docs/SCHEMA_DIFF_REPORT_v0.111.0_to_v0.112.0.md)
 
-These documents describe the intended milestone sequencing, the transport and connection contracts, and the current implementation gaps still being closed.
+These documents describe the milestone sequencing, the current layer boundaries, the `v0.112.0` schema framing, and the remaining implementation gaps still being closed.
 
 ## Roadmap
 
-The roadmap is maintained in [ROADMAP.md]().
+The roadmap is maintained in [ROADMAP.md](/Users/galew/Workspace/Codax/ROADMAP.md).
 
 At a high level, the project is moving in bounded slices:
 
@@ -136,20 +142,22 @@ Later milestones cover compatibility management, thread and code summarization f
 
 ## Contributing
 
-Contribution guidance lives in [CONTRIBUTING.md]().
+Contribution guidance lives in [CONTRIBUTING.md](/Users/galew/Workspace/Codax/CONTRIBUTING.md).
 
 The most useful contributions right now are likely to be in:
 
-- transport and connection test coverage
+- broader server-notification coverage and client DTO validation
 - orchestrator implementation
 - the planned `NavigationSplitView` shell
 - accessibility-first UI and interaction work
-- compatibility detection and protocol hardening
+- documentation and report alignment
 
 ## Notes
 
 - Codax is currently an early, pre-alpha project.
-- The API was initially built around Codex 0.111.0 and is currently compatibility-gated for Codex CLI 0.111.x and 0.112.x.
+- The app is still early alpha and UI-incomplete, even though the protocol-facing layers are already fairly real.
+- Codax is currently compatibility-gated for Codex CLI `0.111.x` and `0.112.x`.
 - Local Codex version and compatibility handling is still being built out beyond the current supported range.
+- The layer reports are currently framed against the `v0.112.0` schema baseline, and the dedicated diff report preserves the `v0.111.0 -> v0.112.0` change context.
 - The repository does not yet document a polished release or distribution workflow.
 - The current README is intentionally contributor-first because the architecture is further along than the end-user product surface.

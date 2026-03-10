@@ -2,9 +2,9 @@
 
 ## Summary
 
-This report maps the transport-facing TypeScript schemas in `~/Workspace/codex-schemas/v0.111.0/` onto the current Swift skeleton in `/Users/galew/Workspace/Codax/Codax.xcodeproj`.
+This report maps the transport-facing TypeScript schemas in `~/Workspace/codex-schemas/v0.112.0/` onto the current Swift skeleton in `/Users/galew/Workspace/Codax/Codax.xcodeproj`.
 
-The goal is not to catalog the entire generated schema bundle. It is to identify the subset that defines the actual wire contract for the transport layer, explain how those schemas should map onto the Swift layering already present in this project, and call out the places where the current skeleton is narrower than `v0.111.0`.
+The goal is not to catalog the entire generated schema bundle. It is to identify the subset that defines the actual wire contract for the transport layer, explain how those schemas should map onto the Swift layering already present in this project, and call out the places where the current skeleton is narrower than `v0.112.0`.
 
 The main conclusion is:
 
@@ -15,7 +15,7 @@ The main conclusion is:
   - `CodexClient.swift` plus focused `CodexClient+*.swift` files for typed client and inbound semantics
   - `CodaxOrchestrator.swift` plus `+Types` coordinator files for app-facing consumption
 - The current Swift surface is intentionally incomplete but structurally aligned.
-- The biggest gap is not architecture. It is schema coverage: the current envelope enums only represent a subset of the server-driven variants present in `v0.111.0`.
+- The biggest gap is not architecture. It is schema coverage: the current envelope enums only represent a subset of the server-driven variants present in `v0.112.0`.
 
 ## Xcode And Repo Context
 
@@ -700,6 +700,7 @@ This report was built against the following checks:
 - The app-server docs were used for transport mechanics that are absent from the TS dump, including the `initialize` -> `initialized` handshake and omitted `jsonrpc` field.
 - Websocket was marked experimental and excluded from the first implementation slice.
 - The Xcode reference to `../codex-schemas` was identified as a synchronized reference group, not as compiled Swift input.
+- The `v0.111.0 -> v0.112.0` diff was reviewed separately, and the wire roots central to the current transport slice were unchanged.
 
 ## Files Reviewed
 
@@ -727,12 +728,12 @@ Swift skeleton:
 
 Primary schema roots:
 
-- `~/Workspace/codex-schemas/v0.111.0/ClientRequest.ts`
-- `~/Workspace/codex-schemas/v0.111.0/ClientNotification.ts`
-- `~/Workspace/codex-schemas/v0.111.0/ServerNotification.ts`
-- `~/Workspace/codex-schemas/v0.111.0/ServerRequest.ts`
-- `~/Workspace/codex-schemas/v0.111.0/RequestId.ts`
-- `~/Workspace/codex-schemas/v0.111.0/EventMsg.ts`
+- `~/Workspace/codex-schemas/v0.112.0/ClientRequest.ts`
+- `~/Workspace/codex-schemas/v0.112.0/ClientNotification.ts`
+- `~/Workspace/codex-schemas/v0.112.0/ServerNotification.ts`
+- `~/Workspace/codex-schemas/v0.112.0/ServerRequest.ts`
+- `~/Workspace/codex-schemas/v0.112.0/RequestId.ts`
+- `~/Workspace/codex-schemas/v0.112.0/EventMsg.ts`
 
 Key reachable payloads:
 

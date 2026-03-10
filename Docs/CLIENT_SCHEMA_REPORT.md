@@ -446,12 +446,12 @@ The current public client-facing types and their current ownership are:
 - `LoginAccountResponse`
 - `CancelLoginAccountParams`
 - `CancelLoginAccountResponse`
-  - currently in `/Users/galew/Workspace/Codax/Codax/Controllers/Orchestration/AuthCoordinator+Types.swift`
+  - `/Users/galew/Workspace/Codax/Codax/Controllers/Client/CodexClient+Account.swift`
 
 This ownership list is important because it shows both:
 
 - the stable first client slice already represented as public Swift API
-- the account/login ownership leak that still needs to be corrected later
+- the corrected placement of account/login request and response DTOs under `Client`
 
 ## Conclusion
 

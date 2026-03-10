@@ -32,15 +32,16 @@ The repository already has real protocol-facing work in place:
 - an actor-based JSON-RPC connection layer with request and response correlation plus tested retry handling for retryable overloads
 - initial typed client wrappers for current app-server methods, including client-owned account and login DTOs
 - startup compatibility gating for Codex CLI `0.111.x` and `0.112.x`
+- an early `NavigationSplitView` shell backed by a shared environment-injected `CodaxOrchestrator`
 - layer reports grounded in the current `v0.112.0` schema baseline, with an explicit `v0.111.0 -> v0.112.0` diff report
 
 The app-facing layers are still early:
 
-- orchestration is not complete yet
-- the `NavigationSplitView` shell is still planned work. The design is locked down, implementation is roadmapped after completing the orchestration layer.
-- the current SwiftUI app launches from a minimal placeholder view
+- orchestration is now partially real, but not complete yet
+- the `NavigationSplitView` shell is implemented in a transitional state and still needs broader pane behavior, polish, and accessibility work
 - UX polish and the full accessibility pass are still in progress, or roadmapped for the near future.
-- transport, connection, orchestration, and compatibility coverage now exist under `CodaxTests`, while deeper client DTO validation and broader notification coverage remain open.
+- transport, connection, client, orchestration, and compatibility coverage now exist under `CodaxTests`, while deeper client DTO validation and broader notification coverage remain open.
+- the test target is now organized by `Transport`, `Connection`, `Client`, and `Orchestration`
 
 ## Why This Project Exists
 
@@ -63,11 +64,13 @@ The codebase is currently organized into a small set of explicit layers:
 - `Client`
   - `CodexClient` provides typed wrappers over the generic connection layer.
 - `Orchestration`
-  - `CodaxOrchestrator` and `AuthCoordinator` are intended to become the app-facing session and auth coordination layer.
+  - `CodaxOrchestrator` is the shared app-facing session owner and is injected through the SwiftUI environment.
+  - `AuthCoordinator` remains the auth-side effect boundary.
 - `Views`
-  - SwiftUI views currently exist as a minimal shell and will later become the multi-pane desktop interface.
+  - SwiftUI views now live in an early three-pane shell and read shared state directly from `CodaxOrchestrator`.
+  - `ContentViewModel` remains only for pane-local draft state; shared app state does not flow through pane models.
 
-`CodaxTests` is now organized by layer, with transport, connection, and orchestration suites split under dedicated directories.
+`CodaxTests` is now organized by layer, with transport, connection, client, and orchestration suites split under dedicated directories.
 
 ## Repository Layout
 
@@ -80,11 +83,11 @@ The main areas of the repository are:
 - `Codax/Controllers/Client`
   - typed request wrappers, inbound message lifting, and server-request handling
 - `Codax/Controllers/Orchestration`
-  - early orchestration and auth coordination types
+  - orchestration runtime, app session state, and auth coordination types
 - `Codax/Views`
-  - the current SwiftUI shell
+  - the current SwiftUI split-view shell
 - `CodaxTests`
-  - layer-organized test target with `Transport`, `Connection`, and `Orchestration` suites
+  - layer-organized test target with `Transport`, `Connection`, `Client`, and `Orchestration` suites
 - `Docs`
   - schema and protocol reports used to ground the implementation
 
@@ -106,9 +109,9 @@ The repository does not currently present itself as a packaged or stable release
 
 Current expectations:
 
-- the app launches as a minimal SwiftUI shell
+- the app launches into an early `NavigationSplitView` shell
 - protocol-facing layers are ahead of the UI
-- some end-to-end app flows are still incomplete
+- some end-to-end app flows are now real, but broader thread, login, and pane behavior is still incomplete
 
 If you are contributing to protocol work, the schema reports and roadmap are the best starting points after opening the project.
 
@@ -148,8 +151,8 @@ Contribution guidance lives in [CONTRIBUTING.md](/Users/galew/Workspace/Codax/CO
 The most useful contributions right now are likely to be in:
 
 - broader server-notification coverage and client DTO validation
-- orchestrator implementation
-- the planned `NavigationSplitView` shell
+- orchestration refinement
+- the current `NavigationSplitView` shell and pane behavior
 - accessibility-first UI and interaction work
 - documentation and report alignment
 
@@ -159,6 +162,7 @@ The most useful contributions right now are likely to be in:
 - The app is still early alpha and UI-incomplete, even though the protocol-facing layers are already fairly real.
 - Codax is currently compatibility-gated for Codex CLI `0.111.x` and `0.112.x`.
 - Local Codex version and compatibility handling is still being built out beyond the current supported range.
+- The current UI shell is real but transitional; it should not be mistaken for a finished product surface.
 - The layer reports are currently framed against the `v0.112.0` schema baseline, and the dedicated diff report preserves the `v0.111.0 -> v0.112.0` change context.
 - The repository does not yet document a polished release or distribution workflow.
 - The current README is intentionally contributor-first because the architecture is further along than the end-user product surface.

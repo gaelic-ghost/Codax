@@ -14,12 +14,13 @@ What is already real:
 - a JSON-RPC `Connection` layer
 - initial typed `Client` wrappers, including client-owned account and login DTOs
 - initial compatibility gating for Codex CLI `0.111.x` and `0.112.x`
+- an early `NavigationSplitView` shell with environment-owned orchestration state
 - layer reports grounded in the current `v0.112.0` schema baseline
 
 What is still early or incomplete:
 
-- `Orchestration`
-- the planned `NavigationSplitView` shell
+- `Orchestration` is only partially complete
+- the current `NavigationSplitView` shell still needs broader pane behavior, polish, and accessibility work
 - broader UX polish
 - the full accessibility pass
 - broader notification coverage and deeper client DTO validation
@@ -45,7 +46,7 @@ Please open an issue first, or otherwise coordinate before investing implementat
 - a change that cuts across multiple subsystems
 - a UI direction change with significant product impact
 
-For this repo in particular, that applies strongly to work spanning `Transport`, `Connection`, `Client`, `Orchestration`, and the future `NavigationSplitView` UI shell.
+For this repo in particular, that applies strongly to work spanning `Transport`, `Connection`, `Client`, `Orchestration`, and the current split-view UI shell.
 
 ## Good First Contribution Areas
 
@@ -53,7 +54,8 @@ The highest-value contribution areas right now are:
 
 - schema and report alignment
 - broader notification coverage and client DTO validation
-- `Orchestration` scaffolding
+- orchestration refinement
+- SwiftUI shell and pane-state cleanup
 - accessibility-first UI groundwork
 - documentation cleanup and consistency fixes
 
@@ -63,6 +65,7 @@ If you want deeper implementation context before changing protocol-facing code, 
 - [TRANSPORT_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/TRANSPORT_SCHEMA_REPORT.md)
 - [CONNECTION_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/CONNECTION_SCHEMA_REPORT.md)
 - [CLIENT_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/CLIENT_SCHEMA_REPORT.md)
+- [CLIENT_THREAD_TURN_ITEM_AUDIT.md](/Users/galew/Workspace/Codax/Docs/CLIENT_THREAD_TURN_ITEM_AUDIT.md)
 - [ORCHESTRATION_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/ORCHESTRATION_SCHEMA_REPORT.md)
 
 ## Development Workflow

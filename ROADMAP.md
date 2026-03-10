@@ -50,11 +50,11 @@ Tickets:
 - [x] Add the `CodaxTests` test target and keep it runnable locally.
 - [x] Add meaningful transport and connection coverage to `CodaxTests`.
 - [x] Organize `CodaxTests/` by layer so transport, connection, and orchestration coverage stay easy to find.
-- [ ] Normalize placeholder docs and the app shell beyond the current scaffolding.
+- [ ] Normalize the remaining transitional docs and shell details beyond the current early split-view baseline.
 
 Exit criteria:
 
-- [ ] Project structure is stable enough for feature milestones and tests can run in local and CI workflows with non-placeholder coverage.
+- [ ] Project structure is stable enough for feature milestones and tests can run in local and CI workflows with meaningful non-placeholder coverage.
 
 ## Milestone 1: Transport
 
@@ -146,11 +146,13 @@ Scope:
 
 Tickets:
 
-- [ ] Replace current `CodaxOrchestrator` placeholder behavior with a real connection lifecycle.
-- [ ] Inject a concrete `CodexClient` and transport or process startup path.
-- [ ] Implement connect, login, thread-loading, and start-turn flows.
+- [x] Replace current `CodaxOrchestrator` placeholder behavior with an initial real connection lifecycle.
+- [x] Inject a concrete `CodexClient` and transport or process startup path.
+- [x] Implement initial connect, thread-loading, and start-turn flows.
+- [ ] Complete login behavior beyond the current placeholder UX.
 - [ ] Implement a concrete `CodexServerRequestHandler`.
-- [ ] Map connection, auth, and thread state into observable app state.
+- [x] Map connection, compatibility, auth, and thread state into observable app state.
+- [ ] Tighten richer app-facing thread and item modeling as the client and UI evolve.
 
 Exit criteria:
 
@@ -164,11 +166,11 @@ Scope:
 
 Tickets:
 
-- [ ] Replace the placeholder `ContentView` shell with a real three-panel layout.
-- [ ] Define the sidebar thread list, middle conversation pane, and right-side detail or inspector pane.
-- [ ] Bind all three panes to orchestrator state.
+- [x] Replace the placeholder `ContentView` shell with a real three-panel layout.
+- [x] Define the sidebar thread list, middle conversation pane, and right-side detail or inspector pane.
+- [x] Bind all three panes to orchestrator state.
 - [ ] Add loading, error, and empty states for startup, connection, and thread selection.
-- [ ] Preserve the current minimal app shell only until the split-view is in place.
+- [ ] Finish pane behavior and remove transitional shell scaffolding.
 
 Exit criteria:
 

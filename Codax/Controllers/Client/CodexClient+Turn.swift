@@ -16,7 +16,7 @@ public enum TurnStatus: String, Sendable, Codable, Equatable {
 	case inProgress
 }
 
-	// MARK: Base Type
+	// MARK: Base Types
 
 public struct Turn: Sendable, Codable, Equatable {
 	public var id: String

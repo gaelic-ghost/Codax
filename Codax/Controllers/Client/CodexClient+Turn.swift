@@ -9,10 +9,19 @@ import Foundation
 
 	// MARK: - Client Layer `Turn` Types
 
+public enum TurnStatus: String, Sendable, Codable, Equatable {
+	case completed
+	case interrupted
+	case failed
+	case inProgress
+}
+
 	// MARK: Base Type
 
-public struct Turn: Sendable, Codable {
+public struct Turn: Sendable, Codable, Equatable {
 	public var id: String
+	/// The app-server currently leaves this empty on `turn/started` and `turn/completed`.
+	/// Treat live `item/*` notifications as the canonical item stream.
 	public var items: [ThreadItem]
 	public var status: TurnStatus
 	public var error: TurnError?
@@ -64,12 +73,11 @@ public struct TurnCompletedNotification: Sendable, Codable {
 
 	// MARK: Errors
 
-public struct TurnError: Sendable, Codable {
+public struct TurnError: Sendable, Codable, Equatable {
 	public var message: String
 	public var codexErrorInfo: JSONValue?
 	public var additionalDetails: String?
 }
-
 
 
 

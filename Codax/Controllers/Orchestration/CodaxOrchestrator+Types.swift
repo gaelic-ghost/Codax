@@ -9,8 +9,6 @@ import Foundation
 
 	// MARK: - Orchestration Layer Types
 
-public typealias ThreadSummary = Thread
-
 struct CodaxOrchestrationRuntime {
 	let process: CodexProcess?
 	let connection: CodexConnection

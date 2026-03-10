@@ -9,23 +9,93 @@ import Foundation
 
 	// MARK: - Client Layer `Thread` Types
 
+public struct GitInfo: Sendable, Codable, Equatable {
+	public var sha: String?
+	public var branch: String?
+	// TODO: Use Foundation.URL
+	public var originUrl: String?
+}
+
+// TODO: Determine if applicable to our client.
+public enum SessionSource: Sendable, Codable, Equatable {
+	case cli
+	case vscode
+	case exec
+	case appServer
+	case subAgent(JSONValue)
+	case unknown
+
+	public init(from decoder: any Decoder) throws {
+		let value = try JSONValue(from: decoder)
+		switch value {
+		case let .string(rawValue):
+			switch rawValue {
+			case "cli":
+				self = .cli
+			case "vscode":
+				self = .vscode
+			case "exec":
+				self = .exec
+			case "appServer":
+				self = .appServer
+			case "unknown":
+				self = .unknown
+			default:
+				throw DecodingError.dataCorrupted(
+					.init(codingPath: decoder.codingPath, debugDescription: "Unsupported SessionSource value: \(rawValue)")
+				)
+			}
+		case let .object(object):
+			if let subAgent = object["subAgent"] {
+				self = .subAgent(subAgent)
+			} else {
+				throw DecodingError.dataCorrupted(
+					.init(codingPath: decoder.codingPath, debugDescription: "Unsupported SessionSource object payload.")
+				)
+			}
+		default:
+			throw DecodingError.dataCorrupted(
+				.init(codingPath: decoder.codingPath, debugDescription: "Unsupported SessionSource payload.")
+			)
+		}
+	}
+
+	public func encode(to encoder: any Encoder) throws {
+		switch self {
+		case .cli:
+			try JSONValue.string("cli").encode(to: encoder)
+		case .vscode:
+			try JSONValue.string("vscode").encode(to: encoder)
+		case .exec:
+			try JSONValue.string("exec").encode(to: encoder)
+		case .appServer:
+			try JSONValue.string("appServer").encode(to: encoder)
+		case let .subAgent(rawValue):
+			try JSONValue.object(["subAgent": rawValue]).encode(to: encoder)
+		case .unknown:
+			try JSONValue.string("unknown").encode(to: encoder)
+		}
+	}
+}
+
 	// MARK: Base Type
 
-public struct Thread: Sendable, Codable {
+public struct Thread: Sendable, Codable, Equatable {
 	public var id: String
 	public var preview: String
 	public var ephemeral: Bool
 	public var modelProvider: String
 	public var createdAt: Int
 	public var updatedAt: Int
-	public var status: JSONValue
+	public var status: ThreadStatus
 	public var path: String?
 	public var cwd: String
 	public var cliVersion: String
-	public var source: JSONValue?
+	public var source: SessionSource?
+	// TODO: Check if this is applicable.
 	public var agentNickname: String?
 	public var agentRole: String?
-	public var gitInfo: JSONValue?
+	public var gitInfo: GitInfo?
 	public var name: String?
 	public var turns: [Turn]
 }
@@ -97,4 +167,3 @@ public struct ThreadStartedNotification: Sendable, Codable {
 }
 
 	// MARK: Errors
-

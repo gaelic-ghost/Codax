@@ -151,15 +151,7 @@ struct CodaxOrchestratorTests {
 		#expect(orchestrator.authMode == .chatgpt)
 		#expect(orchestrator.activeTurnPlan.count == 1)
 		#expect(orchestrator.activeTurnDiff == "M ContentView.swift")
-		guard case let .object(statusObject)? = orchestrator.activeThread?.status else {
-			#expect(Bool(false))
-			return
-		}
-		guard case let .string(type)? = statusObject["type"] else {
-			#expect(Bool(false))
-			return
-		}
-		#expect(type == "active")
+		#expect(orchestrator.activeThread?.status == .active(activeFlags: [.waitingOnApproval]))
 	}
 }
 

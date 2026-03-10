@@ -56,6 +56,7 @@ public actor CodexProcess {
 		self.makeStdioTransport = makeStdioTransport
 	}
 
+	// TODO: Rename to launchLocalCodex(arguments: [String])
 	public func launchBundledCodex(arguments: [String]) async throws -> any CodexTransport {
 		switch phase {
 			case .running:

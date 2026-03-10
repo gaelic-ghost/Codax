@@ -228,15 +228,15 @@ This is one of the strongest-aligned client files in the current tree. The types
 - response DTOs for those methods
 - thread notification seed types like `ThreadStartedNotification`
 
-This file already carries a meaningful first slice of the thread surface, but several fields are still schema-thin:
+This file already carries a meaningful first slice of the thread surface, and its baseline alignment is now stronger:
 
-- `status: JSONValue`
-- `source: JSONValue?`
-- `gitInfo: JSONValue?`
+- `status` is typed as `ThreadStatus`
+- `source` is typed as `SessionSource?`
+- `gitInfo` is typed as `GitInfo?`
 - `approvalPolicy: AskForApproval`
 - `sandbox: SandboxPolicy`
 
-Those are structurally acceptable placeholders for now, but they are not endpoint-complete modeling.
+The remaining thin spots are concentrated in policy/config payloads rather than the base `Thread` shape.
 
 ### 4. `CodexClient+Turn.swift`
 
@@ -250,13 +250,15 @@ Those are structurally acceptable placeholders for now, but they are not endpoin
 - response DTOs for those methods
 - turn lifecycle notification seed types
 
-This file is also structurally sound, but still schema-thin in several places:
+This file is also structurally sound, with the base `Turn` contract now aligned more closely to the schema:
 
 - `input: [JSONValue]`
 - `summary: JSONValue?`
 - `outputSchema: JSONValue?`
 - `items: [ThreadItem]`
 - `codexErrorInfo: JSONValue?`
+
+The major improvement in this slice is that `status` is now a real typed `TurnStatus` instead of a plain string alias, and `ThreadItem` is no longer a raw `JSONValue` alias.
 
 ### 5. `CodexClient+Account.swift`
 
@@ -383,13 +385,13 @@ The current client layer still relies on `JSONValue`-based placeholders in sever
 - `SandboxPolicy`
 - `Personality`
 - `CollaborationMode`
-- `ThreadItem`
 - `DynamicToolCallOutputContentItem`
-- nested fields in `Thread`
-- nested fields in `Turn`
+- nested policy/config fields in `Thread`
+- nested policy/config and tool-detail fields in `Turn`
+- nested detail inside several `ThreadItem` variants
 - nested fields in approval/tool-related DTOs
 
-This is acceptable for a first slice, but the report should treat these as temporary typing, not as stable endpoint-complete modeling.
+This is acceptable for the current slice, but the report should treat these as temporary typing, not as stable endpoint-complete modeling. The top-level `ThreadItem` tagged union is now real; the remaining looseness is mostly within nested payload detail.
 
 ### Where Ownership Is Still Split On Purpose
 

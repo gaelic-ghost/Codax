@@ -9,7 +9,7 @@ import Foundation
 
 	// MARK: - Transport Layer Types
 
-public enum JSONValue: Sendable, Codable {
+public enum JSONValue: Sendable, Codable, Equatable {
 	case string(String)
 	case number(Double)
 	case bool(Bool)

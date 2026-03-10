@@ -18,7 +18,7 @@ final class CodaxOrchestrator {
 
 	var account: Account?
 	var authMode: AuthMode?
-	var threads: [ThreadSummary] = []
+	var threads: [Thread] = []
 	var activeThread: Thread?
 	var connectionState: ConnectionState = .disconnected
 	var loginState: LoginState = .signedOut
@@ -241,7 +241,7 @@ final class CodaxOrchestrator {
 
 		case let .threadStatusChanged(notification):
 			updateThread(id: notification.threadId) { thread in
-				thread.status = Self.jsonValue(for: notification.status)
+				thread.status = notification.status
 			}
 
 		case let .threadTokenUsageUpdated(notification):
@@ -399,22 +399,6 @@ private extension CodaxOrchestrator {
 		updateThread(id: threadID) { thread in
 			guard let index = thread.turns.firstIndex(where: { $0.id == turnID }) else { return }
 			thread.turns[index].error = turnError
-		}
-	}
-
-	static func jsonValue(for status: ThreadStatus) -> JSONValue {
-		switch status {
-		case .notLoaded:
-			return .object(["type": .string("notLoaded")])
-		case .idle:
-			return .object(["type": .string("idle")])
-		case .systemError:
-			return .object(["type": .string("systemError")])
-		case let .active(flags):
-			return .object([
-				"type": .string("active"),
-				"activeFlags": .array(flags.map { .string($0.rawValue) }),
-			])
 		}
 	}
 }

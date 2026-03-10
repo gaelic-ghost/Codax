@@ -120,6 +120,7 @@ Project docs currently worth reading first:
 - [TRANSPORT_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/TRANSPORT_SCHEMA_REPORT.md)
 - [CONNECTION_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/CONNECTION_SCHEMA_REPORT.md)
 - [CLIENT_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/CLIENT_SCHEMA_REPORT.md)
+- [CLIENT_THREAD_TURN_ITEM_AUDIT.md](/Users/galew/Workspace/Codax/Docs/CLIENT_THREAD_TURN_ITEM_AUDIT.md)
 - [ORCHESTRATION_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/ORCHESTRATION_SCHEMA_REPORT.md)
 - [SCHEMA_DIFF_REPORT_v0.111.0_to_v0.112.0.md](/Users/galew/Workspace/Codax/Docs/SCHEMA_DIFF_REPORT_v0.111.0_to_v0.112.0.md)
 

@@ -8,6 +8,8 @@
 import AsyncAlgorithms
 import Foundation
 
+	// MARK: - Connection Layer Actor
+
 public actor CodexConnection {
 	private final class OneShotReply: Sendable {
 		private let channel = AsyncThrowingChannel<Data, Error>()

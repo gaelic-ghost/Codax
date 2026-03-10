@@ -9,6 +9,31 @@ import Foundation
 
 	// MARK: - Client Layer Account/Auth Types
 
+public enum CancelLoginAccountStatus: String, Sendable, Codable {
+	case canceled
+	case notFound
+}
+
+public struct CancelLoginAccountResponse: Sendable, Codable {
+	public var status: CancelLoginAccountStatus
+}
+
+public struct ChatgptAuthTokensRefreshParams: Sendable, Codable {
+	public var reason: String
+	public var previousAccountId: String?
+}
+
+public struct GetAccountResponse: Sendable, Codable {
+	public var account: Account?
+	public var requiresOpenaiAuth: Bool
+}
+
+public struct ChatgptAuthTokensRefreshResponse: Sendable, Codable {
+	public var accessToken: String
+	public var chatgptAccountId: String
+	public var chatgptPlanType: String?
+}
+
 public struct GetAccountParams: Sendable, Codable {
 	public var refreshToken: Bool
 
@@ -17,9 +42,12 @@ public struct GetAccountParams: Sendable, Codable {
 	}
 }
 
-public struct GetAccountResponse: Sendable, Codable {
-	public var account: Account?
-	public var requiresOpenaiAuth: Bool
+public struct CancelLoginAccountParams: Sendable, Codable {
+	public var loginId: String
+
+	public init(loginId: String) {
+		self.loginId = loginId
+	}
 }
 
 public enum LoginAccountParams: Sendable, Codable {
@@ -121,30 +149,3 @@ public enum LoginAccountResponse: Sendable, Codable {
 	}
 }
 
-public struct CancelLoginAccountParams: Sendable, Codable {
-	public var loginId: String
-
-	public init(loginId: String) {
-		self.loginId = loginId
-	}
-}
-
-public enum CancelLoginAccountStatus: String, Sendable, Codable {
-	case canceled
-	case notFound
-}
-
-public struct CancelLoginAccountResponse: Sendable, Codable {
-	public var status: CancelLoginAccountStatus
-}
-
-public struct ChatgptAuthTokensRefreshParams: Sendable, Codable {
-	public var reason: String
-	public var previousAccountId: String?
-}
-
-public struct ChatgptAuthTokensRefreshResponse: Sendable, Codable {
-	public var accessToken: String
-	public var chatgptAccountId: String
-	public var chatgptPlanType: String?
-}

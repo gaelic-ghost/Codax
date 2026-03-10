@@ -9,9 +9,10 @@ import SwiftUI
 
 struct SidebarView: View {
 	@Environment(CodaxOrchestrator.self) private var orchestrator
+	@Bindable private var selection
 
 	var body: some View {
-		List(selection: selectionBinding) {
+		List(selection: ) {
 			if let banner = compatibilityBannerText {
 				Section("Compatibility") {
 					Text(banner)
@@ -43,15 +44,7 @@ struct SidebarView: View {
 		}
 	}
 
-	private var selectionBinding: Binding<String?> {
-		Binding(
-			get: { orchestrator.activeThread?.id },
-			set: { newValue in
-				guard let newValue else { return }
-				orchestrator.selectThread(id: newValue)
-			}
-		)
-	}
+
 
 	private var compatibilityBannerText: String? {
 		guard case let .unsupported(version, _, supportedRange, reason) = orchestrator.compatibility else {

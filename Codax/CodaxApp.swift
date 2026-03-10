@@ -24,7 +24,8 @@ struct CodaxApp: App {
 			NavigationSplitView(
 				columnVisibility: $columnVis,
 				preferredCompactColumn: $prefferedColumn) {
-					SidebarView()
+						// sidebar:
+					SidebarView(selection: orchestrator.activeThread)
 				} content: {
 					ContentView()
 				} detail: {

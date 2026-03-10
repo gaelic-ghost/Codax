@@ -101,4 +101,41 @@ struct CodexCLIProbeTests {
 		#expect(supportedRange == "0.111.x and 0.112.x")
 		#expect(reason.contains("Could not run"))
 	}
+
+	@Test func debugProbeCompatibilityCapturesEnvAndDirectPathAttempts() async throws {
+		let probe = CodexCLIProbe { executableURL, arguments in
+			switch (executableURL.path, arguments) {
+			case ("/usr/bin/which", ["codex"]):
+				return .init(status: 0, stdout: "/opt/homebrew/bin/codex\n", stderr: "")
+			case ("/usr/bin/env", ["codex", "--version"]):
+				throw NSError(
+					domain: "CodaxTests",
+					code: 1,
+					userInfo: [NSLocalizedDescriptionKey: "No such file or directory"]
+				)
+			case ("/opt/homebrew/bin/codex", ["--version"]):
+				return .init(status: 0, stdout: "codex-cli 0.112.0\n", stderr: "")
+			case ("/usr/local/bin/codex", ["--version"]):
+				throw NSError(
+					domain: "CodaxTests",
+					code: 13,
+					userInfo: [NSLocalizedDescriptionKey: "Permission denied"]
+				)
+			default:
+				throw TestFailure(message: "Unexpected command: \(executableURL.path) \(arguments)")
+			}
+		}
+
+		let snapshot = await probe.debugProbeCompatibility()
+
+		#expect(snapshot.detectedCodexPath == "/opt/homebrew/bin/codex")
+		#expect(snapshot.attempts.count == 3)
+		#expect(snapshot.attempts[0].executablePath == "/usr/bin/env")
+		#expect(snapshot.attempts[0].errorDescription?.contains("No such file") == true)
+		#expect(snapshot.attempts[1].executablePath == "/opt/homebrew/bin/codex")
+		#expect(snapshot.attempts[1].stdout.contains("0.112.0"))
+		#expect(snapshot.attempts[2].executablePath == "/usr/local/bin/codex")
+		#expect(snapshot.attempts[2].errorDescription?.contains("Permission denied") == true)
+		#expect(snapshot.formattedDescription.contains("/opt/homebrew/bin/codex"))
+	}
 }

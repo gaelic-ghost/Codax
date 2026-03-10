@@ -22,6 +22,13 @@ struct ContentView: View {
 				.font(.subheadline)
 				.foregroundStyle(.secondary)
 
+			if let compatibilityDebugOutput = orchestrator.compatibilityDebugOutput, !compatibilityDebugOutput.isEmpty {
+				Text(compatibilityDebugOutput)
+					.font(.caption.monospaced())
+					.foregroundStyle(.secondary)
+					.textSelection(.enabled)
+			}
+
 			HStack {
 				Button("Connect") {
 					Task {

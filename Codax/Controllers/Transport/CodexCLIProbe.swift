@@ -41,6 +41,78 @@ public enum CodexCLICompatibility: Sendable, Equatable {
 }
 
 public struct CodexCLIProbe: Sendable {
+	public struct CommandAttemptResult: Sendable, Equatable {
+		public let executablePath: String
+		public let arguments: [String]
+		public let status: Int32?
+		public let stdout: String
+		public let stderr: String
+		public let errorDescription: String?
+
+		public init(
+			executablePath: String,
+			arguments: [String],
+			status: Int32?,
+			stdout: String,
+			stderr: String,
+			errorDescription: String?
+		) {
+			self.executablePath = executablePath
+			self.arguments = arguments
+			self.status = status
+			self.stdout = stdout
+			self.stderr = stderr
+			self.errorDescription = errorDescription
+		}
+	}
+
+	public struct DebugSnapshot: Sendable, Equatable {
+		public let inheritedPath: String?
+		public let detectedCodexPath: String?
+		public let compatibility: CodexCLICompatibility
+		public let attempts: [CommandAttemptResult]
+
+		public init(
+			inheritedPath: String?,
+			detectedCodexPath: String?,
+			compatibility: CodexCLICompatibility,
+			attempts: [CommandAttemptResult]
+		) {
+			self.inheritedPath = inheritedPath
+			self.detectedCodexPath = detectedCodexPath
+			self.compatibility = compatibility
+			self.attempts = attempts
+		}
+
+		public var formattedDescription: String {
+			var lines: [String] = []
+			lines.append("Inherited PATH: \(inheritedPath ?? "<nil>")")
+			lines.append("Detected codex path: \(detectedCodexPath ?? "<nil>")")
+			lines.append("Compatibility: \(String(describing: compatibility))")
+
+			for attempt in attempts {
+				lines.append("")
+				lines.append("$ \(attempt.executablePath) \(attempt.arguments.joined(separator: " "))")
+				if let status = attempt.status {
+					lines.append("status: \(status)")
+				}
+				if let errorDescription = attempt.errorDescription {
+					lines.append("error: \(errorDescription)")
+				}
+				if !attempt.stdout.isEmpty {
+					lines.append("stdout:")
+					lines.append(attempt.stdout.trimmingCharacters(in: .newlines))
+				}
+				if !attempt.stderr.isEmpty {
+					lines.append("stderr:")
+					lines.append(attempt.stderr.trimmingCharacters(in: .newlines))
+				}
+			}
+
+			return lines.joined(separator: "\n")
+		}
+	}
+
 	public struct CommandOutput: Sendable, Equatable {
 		public let status: Int32
 		public let stdout: String
@@ -104,10 +176,42 @@ public struct CodexCLIProbe: Sendable {
 			)
 		}
 	}
+
+	public func debugProbeCompatibility() async -> DebugSnapshot {
+		let codexPath = await detectCodexPath()
+		var attempts: [CommandAttemptResult] = []
+
+		let envAttempt = await runAttempt(
+			executableURL: URL(fileURLWithPath: "/usr/bin/env"),
+			arguments: ["codex", "--version"]
+		)
+		attempts.append(envAttempt)
+
+		for candidate in Self.directProbeCandidates {
+			attempts.append(
+				await runAttempt(
+					executableURL: URL(fileURLWithPath: candidate),
+					arguments: ["--version"]
+				)
+			)
+		}
+
+		let compatibility = await probeCompatibility()
+		return DebugSnapshot(
+			inheritedPath: ProcessInfo.processInfo.environment["PATH"],
+			detectedCodexPath: codexPath,
+			compatibility: compatibility,
+			attempts: attempts
+		)
+	}
 }
 
 extension CodexCLIProbe {
 	static let supportedRangeDescription = "0.111.x and 0.112.x"
+	static let directProbeCandidates = [
+		"/opt/homebrew/bin/codex",
+		"/usr/local/bin/codex",
+	]
 
 	static func isSupported(version: CodexCLIVersion) -> Bool {
 		version.major == 0 && (version.minor == 111 || version.minor == 112)
@@ -149,6 +253,29 @@ extension CodexCLIProbe {
 				.first
 		} catch {
 			return nil
+		}
+	}
+
+	private func runAttempt(executableURL: URL, arguments: [String]) async -> CommandAttemptResult {
+		do {
+			let output = try await runCommand(executableURL, arguments)
+			return CommandAttemptResult(
+				executablePath: executableURL.path,
+				arguments: arguments,
+				status: output.status,
+				stdout: output.stdout,
+				stderr: output.stderr,
+				errorDescription: nil
+			)
+		} catch {
+			return CommandAttemptResult(
+				executablePath: executableURL.path,
+				arguments: arguments,
+				status: nil,
+				stdout: "",
+				stderr: "",
+				errorDescription: error.localizedDescription
+			)
 		}
 	}
 

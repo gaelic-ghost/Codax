@@ -27,6 +27,7 @@ final class CodaxOrchestrator {
 	var activeTurnPlan: [TurnPlanStep] = []
 	var activeTurnDiff: String?
 	var activeError: String?
+	var compatibilityDebugOutput: String?
 	var isLoadingThreads = false
 
 	private let compatibilityProbe: CodexCLIProbe
@@ -277,7 +278,10 @@ final class CodaxOrchestrator {
 
 	func refreshCompatibility() async {
 		compatibility = .checking
-		compatibility = CodaxCompatibilityState(await compatibilityProbe.probeCompatibility())
+		let debugSnapshot = await compatibilityProbe.debugProbeCompatibility()
+		compatibilityDebugOutput = debugSnapshot.formattedDescription
+		print("[CodaxCompatibilityProbe]\n\(debugSnapshot.formattedDescription)")
+		compatibility = CodaxCompatibilityState(debugSnapshot.compatibility)
 	}
 }
 

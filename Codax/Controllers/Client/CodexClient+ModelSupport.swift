@@ -219,6 +219,109 @@ public enum NetworkAccess: String, Sendable, Codable, Equatable, Hashable {
 	case enabled
 }
 
+public enum NetworkPolicyRuleAction: String, Sendable, Codable, Equatable, Hashable {
+	case allow
+	case deny
+}
+
+public enum MacOsPreferencesPermission: String, Sendable, Codable, Equatable, Hashable {
+	case none
+	case readOnly = "read_only"
+	case readWrite = "read_write"
+}
+
+public enum MacOsAutomationPermission: Sendable, Codable, Equatable, Hashable {
+	case none
+	case all
+	case bundleIDs([String])
+
+	private enum CodingKeys: String, CodingKey {
+		case bundleIDs = "bundle_ids"
+	}
+
+	public init(from decoder: any Decoder) throws {
+		if let container = try? decoder.singleValueContainer(), let value = try? container.decode(String.self) {
+			switch value {
+			case "none":
+				self = .none
+			case "all":
+				self = .all
+			default:
+				throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported MacOsAutomationPermission value: \(value)")
+			}
+			return
+		}
+
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		self = .bundleIDs(try container.decode([String].self, forKey: .bundleIDs))
+	}
+
+	public func encode(to encoder: any Encoder) throws {
+		switch self {
+		case .none:
+			var container = encoder.singleValueContainer()
+			try container.encode("none")
+		case .all:
+			var container = encoder.singleValueContainer()
+			try container.encode("all")
+		case let .bundleIDs(bundleIDs):
+			var container = encoder.container(keyedBy: CodingKeys.self)
+			try container.encode(bundleIDs, forKey: .bundleIDs)
+		}
+	}
+}
+
+public struct AdditionalFileSystemPermissions: Sendable, Codable, Equatable, Hashable {
+	public var read: [String]?
+	public var write: [String]?
+}
+
+public struct AdditionalNetworkPermissions: Sendable, Codable, Equatable, Hashable {
+	public var enabled: Bool?
+}
+
+public struct AdditionalMacOsPermissions: Sendable, Codable, Equatable, Hashable {
+	public var preferences: MacOsPreferencesPermission
+	public var automations: MacOsAutomationPermission
+	public var accessibility: Bool
+	public var calendar: Bool
+}
+
+public struct AdditionalPermissionProfile: Sendable, Codable, Equatable, Hashable {
+	public var network: AdditionalNetworkPermissions?
+	public var fileSystem: AdditionalFileSystemPermissions?
+	public var macos: AdditionalMacOsPermissions?
+
+	private enum CodingKeys: String, CodingKey {
+		case network
+		case fileSystem
+		case macos
+	}
+}
+
+public struct ExecPolicyAmendment: Sendable, Codable, Equatable, Hashable {
+	public var commands: [String]
+
+	public init(_ commands: [String]) {
+		self.commands = commands
+	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.singleValueContainer()
+		self.commands = try container.decode([String].self)
+	}
+
+	public func encode(to encoder: any Encoder) throws {
+		var container = encoder.singleValueContainer()
+		try container.encode(commands)
+	}
+}
+
+public struct NetworkPolicyAmendment: Sendable, Codable, Equatable, Hashable {
+	public var host: String
+	public var action: NetworkPolicyRuleAction
+}
+
 public enum ReadOnlyAccess: Sendable, Codable, Equatable, Hashable {
 	case restricted(includePlatformDefaults: Bool, readableRoots: [String])
 	case fullAccess
@@ -615,6 +718,131 @@ public enum SubAgentSource: Sendable, Codable, Equatable, Hashable {
 		case let .other(value):
 			var container = encoder.container(keyedBy: CodingKeys.self)
 			try container.encode(value, forKey: .other)
+		}
+	}
+}
+
+public enum ParsedCommand: Sendable, Codable, Equatable, Hashable {
+	case read(cmd: String, name: String, path: String)
+	case listFiles(cmd: String, path: String?)
+	case search(cmd: String, query: String?, path: String?)
+	case unknown(cmd: String)
+
+	private enum CodingKeys: String, CodingKey {
+		case type
+		case cmd
+		case name
+		case path
+		case query
+	}
+
+	private enum Kind: String, Codable {
+		case read
+		case listFiles = "list_files"
+		case search
+		case unknown
+	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		switch try container.decode(Kind.self, forKey: .type) {
+		case .read:
+			self = .read(
+				cmd: try container.decode(String.self, forKey: .cmd),
+				name: try container.decode(String.self, forKey: .name),
+				path: try container.decode(String.self, forKey: .path)
+			)
+		case .listFiles:
+			self = .listFiles(
+				cmd: try container.decode(String.self, forKey: .cmd),
+				path: try container.decodeIfPresent(String.self, forKey: .path)
+			)
+		case .search:
+			self = .search(
+				cmd: try container.decode(String.self, forKey: .cmd),
+				query: try container.decodeIfPresent(String.self, forKey: .query),
+				path: try container.decodeIfPresent(String.self, forKey: .path)
+			)
+		case .unknown:
+			self = .unknown(cmd: try container.decode(String.self, forKey: .cmd))
+		}
+	}
+
+	public func encode(to encoder: any Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		switch self {
+		case let .read(cmd, name, path):
+			try container.encode(Kind.read, forKey: .type)
+			try container.encode(cmd, forKey: .cmd)
+			try container.encode(name, forKey: .name)
+			try container.encode(path, forKey: .path)
+		case let .listFiles(cmd, path):
+			try container.encode(Kind.listFiles, forKey: .type)
+			try container.encode(cmd, forKey: .cmd)
+			try container.encodeIfPresent(path, forKey: .path)
+		case let .search(cmd, query, path):
+			try container.encode(Kind.search, forKey: .type)
+			try container.encode(cmd, forKey: .cmd)
+			try container.encodeIfPresent(query, forKey: .query)
+			try container.encodeIfPresent(path, forKey: .path)
+		case let .unknown(cmd):
+			try container.encode(Kind.unknown, forKey: .type)
+			try container.encode(cmd, forKey: .cmd)
+		}
+	}
+}
+
+public struct ToolRequestUserInputOption: Sendable, Codable, Equatable, Hashable {
+	public var label: String
+	public var description: String
+}
+
+public enum FileChange: Sendable, Codable, Equatable, Hashable {
+	case add(content: String)
+	case delete(content: String)
+	case update(unifiedDiff: String, movePath: String?)
+
+	private enum CodingKeys: String, CodingKey {
+		case type
+		case content
+		case unifiedDiff = "unified_diff"
+		case movePath = "move_path"
+	}
+
+	private enum Kind: String, Codable {
+		case add
+		case delete
+		case update
+	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		switch try container.decode(Kind.self, forKey: .type) {
+		case .add:
+			self = .add(content: try container.decode(String.self, forKey: .content))
+		case .delete:
+			self = .delete(content: try container.decode(String.self, forKey: .content))
+		case .update:
+			self = .update(
+				unifiedDiff: try container.decode(String.self, forKey: .unifiedDiff),
+				movePath: try container.decodeIfPresent(String.self, forKey: .movePath)
+			)
+		}
+	}
+
+	public func encode(to encoder: any Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		switch self {
+		case let .add(content):
+			try container.encode(Kind.add, forKey: .type)
+			try container.encode(content, forKey: .content)
+		case let .delete(content):
+			try container.encode(Kind.delete, forKey: .type)
+			try container.encode(content, forKey: .content)
+		case let .update(unifiedDiff, movePath):
+			try container.encode(Kind.update, forKey: .type)
+			try container.encode(unifiedDiff, forKey: .unifiedDiff)
+			try container.encodeIfPresent(movePath, forKey: .movePath)
 		}
 	}
 }

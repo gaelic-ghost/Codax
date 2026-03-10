@@ -210,6 +210,8 @@ final class CodaxOrchestrator {
 		}
 	}
 
+	// MARK: Server Notification Handling
+
 	func handle(_ notification: ServerNotificationEnvelope) {
 		switch notification {
 		case let .error(error):

@@ -48,23 +48,24 @@ nonisolated public enum ServerNotificationEnvelope: Sendable {
 extension ServerNotificationEnvelope {
 	nonisolated static func decode(method: String, params: Data, decoder: JSONDecoder) throws -> ServerNotificationEnvelope {
 		switch method {
+					// MARK: Base
 			case "error":
 				return .error(try decoder.decode(ErrorNotification.self, from: params))
 			case "serverRequest/resolved":
 				return .serverRequestResolved(try decoder.decode(ServerRequestResolvedNotification.self, from: params))
-
+					// MARK: Account
 			case "account/updated":
 				return .accountUpdated(try decoder.decode(AccountUpdatedNotification.self, from: params))
 			case "account/login/completed":
 				return .accountLoginCompleted(try decoder.decode(AccountLoginCompletedNotification.self, from: params))
-
+					// MARK: Thread
 			case "thread/started":
 				return .threadStarted(try decoder.decode(ThreadStartedNotification.self, from: params))
 			case "thread/status/changed":
 				return .threadStatusChanged(try decoder.decode(ThreadStatusChangedNotification.self, from: params))
 			case "thread/tokenUsage/updated":
 				return .threadTokenUsageUpdated(try decoder.decode(ThreadTokenUsageUpdatedNotification.self, from: params))
-
+					// MARK: Turn
 			case "turn/started":
 				return .turnStarted(try decoder.decode(TurnStartedNotification.self, from: params))
 			case "turn/completed":
@@ -73,7 +74,7 @@ extension ServerNotificationEnvelope {
 				return .turnDiffUpdated(try decoder.decode(TurnDiffUpdatedNotification.self, from: params))
 			case "turn/plan/updated":
 				return .turnPlanUpdated(try decoder.decode(TurnPlanUpdatedNotification.self, from: params))
-
+					// MARK: Item
 			case "item/started":
 				return .itemStarted(try decoder.decode(ItemStartedNotification.self, from: params))
 			case "item/completed":
@@ -90,7 +91,7 @@ extension ServerNotificationEnvelope {
 				return .reasoningSummaryTextDelta(try decoder.decode(ReasoningSummaryTextDeltaNotification.self, from: params))
 			case "item/reasoning/summaryPartAdded":
 				return .reasoningSummaryPartAdded(try decoder.decode(ReasoningSummaryPartAddedNotification.self, from: params))
-
+					// MARK: DEFAULT
 			default:
 				return .unknown(method: method, raw: params)
 		}
@@ -193,6 +194,8 @@ public enum ThreadStatus: Sendable, Codable, Equatable, Hashable {
 		}
 	}
 }
+
+	// MARK: Thread
 
 public struct ThreadStatusChangedNotification: Sendable, Codable {
 	public var threadCodexId: String

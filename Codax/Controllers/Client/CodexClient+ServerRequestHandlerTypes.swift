@@ -18,17 +18,17 @@ public protocol CodexServerRequestHandler: Sendable {
 	// MARK: - Server Request Envelopes
 
 nonisolated public enum ServerRequestEnvelope: Sendable {
-		// MARK: Auth Refresh
+		// MARK: Account
 	case chatgptAuthRefresh(ChatgptAuthTokensRefreshParams, id: JSONRPCID)
 		// MARK: File Change/Apply Patch Approvals
 	case fileChangeApproval(FileChangeRequestApprovalParams, id: JSONRPCID)
 	case applyPatchApproval(ApplyPatchApprovalParams, id: JSONRPCID)
-		// MARK: Tool Reqs/Approvals
+		// MARK: Tools
 	case userInput(ToolRequestUserInputParams, id: JSONRPCID)
 	case dynamicToolCall(DynamicToolCallParams, id: JSONRPCID)
 		// MARK: MCP Elicitation
 	case mcpServerElicitation(McpServerElicitationRequestParams, id: JSONRPCID)
-		// MARK: Command Approvals
+		// MARK: Commands
 	case commandApproval(CommandExecutionRequestApprovalParams, id: JSONRPCID)
 	case execCommandApproval(ExecCommandApprovalParams, id: JSONRPCID)
 		// MARK: DEFAULT
@@ -38,7 +38,7 @@ nonisolated public enum ServerRequestEnvelope: Sendable {
 extension ServerRequestEnvelope {
 	nonisolated static func decode(method: String, id: JSONRPCID, params: Data, decoder: JSONDecoder) throws -> ServerRequestEnvelope {
 		switch method {
-					// MARK: Auth Refresh
+					// MARK: Account
 			case "account/chatgptAuthTokens/refresh":
 				return .chatgptAuthRefresh(try decoder.decode(ChatgptAuthTokensRefreshParams.self, from: params), id: id)
 					// MARK: File Change/Apply Patch Approvals
@@ -46,7 +46,7 @@ extension ServerRequestEnvelope {
 				return .fileChangeApproval(try decoder.decode(FileChangeRequestApprovalParams.self, from: params), id: id)
 			case "applyPatchApproval":
 				return .applyPatchApproval(try decoder.decode(ApplyPatchApprovalParams.self, from: params), id: id)
-					// MARK: Tool Reqs/Approvals
+					// MARK: Tools
 			case "item/tool/requestUserInput":
 				return .userInput(try decoder.decode(ToolRequestUserInputParams.self, from: params), id: id)
 			case "item/tool/call":
@@ -54,7 +54,7 @@ extension ServerRequestEnvelope {
 			case "mcpServer/elicitation/request":
 					// MARK: MCP Elicitation
 				return .mcpServerElicitation(try decoder.decode(McpServerElicitationRequestParams.self, from: params), id: id)
-					// MARK: Command Approvals
+					// MARK: Commands
 			case "item/commandExecution/requestApproval":
 				return .commandApproval(try decoder.decode(CommandExecutionRequestApprovalParams.self, from: params), id: id)
 			case "execCommandApproval":
@@ -67,17 +67,17 @@ extension ServerRequestEnvelope {
 
 	nonisolated var id: JSONRPCID {
 		switch self {
-					// MARK: Auth Refresh
+					// MARK: Account
 			case let .chatgptAuthRefresh(_, id),
 					// MARK: File Change/Apply Patch Approvals
 				let .fileChangeApproval(_, id),
 				let .applyPatchApproval(_, id),
-					// MARK: Tool Reqs/Approvals
+					// MARK: Tools
 				let .userInput(_, id),
 				let .dynamicToolCall(_, id),
 					// MARK: MCP Elicitation
 				let .mcpServerElicitation(_, id),
-					// MARK: Command Approvals
+					// MARK: Commands
 				let .commandApproval(_, id),
 				let .execCommandApproval(_, id),
 					// MARK: DEFAULT
@@ -92,12 +92,12 @@ extension ServerRequestEnvelope {
 	// MARK: Base Type
 
 public enum ServerRequestResult: Sendable {
-		// MARK: Auth Refresh
+		// MARK: Account
 	case chatgptAuthRefresh(ChatgptAuthTokensRefreshResponse)
 		// MARK: File Change/Apply Patch Approvals
 	case fileChangeApproval(FileChangeRequestApprovalResponse)
 	case applyPatchApproval(ApplyPatchApprovalResponse)
-		// MARK: Tool Reqs/Approvals
+		// MARK: Tools
 	case userInput(ToolRequestUserInputResponse)
 	case dynamicToolCall(DynamicToolCallResponse)
 	case mcpServerElicitation(McpServerElicitationRequestResponse)
@@ -143,7 +143,7 @@ public enum ReviewDecision: Sendable, Codable {
 	}
 }
 
-	// MARK: Auth Refresh Types
+	// MARK: Account
 	// Extracted to CodexClient+Account.swift
 
 	// MARK: File Change & Apply Patch Approval Types
@@ -179,7 +179,7 @@ public struct ApplyPatchApprovalParams: Sendable, Codable {
 	public var grantRoot: String?
 }
 
-	// MARK: Tool Request/Approval Types
+	// MARK: Tools
 
 public struct ToolRequestUserInputResponse: Sendable, Codable {
 	public var answers: [String: ToolRequestUserInputAnswer]
@@ -242,7 +242,7 @@ public enum McpServerElicitationAction: String, Sendable, Codable {
 	case cancel
 }
 
-	// MARK: Command Approval Types
+	// MARK: Commands
 
 public struct CommandExecutionRequestApprovalResponse: Sendable, Codable {
 	public var decision: CommandExecutionApprovalDecision

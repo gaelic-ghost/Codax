@@ -20,6 +20,11 @@ public enum CodexInboundMessage: Sendable {
 
 	// MARK: Initialization/Startup Types
 
+public struct InitializeParams: Sendable, Codable {
+	public var clientInfo: ClientInfo
+	public var capabilities: InitializeCapabilities?
+}
+
 public struct ClientInfo: Sendable, Codable {
 	public var name: String
 	public var title: String?
@@ -29,11 +34,6 @@ public struct ClientInfo: Sendable, Codable {
 public struct InitializeCapabilities: Sendable, Codable {
 	public var experimentalApi: Bool
 	public var optOutNotificationMethods: [String]?
-}
-
-public struct InitializeParams: Sendable, Codable {
-	public var clientInfo: ClientInfo
-	public var capabilities: InitializeCapabilities?
 }
 
 public struct InitializeResponse: Sendable, Codable {

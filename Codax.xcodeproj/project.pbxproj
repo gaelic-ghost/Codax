@@ -36,10 +36,29 @@
 		49F3396B2F60A3C500287536 /* AGENTS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AGENTS.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		49722E332F6218C50025032B /* Exceptions for "Tools" folder in "Codax" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				generate_connection_schema.js,
+				update_connection_schema_progress.js,
+			);
+			target = 490E23A52F5CCA8A00972F32 /* Codax */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		490E23A82F5CCA8A00972F32 /* Codax */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Codax;
+			sourceTree = "<group>";
+		};
+		49722E322F6218C50025032B /* Tools */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				49722E332F6218C50025032B /* Exceptions for "Tools" folder in "Codax" target */,
+			);
+			path = Tools;
 			sourceTree = "<group>";
 		};
 		49BD911A2F5F91F9004A63F7 /* codex-schemas */ = {
@@ -81,6 +100,7 @@
 		490E239D2F5CCA8A00972F32 = {
 			isa = PBXGroup;
 			children = (
+				49722E322F6218C50025032B /* Tools */,
 				49C635B22F5DA26000BDA18D /* Docs */,
 				49F339562F60498700287536 /* Codax.xctestplan */,
 				49F3396B2F60A3C500287536 /* AGENTS.md */,
@@ -121,6 +141,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				490E23A82F5CCA8A00972F32 /* Codax */,
+				49722E322F6218C50025032B /* Tools */,
 				49C635B22F5DA26000BDA18D /* Docs */,
 			);
 			name = Codax;

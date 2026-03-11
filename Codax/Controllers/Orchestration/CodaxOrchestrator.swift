@@ -18,17 +18,57 @@ final class CodaxOrchestrator {
 
 	var account: Account?
 	var authMode: AuthMode?
-	var threads: [Thread] = []
-	var activeThread: Thread?
 	var connectionState: ConnectionState = .disconnected
 	var loginState: LoginState = .signedOut
 	var compatibility: CodaxCompatibilityState = .unknown
-	var activeThreadTokenUsage: ThreadTokenUsage?
-	var activeTurnPlan: [TurnPlanStep] = []
-	var activeTurnDiff: String?
-	var activeError: String?
-	var compatibilityDebugOutput: String?
 	var isLoadingThreads = false
+	var errorState: CodaxOrchestratorError?
+	var compatibilityDebugInfo: CodaxCompatibilityDebugInfo?
+
+	var threads: [Thread] {
+		get { threadSessionState.threads }
+		set { threadSessionState.replaceThreads(newValue) }
+	}
+
+	var selectedThreadCodexId: String? {
+		get { threadSessionState.selectedThreadCodexId }
+		set {
+			guard let newValue else {
+				threadSessionState.selectedThreadCodexId = nil
+				return
+			}
+			threadSessionState.selectThread(codexId: newValue)
+		}
+	}
+
+	var activeThread: Thread? {
+		get { threadSessionState.selectedThread }
+		set { threadSessionState.setSelectedThread(newValue) }
+	}
+
+	var activeThreadTokenUsage: ThreadTokenUsage? {
+		get { threadSessionState.selectedTokenUsage }
+		set {
+			guard let threadCodexId = threadSessionState.selectedThreadCodexId else { return }
+			threadSessionState.setTokenUsage(newValue, for: threadCodexId)
+		}
+	}
+
+	var activeTurnPlan: [TurnPlanStep] {
+		get { threadSessionState.selectedTurnPlan }
+		set {
+			guard let threadCodexId = threadSessionState.selectedThreadCodexId else { return }
+			threadSessionState.setTurnPlan(newValue, for: threadCodexId)
+		}
+	}
+
+	var activeTurnDiff: String? {
+		get { threadSessionState.selectedTurnDiff }
+		set {
+			guard let threadCodexId = threadSessionState.selectedThreadCodexId else { return }
+			threadSessionState.setTurnDiff(newValue, for: threadCodexId)
+		}
+	}
 
 	private let compatibilityProbe: CodexCLIProbe
 	private let runtimeFactory: RuntimeFactory
@@ -37,7 +77,7 @@ final class CodaxOrchestrator {
 	private var runtimeCoordinator: CodexRuntimeCoordinator?
 	private var notificationTask: Task<Void, Never>?
 	private var serverRequestTask: Task<Void, Never>?
-	private var activeThreadCodexId: String?
+	private var threadSessionState = CodaxThreadSessionState()
 
 	init() {
 		self.compatibilityProbe = CodexCLIProbe()
@@ -83,7 +123,7 @@ final class CodaxOrchestrator {
 		}
 
 		connectionState = .connecting
-		activeError = nil
+		errorState = nil
 
 		do {
 			let runtimeCoordinator = try await runtimeFactory()
@@ -99,14 +139,14 @@ final class CodaxOrchestrator {
 			connectionState = .connected
 			await loadThreads()
 		} catch {
-			activeError = error.localizedDescription
+			errorState = CodaxOrchestratorError(message: error.localizedDescription)
 			connectionState = .disconnected
 			await teardownRuntime()
 		}
 	}
 
 	func loginWithChatGPT() async {
-		activeError = "ChatGPT login flow is not implemented yet."
+		errorState = CodaxOrchestratorError(message: "ChatGPT login flow is not implemented yet.")
 	}
 
 	func loadThreads() async {
@@ -115,30 +155,23 @@ final class CodaxOrchestrator {
 		isLoadingThreads = true
 		defer { isLoadingThreads = false }
 
-		guard let threadCodexId = activeThreadCodexId ?? activeThread?.codexId else {
-			if let activeThread {
-				upsertThread(activeThread)
-			} else {
-				threads = []
-				activeThread = nil
-			}
+		guard let threadCodexId = threadSessionState.selectedThreadCodexId else {
 			return
 		}
 
 		do {
 			let response = try await client.readThread(ThreadReadParams(threadCodexId: threadCodexId, includeTurns: true))
-			activeThreadCodexId = response.thread.codexId
-			activeThread = response.thread
-			upsertThread(response.thread)
+			threadSessionState.upsert(response.thread)
+			threadSessionState.selectThread(codexId: response.thread.codexId)
 		} catch {
-			activeError = error.localizedDescription
+			errorState = CodaxOrchestratorError(message: error.localizedDescription)
 		}
 	}
 
 	func startThread() async {
 		guard connectionState == .connected, let client = await runtimeCoordinator?.client() else { return }
 
-		activeError = nil
+		errorState = nil
 
 		do {
 			let response = try await client.startThread(
@@ -159,25 +192,22 @@ final class CodaxOrchestrator {
 					persistExtendedHistory: false
 				)
 			)
-			activeThreadCodexId = response.thread.codexId
-			activeThread = response.thread
-			activeThreadTokenUsage = nil
-			activeTurnPlan = []
-			activeTurnDiff = nil
-			upsertThread(response.thread)
+			threadSessionState.upsert(response.thread)
+			threadSessionState.selectThread(codexId: response.thread.codexId)
+			threadSessionState.clearSelectedTransientState()
 		} catch {
-			activeError = error.localizedDescription
+			errorState = CodaxOrchestratorError(message: error.localizedDescription)
 		}
 	}
 
 	func startTurn(inputText: String) async {
 		guard connectionState == .connected, let client = await runtimeCoordinator?.client() else { return }
-		guard let threadCodexId = activeThread?.codexId ?? activeThreadCodexId else { return }
+		guard let threadCodexId = threadSessionState.selectedThreadCodexId else { return }
 
 		let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
 		guard !trimmed.isEmpty else { return }
 
-		activeError = nil
+		errorState = nil
 
 		do {
 			let response = try await client.startTurn(
@@ -198,15 +228,12 @@ final class CodaxOrchestrator {
 			)
 			merge(turn: response.turn, intoThreadCodexId: threadCodexId)
 		} catch {
-			activeError = error.localizedDescription
+			errorState = CodaxOrchestratorError(message: error.localizedDescription)
 		}
 	}
 
 	func selectThread(codexId: String) {
-		activeThreadCodexId = codexId
-		if let thread = threads.first(where: { $0.codexId == codexId }) {
-			activeThread = thread
-		}
+		threadSessionState.selectThread(codexId: codexId)
 	}
 
 	// MARK: Server Notification Handling
@@ -214,7 +241,7 @@ final class CodaxOrchestrator {
 	func handle(_ notification: ServerNotificationEnvelope) {
 		switch notification {
 		case let .error(error):
-			activeError = error.error.message
+			errorState = CodaxOrchestratorError(message: error.error.message)
 			merge(turnError: error.error, intoThreadCodexId: error.threadCodexId, turnCodexId: error.turnCodexId)
 
 		case let .accountUpdated(notification):
@@ -236,32 +263,28 @@ final class CodaxOrchestrator {
 			}
 
 		case let .threadStarted(notification):
-			activeThreadCodexId = notification.thread.codexId
-			activeThread = notification.thread
-			upsertThread(notification.thread)
+			threadSessionState.upsert(notification.thread)
+			threadSessionState.selectThread(codexId: notification.thread.codexId)
 
 		case let .threadStatusChanged(notification):
-			updateThread(codexId: notification.threadCodexId) { thread in
+			threadSessionState.updateThread(codexId: notification.threadCodexId) { thread in
 				thread.status = notification.status
 			}
 
 		case let .threadTokenUsageUpdated(notification):
-			guard notification.threadCodexId == activeThreadCodexId || notification.threadCodexId == activeThread?.codexId else { return }
-			activeThreadTokenUsage = notification.tokenUsage
+			threadSessionState.setTokenUsage(notification.tokenUsage, for: notification.threadCodexId)
 
 		case let .turnStarted(notification):
-			merge(turn: notification.turn, intoThreadCodexId: notification.threadCodexId)
+			threadSessionState.merge(turn: notification.turn, into: notification.threadCodexId)
 
 		case let .turnCompleted(notification):
-			merge(turn: notification.turn, intoThreadCodexId: notification.threadCodexId)
+			threadSessionState.merge(turn: notification.turn, into: notification.threadCodexId)
 
 		case let .turnPlanUpdated(notification):
-			guard notification.threadCodexId == activeThreadCodexId || notification.threadCodexId == activeThread?.codexId else { return }
-			activeTurnPlan = notification.plan
+			threadSessionState.setTurnPlan(notification.plan, for: notification.threadCodexId)
 
 		case let .turnDiffUpdated(notification):
-			guard notification.threadCodexId == activeThreadCodexId || notification.threadCodexId == activeThread?.codexId else { return }
-			activeTurnDiff = notification.diff
+			threadSessionState.setTurnDiff(notification.diff, for: notification.threadCodexId)
 
 		case .serverRequestResolved,
 			.itemStarted,
@@ -299,7 +322,7 @@ final class CodaxOrchestrator {
 	func refreshCompatibility() async {
 		compatibility = .checking
 		let debugSnapshot = await compatibilityProbe.debugProbeCompatibility()
-		compatibilityDebugOutput = debugSnapshot.formattedDescription
+		compatibilityDebugInfo = CodaxCompatibilityDebugInfo(formattedDescription: debugSnapshot.formattedDescription)
 		print("[CodaxCompatibilityProbe]\n\(debugSnapshot.formattedDescription)")
 		compatibility = CodaxCompatibilityState(debugSnapshot.compatibility)
 	}
@@ -380,45 +403,11 @@ private extension CodaxOrchestrator {
 		runtimeCoordinator = nil
 	}
 
-	func upsertThread(_ thread: Thread) {
-		if let index = threads.firstIndex(where: { $0.codexId == thread.codexId }) {
-			threads[index] = thread
-		} else {
-			threads.append(thread)
-		}
-	}
-
-	func updateThread(codexId: String, mutation: (inout Thread) -> Void) {
-		if var activeThread, activeThread.codexId == codexId {
-			mutation(&activeThread)
-			self.activeThread = activeThread
-			upsertThread(activeThread)
-			return
-		}
-
-		guard let index = threads.firstIndex(where: { $0.codexId == codexId }) else { return }
-		var thread = threads[index]
-		mutation(&thread)
-		threads[index] = thread
-		if activeThreadCodexId == codexId {
-			activeThread = thread
-		}
-	}
-
 	func merge(turn: Turn, intoThreadCodexId threadCodexId: String) {
-		updateThread(codexId: threadCodexId) { thread in
-			if let index = thread.turns.firstIndex(where: { $0.codexId == turn.codexId }) {
-				thread.turns[index] = turn
-			} else {
-				thread.turns.append(turn)
-			}
-		}
+		threadSessionState.merge(turn: turn, into: threadCodexId)
 	}
 
 	func merge(turnError: TurnError, intoThreadCodexId threadCodexId: String, turnCodexId: String) {
-		updateThread(codexId: threadCodexId) { thread in
-			guard let index = thread.turns.firstIndex(where: { $0.codexId == turnCodexId }) else { return }
-			thread.turns[index].error = turnError
-		}
+		threadSessionState.merge(turnError: turnError, into: threadCodexId, turnCodexId: turnCodexId)
 	}
 }

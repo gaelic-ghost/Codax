@@ -22,8 +22,8 @@ struct ContentView: View {
 				.font(.subheadline)
 				.foregroundStyle(.secondary)
 
-			if let compatibilityDebugOutput = orchestrator.compatibilityDebugOutput, !compatibilityDebugOutput.isEmpty {
-				Text(compatibilityDebugOutput)
+			if let compatibilityDebugInfo = orchestrator.compatibilityDebugInfo, !compatibilityDebugInfo.formattedDescription.isEmpty {
+				Text(compatibilityDebugInfo.formattedDescription)
 					.font(.caption.monospaced())
 					.foregroundStyle(.secondary)
 					.textSelection(.enabled)
@@ -61,18 +61,18 @@ struct ContentView: View {
 			TextField("Start a turn", text: $bindableVM.turnInput, axis: .vertical)
 				.textFieldStyle(.roundedBorder)
 
-			Button("Send Turn") {
-				Task {
-					let input = bindableVM.turnInput
-					await orchestrator.startTurn(inputText: input)
-					guard orchestrator.activeError == nil else { return }
-					bindableVM.turnInput = ""
+				Button("Send Turn") {
+					Task {
+						let input = bindableVM.turnInput
+						await orchestrator.startTurn(inputText: input)
+						guard orchestrator.errorState == nil else { return }
+						bindableVM.turnInput = ""
+					}
 				}
-			}
 			.disabled(orchestrator.activeThread == nil || bindableVM.turnInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
-			if let error = orchestrator.activeError {
-				Text(error)
+			if let error = orchestrator.errorState {
+				Text(error.message)
 					.foregroundStyle(.red)
 			}
 

@@ -9,7 +9,7 @@ import SwiftUI
 
 struct SidebarView: View {
 	@Environment(CodaxOrchestrator.self) private var orchestrator
-	@Binding var selection: UUID?
+	@Binding var selection: String?
 
 	var body: some View {
 		List(selection: $selection) {
@@ -25,9 +25,9 @@ struct SidebarView: View {
 					Text("No threads yet")
 						.foregroundStyle(.secondary)
 				} else {
-					ForEach(orchestrator.threads, id: \.id) { thread in
+					ForEach(orchestrator.threads, id: \.codexId) { thread in
 						Text(displayTitle(for: thread))
-							.tag(thread.id)
+							.tag(thread.codexId)
 					}
 				}
 			}

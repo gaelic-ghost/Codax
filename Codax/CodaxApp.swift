@@ -27,16 +27,8 @@ struct CodaxApp: App {
 						// sidebar:
 					SidebarView(
 						selection: Binding(
-							get: { orchestrator.activeThread?.id },
-							set: { selectedID in
-								guard
-									let selectedID,
-									let thread = orchestrator.threads.first(where: { $0.id == selectedID })
-								else {
-									return
-								}
-								orchestrator.selectThread(codexId: thread.codexId)
-							}
+							get: { orchestrator.selectedThreadCodexId },
+							set: { orchestrator.selectedThreadCodexId = $0 }
 						)
 					)
 				} content: {

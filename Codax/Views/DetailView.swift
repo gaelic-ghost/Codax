@@ -48,9 +48,9 @@ struct DetailView: View {
 				}
 			}
 
-			if let activeError = orchestrator.activeError {
+			if let activeError = orchestrator.errorState {
 				Section("Error") {
-					Text(activeError)
+					Text(activeError.message)
 						.foregroundStyle(.red)
 				}
 			}

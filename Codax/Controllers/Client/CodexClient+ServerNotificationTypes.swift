@@ -127,7 +127,6 @@ public struct ServerRequestResolvedNotification: Sendable, Codable {
 }
 
 // MARK: Account
-// See `AuthCoordinator.swift`, `AuthCoordinator+Types.swift` for related symbols.
 
 public struct AccountUpdatedNotification: Sendable, Codable {
 	public var authMode: AuthMode?

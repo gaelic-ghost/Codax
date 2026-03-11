@@ -7,12 +7,6 @@
 
 import Foundation
 
-// MARK: Responder Protocol
-
-public protocol CodexServerRequestResponder: Sendable {
-	func handle(_ request: ServerRequestEnvelope) async -> ServerRequestResponse
-}
-
 // MARK: Runtime Coordinator
 
 public actor CodexRuntimeCoordinator {

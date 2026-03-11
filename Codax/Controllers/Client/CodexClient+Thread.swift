@@ -11,7 +11,7 @@ import Foundation
 
 	// MARK: Base Type
 
-public struct Thread: Identifiable, Sendable, Codable, Equatable, Hashable {
+public struct Thread: Identifiable, Sendable, Codable, Equatable, Hashable, CodexClientIdentifiable {
 	public var id: UUID
 	public var codexId: String
 	public var preview: String
@@ -52,9 +52,8 @@ public struct Thread: Identifiable, Sendable, Codable, Equatable, Hashable {
 
 	public init(from decoder: any Decoder) throws {
 		let container = try decoder.container(keyedBy: CodingKeys.self)
-		let codexId = try container.decode(String.self, forKey: .codexId)
-		self.id = ClientIdentity.thread(codexId)
-		self.codexId = codexId
+		self.codexId = try container.decode(String.self, forKey: .codexId)
+		self.id = ClientIdentity.thread(self.codexId)
 		self.preview = try container.decode(String.self, forKey: .preview)
 		self.ephemeral = try container.decode(Bool.self, forKey: .ephemeral)
 		self.modelProvider = try container.decode(String.self, forKey: .modelProvider)
@@ -211,57 +210,36 @@ public enum SessionSource: Sendable, Codable, Equatable, Hashable {
 	case unknown
 
 	public init(from decoder: any Decoder) throws {
-		let container = try decoder.singleValueContainer()
-		if let rawValue = try? container.decode(String.self) {
-			switch rawValue {
-				case "cli":
-					self = .cli
-				case "vscode":
-					self = .vscode
-				case "exec":
-					self = .exec
-				case "appServer":
-					self = .appServer
-				case "unknown":
-					self = .unknown
-				default:
-					throw DecodingError.dataCorrupted(
-						.init(codingPath: decoder.codingPath, debugDescription: "Unsupported SessionSource value: \(rawValue)")
-					)
-			}
-			return
-		}
-
-		let keyed = try decoder.container(keyedBy: CodingKeys.self)
-		if keyed.contains(.subAgent) {
-			self = .subAgent(try keyed.decode(SubAgentSource.self, forKey: .subAgent))
-		} else {
-			throw DecodingError.dataCorrupted(
-				.init(codingPath: decoder.codingPath, debugDescription: "Unsupported SessionSource payload.")
-			)
+		self = try CodexCoding.decodeStringOrObject(
+			from: decoder,
+			typeName: "SessionSource",
+			stringMapping: [
+				"cli": .cli,
+				"vscode": .vscode,
+				"exec": .exec,
+				"appServer": .appServer,
+				"unknown": .unknown,
+			]
+		) { (container: KeyedDecodingContainer<CodingKeys>) in
+			.subAgent(try container.decode(SubAgentSource.self, forKey: .subAgent))
 		}
 	}
 
 	public func encode(to encoder: any Encoder) throws {
 		switch self {
 			case .cli:
-				var container = encoder.singleValueContainer()
-				try container.encode("cli")
+				try CodexCoding.encodeStringValue("cli", to: encoder)
 			case .vscode:
-				var container = encoder.singleValueContainer()
-				try container.encode("vscode")
+				try CodexCoding.encodeStringValue("vscode", to: encoder)
 			case .exec:
-				var container = encoder.singleValueContainer()
-				try container.encode("exec")
+				try CodexCoding.encodeStringValue("exec", to: encoder)
 			case .appServer:
-				var container = encoder.singleValueContainer()
-				try container.encode("appServer")
+				try CodexCoding.encodeStringValue("appServer", to: encoder)
 			case let .subAgent(rawValue):
 				var container = encoder.container(keyedBy: CodingKeys.self)
 				try container.encode(rawValue, forKey: .subAgent)
 			case .unknown:
-				var container = encoder.singleValueContainer()
-				try container.encode("unknown")
+				try CodexCoding.encodeStringValue("unknown", to: encoder)
 		}
 	}
 

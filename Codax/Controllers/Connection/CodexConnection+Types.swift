@@ -47,9 +47,9 @@ nonisolated public struct JSONRPCErrorEnvelope: Encodable, Sendable {
 nonisolated public struct JSONRPCErrorObject: Sendable, Codable {
 	public let code: Int
 	public let message: String
-	public let data: JSONValue?
+	public let data: CodexValue?
 
-	public init(code: Int, message: String, data: JSONValue? = nil) {
+	public init(code: Int, message: String, data: CodexValue? = nil) {
 		self.code = code
 		self.message = message
 		self.data = data

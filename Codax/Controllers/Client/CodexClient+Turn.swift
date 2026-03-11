@@ -11,7 +11,7 @@ import Foundation
 
 	// MARK: Base Types
 
-public struct Turn: Identifiable, Sendable, Codable, Equatable, Hashable {
+public struct Turn: Identifiable, Sendable, Codable, Equatable, Hashable, CodexClientIdentifiable {
 	public var id: UUID
 	public var codexId: String
 	/// The app-server currently leaves this empty on `turn/started` and `turn/completed`.
@@ -29,9 +29,8 @@ public struct Turn: Identifiable, Sendable, Codable, Equatable, Hashable {
 
 	public init(from decoder: any Decoder) throws {
 		let container = try decoder.container(keyedBy: CodingKeys.self)
-		let codexId = try container.decode(String.self, forKey: .codexId)
-		self.id = ClientIdentity.turn(codexId)
-		self.codexId = codexId
+		self.codexId = try container.decode(String.self, forKey: .codexId)
+		self.id = ClientIdentity.turn(self.codexId)
 		self.items = try container.decode([ThreadItem].self, forKey: .items)
 		self.status = try container.decode(TurnStatus.self, forKey: .status)
 		self.error = try container.decodeIfPresent(TurnError.self, forKey: .error)
@@ -143,5 +142,4 @@ public enum ReasoningSummary: String, Sendable, Codable, Equatable, Hashable {
 	case detailed
 	case none
 }
-
 

@@ -241,18 +241,7 @@ public enum CollabAgentToolCallStatus: String, Sendable, Codable, Equatable, Has
 	case failed
 }
 
-private protocol CodexItemIdentity {
-	var codexId: String { get }
-	var id: UUID { get set }
-}
-
-private extension CodexItemIdentity {
-	mutating func assignIdentity(using makeID: (String) -> UUID) {
-		id = makeID(codexId)
-	}
-}
-
-public struct UserMessageItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+public struct UserMessageItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexClientIdentifiable {
 	public var id: UUID
 	public var codexId: String
 	public var content: [UserInput]
@@ -276,7 +265,7 @@ public struct UserMessageItem: Identifiable, Sendable, Codable, Equatable, Hasha
 	}
 }
 
-public struct AgentMessageItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+public struct AgentMessageItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexClientIdentifiable {
 	public var id: UUID
 	public var codexId: String
 	public var text: String
@@ -304,7 +293,7 @@ public struct AgentMessageItem: Identifiable, Sendable, Codable, Equatable, Hash
 	}
 }
 
-public struct PlanItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+public struct PlanItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexClientIdentifiable {
 	public var id: UUID
 	public var codexId: String
 	public var text: String
@@ -328,7 +317,7 @@ public struct PlanItem: Identifiable, Sendable, Codable, Equatable, Hashable, Co
 	}
 }
 
-public struct ReasoningItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+public struct ReasoningItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexClientIdentifiable {
 	public var id: UUID
 	public var codexId: String
 	public var summary: [String]
@@ -356,7 +345,7 @@ public struct ReasoningItem: Identifiable, Sendable, Codable, Equatable, Hashabl
 	}
 }
 
-public struct CommandExecutionItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+public struct CommandExecutionItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexClientIdentifiable {
 	public var id: UUID
 	public var codexId: String
 	public var command: String
@@ -414,7 +403,7 @@ public struct FileUpdateChange: Sendable, Codable, Equatable, Hashable {
 	public var diff: String
 }
 
-public struct FileChangeItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+public struct FileChangeItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexClientIdentifiable {
 	public var id: UUID
 	public var codexId: String
 	public var changes: [FileUpdateChange]
@@ -451,7 +440,7 @@ public struct McpToolCallError: Sendable, Codable, Equatable, Hashable {
 	public var message: String
 }
 
-public struct McpToolCallItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+public struct McpToolCallItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexClientIdentifiable {
 	public var id: UUID
 	public var codexId: String
 	public var server: String
@@ -499,7 +488,7 @@ public struct McpToolCallItem: Identifiable, Sendable, Codable, Equatable, Hasha
 	}
 }
 
-public struct DynamicToolCallItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+public struct DynamicToolCallItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexClientIdentifiable {
 	public var id: UUID
 	public var codexId: String
 	public var tool: String
@@ -543,7 +532,7 @@ public struct DynamicToolCallItem: Identifiable, Sendable, Codable, Equatable, H
 	}
 }
 
-public struct CollabAgentToolCallItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+public struct CollabAgentToolCallItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexClientIdentifiable {
 	public var id: UUID
 	public var codexId: String
 	public var tool: CollabAgentTool
@@ -587,7 +576,7 @@ public struct CollabAgentToolCallItem: Identifiable, Sendable, Codable, Equatabl
 	}
 }
 
-public struct WebSearchItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+public struct WebSearchItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexClientIdentifiable {
 	public var id: UUID
 	public var codexId: String
 	public var query: String
@@ -615,7 +604,7 @@ public struct WebSearchItem: Identifiable, Sendable, Codable, Equatable, Hashabl
 	}
 }
 
-public struct ImageViewItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+public struct ImageViewItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexClientIdentifiable {
 	public var id: UUID
 	public var codexId: String
 	public var path: String
@@ -639,7 +628,7 @@ public struct ImageViewItem: Identifiable, Sendable, Codable, Equatable, Hashabl
 	}
 }
 
-public struct ImageGenerationItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+public struct ImageGenerationItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexClientIdentifiable {
 	public var id: UUID
 	public var codexId: String
 	public var status: String
@@ -671,7 +660,7 @@ public struct ImageGenerationItem: Identifiable, Sendable, Codable, Equatable, H
 	}
 }
 
-public struct ReviewModeItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+public struct ReviewModeItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexClientIdentifiable {
 	public var id: UUID
 	public var codexId: String
 	public var review: String
@@ -695,7 +684,7 @@ public struct ReviewModeItem: Identifiable, Sendable, Codable, Equatable, Hashab
 	}
 }
 
-public struct ContextCompactionItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexItemIdentity {
+public struct ContextCompactionItem: Identifiable, Sendable, Codable, Equatable, Hashable, CodexClientIdentifiable {
 	public var id: UUID
 	public var codexId: String
 
@@ -807,8 +796,7 @@ public enum ThreadItem: Sendable, Codable, Equatable, Hashable {
 	}
 
 	private static func decode<T: Decodable>(_ type: T.Type, from value: CodexValue) throws -> T {
-		let data = try JSONEncoder().encode(value)
-		return try JSONDecoder().decode(T.self, from: data)
+		try CodexValue.decode(type, from: value)
 	}
 }
 

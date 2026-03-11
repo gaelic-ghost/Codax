@@ -3,6 +3,28 @@ import Testing
 @testable import Codax
 
 struct CodexConnectionTests {
+	@Test func jsonRPCErrorObjectDecodesCodexValueData() throws {
+		let data = Data(
+			"""
+			{
+			  "code": -32001,
+			  "message": "overloaded",
+			  "data": {
+			    "retryAfterMs": 250,
+			    "servers": ["a", "b"]
+			  }
+			}
+			""".utf8
+		)
+
+		let error = try JSONDecoder().decode(JSONRPCErrorObject.self, from: data)
+
+		#expect(error.data == .object([
+			"retryAfterMs": .number(250),
+			"servers": .array([.string("a"), .string("b")]),
+		]))
+	}
+
 	@Test func requestResolvesMatchingResponse() async throws {
 		let transport = TestTransport()
 		let connection = CodexConnection(transport: transport)

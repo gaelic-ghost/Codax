@@ -53,6 +53,90 @@ public indirect enum CodexValue: Sendable, Codable, Equatable, Hashable {
 	}
 }
 
+extension CodexValue {
+	static func decode<T: Decodable>(_ type: T.Type, from value: CodexValue, using decoder: JSONDecoder = JSONDecoder()) throws -> T {
+		let data = try JSONEncoder().encode(value)
+		return try decoder.decode(T.self, from: data)
+	}
+}
+
+enum CodexCoding {
+	static func decodeStringCase<Value>(
+		from decoder: any Decoder,
+		typeName: String,
+		mapping: [String: Value]
+	) throws -> Value {
+		let container = try decoder.singleValueContainer()
+		let rawValue = try container.decode(String.self)
+		guard let value = mapping[rawValue] else {
+			throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported \(typeName) value: \(rawValue)")
+		}
+		return value
+	}
+
+	static func decodeStringOrObject<Keys: CodingKey, Value>(
+		from decoder: any Decoder,
+		typeName: String,
+		stringMapping: [String: Value],
+		object: (KeyedDecodingContainer<Keys>) throws -> Value
+	) throws -> Value {
+		if let container = try? decoder.singleValueContainer(), let rawValue = try? container.decode(String.self) {
+			guard let value = stringMapping[rawValue] else {
+				throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported \(typeName) value: \(rawValue)")
+			}
+			return value
+		}
+
+		let container = try decoder.container(keyedBy: Keys.self)
+		return try object(container)
+	}
+
+	static func decodeKeyedOneOf<Keys: CodingKey, Value>(
+		from decoder: any Decoder,
+		typeName: String,
+		tries: [(Keys, (KeyedDecodingContainer<Keys>) throws -> Value)]
+	) throws -> Value {
+		let container = try decoder.container(keyedBy: Keys.self)
+		for (key, decode) in tries where container.contains(key) {
+			return try decode(container)
+		}
+		throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Unsupported \(typeName) payload."))
+	}
+
+	static func decodeTaggedKind<Keys: CodingKey, Kind: RawRepresentable>(
+		from decoder: any Decoder,
+		codingKeys: Keys.Type,
+		typeKey: Keys,
+		kindType: Kind.Type,
+		typeName: String
+	) throws -> (kind: Kind, container: KeyedDecodingContainer<Keys>)
+	where Kind.RawValue == String
+	{
+		let container = try decoder.container(keyedBy: codingKeys)
+		let rawValue = try container.decode(String.self, forKey: typeKey)
+		guard let kind = Kind(rawValue: rawValue) else {
+			throw DecodingError.dataCorruptedError(forKey: typeKey, in: container, debugDescription: "Unsupported \(typeName) type: \(rawValue)")
+		}
+		return (kind, container)
+	}
+
+	static func encodeStringValue(_ value: String, to encoder: any Encoder) throws {
+		var container = encoder.singleValueContainer()
+		try container.encode(value)
+	}
+}
+
+protocol CodexClientIdentifiable {
+	var codexId: String { get }
+	var id: UUID { get set }
+}
+
+extension CodexClientIdentifiable {
+	mutating func assignIdentity(using makeID: (String) -> UUID) {
+		id = makeID(codexId)
+	}
+}
+
 private enum ClientIdentityKind: String {
 	case thread
 	case turn
@@ -162,31 +246,28 @@ public enum AskForApproval: Sendable, Codable, Equatable, Hashable {
 	}
 
 	public init(from decoder: any Decoder) throws {
-		if let container = try? decoder.singleValueContainer(), let value = try? container.decode(String.self) {
-			switch value {
-			case "untrusted": self = .untrusted
-			case "on-failure": self = .onFailure
-			case "on-request": self = .onRequest
-			case "never": self = .never
-			default:
-				throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported AskForApproval value: \(value)")
-			}
-			return
+		self = try CodexCoding.decodeStringOrObject(
+			from: decoder,
+			typeName: "AskForApproval",
+			stringMapping: [
+				"untrusted": .untrusted,
+				"on-failure": .onFailure,
+				"on-request": .onRequest,
+				"never": .never,
+			]
+		) { (container: KeyedDecodingContainer<CodingKeys>) in
+			.reject(try container.decode(AskForApprovalReject.self, forKey: .reject))
 		}
-
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-		self = .reject(try container.decode(AskForApprovalReject.self, forKey: .reject))
 	}
 
 	public func encode(to encoder: any Encoder) throws {
 		switch self {
 		case .untrusted, .onFailure, .onRequest, .never:
-			var container = encoder.singleValueContainer()
 			switch self {
-			case .untrusted: try container.encode("untrusted")
-			case .onFailure: try container.encode("on-failure")
-			case .onRequest: try container.encode("on-request")
-			case .never: try container.encode("never")
+			case .untrusted: try CodexCoding.encodeStringValue("untrusted", to: encoder)
+			case .onFailure: try CodexCoding.encodeStringValue("on-failure", to: encoder)
+			case .onRequest: try CodexCoding.encodeStringValue("on-request", to: encoder)
+			case .never: try CodexCoding.encodeStringValue("never", to: encoder)
 			case .reject: break
 			}
 		case let .reject(value):
@@ -240,30 +321,24 @@ public enum MacOsAutomationPermission: Sendable, Codable, Equatable, Hashable {
 	}
 
 	public init(from decoder: any Decoder) throws {
-		if let container = try? decoder.singleValueContainer(), let value = try? container.decode(String.self) {
-			switch value {
-			case "none":
-				self = .none
-			case "all":
-				self = .all
-			default:
-				throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported MacOsAutomationPermission value: \(value)")
-			}
-			return
+		self = try CodexCoding.decodeStringOrObject(
+			from: decoder,
+			typeName: "MacOsAutomationPermission",
+			stringMapping: [
+				"none": .none,
+				"all": .all,
+			]
+		) { (container: KeyedDecodingContainer<CodingKeys>) in
+			.bundleIDs(try container.decode([String].self, forKey: .bundleIDs))
 		}
-
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-		self = .bundleIDs(try container.decode([String].self, forKey: .bundleIDs))
 	}
 
 	public func encode(to encoder: any Encoder) throws {
 		switch self {
 		case .none:
-			var container = encoder.singleValueContainer()
-			try container.encode("none")
+			try CodexCoding.encodeStringValue("none", to: encoder)
 		case .all:
-			var container = encoder.singleValueContainer()
-			try container.encode("all")
+			try CodexCoding.encodeStringValue("all", to: encoder)
 		case let .bundleIDs(bundleIDs):
 			var container = encoder.container(keyedBy: CodingKeys.self)
 			try container.encode(bundleIDs, forKey: .bundleIDs)
@@ -540,8 +615,14 @@ public enum DynamicToolCallOutputContentItem: Sendable, Codable, Equatable, Hash
 	}
 
 	public init(from decoder: any Decoder) throws {
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-		switch try container.decode(Kind.self, forKey: .type) {
+		let (kind, container) = try CodexCoding.decodeTaggedKind(
+			from: decoder,
+			codingKeys: CodingKeys.self,
+			typeKey: .type,
+			kindType: Kind.self,
+			typeName: "DynamicToolCallOutputContentItem"
+		)
+		switch kind {
 		case .inputText:
 			self = .inputText(text: try container.decode(String.self, forKey: .text))
 		case .inputImage:
@@ -586,55 +667,59 @@ public enum CodexErrorInfo: Sendable, Codable, Equatable, Hashable {
 	}
 
 	public init(from decoder: any Decoder) throws {
-		if let container = try? decoder.singleValueContainer(), let value = try? container.decode(String.self) {
-			switch value {
-			case "contextWindowExceeded": self = .contextWindowExceeded
-			case "usageLimitExceeded": self = .usageLimitExceeded
-			case "serverOverloaded": self = .serverOverloaded
-			case "internalServerError": self = .internalServerError
-			case "unauthorized": self = .unauthorized
-			case "badRequest": self = .badRequest
-			case "threadRollbackFailed": self = .threadRollbackFailed
-			case "sandboxError": self = .sandboxError
-			case "other": self = .other
-			default:
-				throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported CodexErrorInfo value: \(value)")
-			}
-			return
-		}
-
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-		if container.contains(.httpConnectionFailed) {
-			let nested = try container.nestedContainer(keyedBy: CodingKeys.self, forKey: .httpConnectionFailed)
-			self = .httpConnectionFailed(httpStatusCode: try nested.decodeIfPresent(Int.self, forKey: .httpStatusCode))
-		} else if container.contains(.responseStreamConnectionFailed) {
-			let nested = try container.nestedContainer(keyedBy: CodingKeys.self, forKey: .responseStreamConnectionFailed)
-			self = .responseStreamConnectionFailed(httpStatusCode: try nested.decodeIfPresent(Int.self, forKey: .httpStatusCode))
-		} else if container.contains(.responseStreamDisconnected) {
-			let nested = try container.nestedContainer(keyedBy: CodingKeys.self, forKey: .responseStreamDisconnected)
-			self = .responseStreamDisconnected(httpStatusCode: try nested.decodeIfPresent(Int.self, forKey: .httpStatusCode))
-		} else if container.contains(.responseTooManyFailedAttempts) {
-			let nested = try container.nestedContainer(keyedBy: CodingKeys.self, forKey: .responseTooManyFailedAttempts)
-			self = .responseTooManyFailedAttempts(httpStatusCode: try nested.decodeIfPresent(Int.self, forKey: .httpStatusCode))
-		} else {
-			throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Unsupported CodexErrorInfo payload."))
+		self = try CodexCoding.decodeStringOrObject(
+			from: decoder,
+			typeName: "CodexErrorInfo",
+			stringMapping: [
+				"contextWindowExceeded": .contextWindowExceeded,
+				"usageLimitExceeded": .usageLimitExceeded,
+				"serverOverloaded": .serverOverloaded,
+				"internalServerError": .internalServerError,
+				"unauthorized": .unauthorized,
+				"badRequest": .badRequest,
+				"threadRollbackFailed": .threadRollbackFailed,
+				"sandboxError": .sandboxError,
+				"other": .other,
+			]
+		) { (_: KeyedDecodingContainer<CodingKeys>) in
+			try CodexCoding.decodeKeyedOneOf(
+				from: decoder,
+				typeName: "CodexErrorInfo",
+				tries: [
+					(CodingKeys.httpConnectionFailed, { (container: KeyedDecodingContainer<CodingKeys>) in
+						let nested = try container.nestedContainer(keyedBy: CodingKeys.self, forKey: .httpConnectionFailed)
+						return .httpConnectionFailed(httpStatusCode: try nested.decodeIfPresent(Int.self, forKey: .httpStatusCode))
+					}),
+					(CodingKeys.responseStreamConnectionFailed, { (container: KeyedDecodingContainer<CodingKeys>) in
+						let nested = try container.nestedContainer(keyedBy: CodingKeys.self, forKey: .responseStreamConnectionFailed)
+						return .responseStreamConnectionFailed(httpStatusCode: try nested.decodeIfPresent(Int.self, forKey: .httpStatusCode))
+					}),
+					(CodingKeys.responseStreamDisconnected, { (container: KeyedDecodingContainer<CodingKeys>) in
+						let nested = try container.nestedContainer(keyedBy: CodingKeys.self, forKey: .responseStreamDisconnected)
+						return .responseStreamDisconnected(httpStatusCode: try nested.decodeIfPresent(Int.self, forKey: .httpStatusCode))
+					}),
+					(CodingKeys.responseTooManyFailedAttempts, { (container: KeyedDecodingContainer<CodingKeys>) in
+						let nested = try container.nestedContainer(keyedBy: CodingKeys.self, forKey: .responseTooManyFailedAttempts)
+						return .responseTooManyFailedAttempts(httpStatusCode: try nested.decodeIfPresent(Int.self, forKey: .httpStatusCode))
+					}),
+				]
+			)
 		}
 	}
 
 	public func encode(to encoder: any Encoder) throws {
 		switch self {
 		case .contextWindowExceeded, .usageLimitExceeded, .serverOverloaded, .internalServerError, .unauthorized, .badRequest, .threadRollbackFailed, .sandboxError, .other:
-			var container = encoder.singleValueContainer()
 			switch self {
-			case .contextWindowExceeded: try container.encode("contextWindowExceeded")
-			case .usageLimitExceeded: try container.encode("usageLimitExceeded")
-			case .serverOverloaded: try container.encode("serverOverloaded")
-			case .internalServerError: try container.encode("internalServerError")
-			case .unauthorized: try container.encode("unauthorized")
-			case .badRequest: try container.encode("badRequest")
-			case .threadRollbackFailed: try container.encode("threadRollbackFailed")
-			case .sandboxError: try container.encode("sandboxError")
-			case .other: try container.encode("other")
+			case .contextWindowExceeded: try CodexCoding.encodeStringValue("contextWindowExceeded", to: encoder)
+			case .usageLimitExceeded: try CodexCoding.encodeStringValue("usageLimitExceeded", to: encoder)
+			case .serverOverloaded: try CodexCoding.encodeStringValue("serverOverloaded", to: encoder)
+			case .internalServerError: try CodexCoding.encodeStringValue("internalServerError", to: encoder)
+			case .unauthorized: try CodexCoding.encodeStringValue("unauthorized", to: encoder)
+			case .badRequest: try CodexCoding.encodeStringValue("badRequest", to: encoder)
+			case .threadRollbackFailed: try CodexCoding.encodeStringValue("threadRollbackFailed", to: encoder)
+			case .sandboxError: try CodexCoding.encodeStringValue("sandboxError", to: encoder)
+			case .other: try CodexCoding.encodeStringValue("other", to: encoder)
 			default: break
 			}
 		case let .httpConnectionFailed(httpStatusCode):
@@ -670,44 +755,44 @@ public enum SubAgentSource: Sendable, Codable, Equatable, Hashable {
 	}
 
 	public init(from decoder: any Decoder) throws {
-		if let container = try? decoder.singleValueContainer(), let value = try? container.decode(String.self) {
-			switch value {
-			case "review": self = .review
-			case "compact": self = .compact
-			case "memory_consolidation": self = .memoryConsolidation
-			default:
-				throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported SubAgentSource value: \(value)")
-			}
-			return
-		}
-
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-		if container.contains(.threadSpawn) {
-			let nested = try container.nestedContainer(keyedBy: CodingKeys.self, forKey: .threadSpawn)
-			self = .threadSpawn(
-				parentThreadCodexId: try nested.decode(String.self, forKey: .parentThreadCodexId),
-				depth: try nested.decode(Int.self, forKey: .depth),
-				agentNickname: try nested.decodeIfPresent(String.self, forKey: .agentNickname),
-				agentRole: try nested.decodeIfPresent(String.self, forKey: .agentRole)
+		self = try CodexCoding.decodeStringOrObject(
+			from: decoder,
+			typeName: "SubAgentSource",
+			stringMapping: [
+				"review": .review,
+				"compact": .compact,
+				"memory_consolidation": .memoryConsolidation,
+			]
+		) { (_: KeyedDecodingContainer<CodingKeys>) in
+			try CodexCoding.decodeKeyedOneOf(
+				from: decoder,
+				typeName: "SubAgentSource",
+				tries: [
+					(CodingKeys.threadSpawn, { (container: KeyedDecodingContainer<CodingKeys>) in
+						let nested = try container.nestedContainer(keyedBy: CodingKeys.self, forKey: .threadSpawn)
+						return .threadSpawn(
+							parentThreadCodexId: try nested.decode(String.self, forKey: .parentThreadCodexId),
+							depth: try nested.decode(Int.self, forKey: .depth),
+							agentNickname: try nested.decodeIfPresent(String.self, forKey: .agentNickname),
+							agentRole: try nested.decodeIfPresent(String.self, forKey: .agentRole)
+						)
+					}),
+					(CodingKeys.other, { (container: KeyedDecodingContainer<CodingKeys>) in
+						.other(try container.decode(String.self, forKey: .other))
+					}),
+				]
 			)
-		} else if container.contains(.other) {
-			self = .other(try container.decode(String.self, forKey: .other))
-		} else {
-			throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Unsupported SubAgentSource payload."))
 		}
 	}
 
 	public func encode(to encoder: any Encoder) throws {
 		switch self {
 		case .review:
-			var container = encoder.singleValueContainer()
-			try container.encode("review")
+			try CodexCoding.encodeStringValue("review", to: encoder)
 		case .compact:
-			var container = encoder.singleValueContainer()
-			try container.encode("compact")
+			try CodexCoding.encodeStringValue("compact", to: encoder)
 		case .memoryConsolidation:
-			var container = encoder.singleValueContainer()
-			try container.encode("memory_consolidation")
+			try CodexCoding.encodeStringValue("memory_consolidation", to: encoder)
 		case let .threadSpawn(parentThreadCodexId, depth, agentNickname, agentRole):
 			var container = encoder.container(keyedBy: CodingKeys.self)
 			var nested = container.nestedContainer(keyedBy: CodingKeys.self, forKey: .threadSpawn)
@@ -744,8 +829,14 @@ public enum ParsedCommand: Sendable, Codable, Equatable, Hashable {
 	}
 
 	public init(from decoder: any Decoder) throws {
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-		switch try container.decode(Kind.self, forKey: .type) {
+		let (kind, container) = try CodexCoding.decodeTaggedKind(
+			from: decoder,
+			codingKeys: CodingKeys.self,
+			typeKey: .type,
+			kindType: Kind.self,
+			typeName: "ParsedCommand"
+		)
+		switch kind {
 		case .read:
 			self = .read(
 				cmd: try container.decode(String.self, forKey: .cmd),
@@ -816,8 +907,14 @@ public enum FileChange: Sendable, Codable, Equatable, Hashable {
 	}
 
 	public init(from decoder: any Decoder) throws {
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-		switch try container.decode(Kind.self, forKey: .type) {
+		let (kind, container) = try CodexCoding.decodeTaggedKind(
+			from: decoder,
+			codingKeys: CodingKeys.self,
+			typeKey: .type,
+			kindType: Kind.self,
+			typeName: "FileChange"
+		)
+		switch kind {
 		case .add:
 			self = .add(content: try container.decode(String.self, forKey: .content))
 		case .delete:

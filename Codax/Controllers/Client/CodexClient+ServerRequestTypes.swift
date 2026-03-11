@@ -1,5 +1,5 @@
 //
-//  CodexClient+ServerRequestHandlerTypes.swift
+//  CodexClient+ServerRequestTypes.swift
 //  Codax
 //
 //  Created by Gale Williams on 3/8/26.
@@ -108,39 +108,37 @@ public enum ReviewDecision: Sendable, Codable, Equatable, Hashable {
 	}
 
 	public init(from decoder: any Decoder) throws {
-		if let container = try? decoder.singleValueContainer(), let value = try? container.decode(String.self) {
-			switch value {
-			case "approved":
-				self = .approved
-			case "approved_for_session":
-				self = .approvedForSession
-			case "denied":
-				self = .denied
-			case "abort":
-				self = .abort
-			default:
-				throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported ReviewDecision value: \(value)")
-			}
-			return
-		}
-
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-		if container.contains(.approvedExecPolicyAmendment) {
-			let payload = try container.decode(ApprovedExecPolicyPayload.self, forKey: .approvedExecPolicyAmendment)
-			self = .approvedExecPolicyAmendment(payload.proposedExecPolicyAmendment)
-		} else if container.contains(.networkPolicyAmendment) {
-			let payload = try container.decode(NetworkPolicyPayload.self, forKey: .networkPolicyAmendment)
-			self = .networkPolicyAmendment(payload.networkPolicyAmendment)
-		} else {
-			throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Unsupported ReviewDecision payload."))
+		self = try CodexCoding.decodeStringOrObject(
+			from: decoder,
+			typeName: "ReviewDecision",
+			stringMapping: [
+				"approved": .approved,
+				"approved_for_session": .approvedForSession,
+				"denied": .denied,
+				"abort": .abort,
+			]
+		) { (_: KeyedDecodingContainer<CodingKeys>) in
+			try CodexCoding.decodeKeyedOneOf(
+				from: decoder,
+				typeName: "ReviewDecision",
+				tries: [
+					(CodingKeys.approvedExecPolicyAmendment, { (container: KeyedDecodingContainer<CodingKeys>) in
+						let payload = try container.decode(ApprovedExecPolicyPayload.self, forKey: .approvedExecPolicyAmendment)
+						return .approvedExecPolicyAmendment(payload.proposedExecPolicyAmendment)
+					}),
+					(CodingKeys.networkPolicyAmendment, { (container: KeyedDecodingContainer<CodingKeys>) in
+						let payload = try container.decode(NetworkPolicyPayload.self, forKey: .networkPolicyAmendment)
+						return .networkPolicyAmendment(payload.networkPolicyAmendment)
+					}),
+				]
+			)
 		}
 	}
 
 	public func encode(to encoder: any Encoder) throws {
 		switch self {
 		case .approved:
-			var container = encoder.singleValueContainer()
-			try container.encode("approved")
+			try CodexCoding.encodeStringValue("approved", to: encoder)
 		case let .approvedExecPolicyAmendment(amendment):
 			var container = encoder.container(keyedBy: CodingKeys.self)
 			try container.encode(
@@ -148,8 +146,7 @@ public enum ReviewDecision: Sendable, Codable, Equatable, Hashable {
 				forKey: .approvedExecPolicyAmendment
 			)
 		case .approvedForSession:
-			var container = encoder.singleValueContainer()
-			try container.encode("approved_for_session")
+			try CodexCoding.encodeStringValue("approved_for_session", to: encoder)
 		case let .networkPolicyAmendment(amendment):
 			var container = encoder.container(keyedBy: CodingKeys.self)
 			try container.encode(
@@ -157,11 +154,9 @@ public enum ReviewDecision: Sendable, Codable, Equatable, Hashable {
 				forKey: .networkPolicyAmendment
 			)
 		case .denied:
-			var container = encoder.singleValueContainer()
-			try container.encode("denied")
+			try CodexCoding.encodeStringValue("denied", to: encoder)
 		case .abort:
-			var container = encoder.singleValueContainer()
-			try container.encode("abort")
+			try CodexCoding.encodeStringValue("abort", to: encoder)
 		}
 	}
 }
@@ -339,42 +334,39 @@ public enum CommandExecutionApprovalDecision: Sendable, Codable, Equatable, Hash
 	}
 
 	public init(from decoder: any Decoder) throws {
-		if let container = try? decoder.singleValueContainer(), let value = try? container.decode(String.self) {
-			switch value {
-			case "accept":
-				self = .accept
-			case "acceptForSession":
-				self = .acceptForSession
-			case "decline":
-				self = .decline
-			case "cancel":
-				self = .cancel
-			default:
-				throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported CommandExecutionApprovalDecision value: \(value)")
-			}
-			return
-		}
-
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-		if container.contains(.acceptWithExecPolicyAmendment) {
-			let payload = try container.decode(ExecPolicyPayload.self, forKey: .acceptWithExecPolicyAmendment)
-			self = .acceptWithExecPolicyAmendment(payload.execPolicyAmendment)
-		} else if container.contains(.applyNetworkPolicyAmendment) {
-			let payload = try container.decode(NetworkPolicyPayload.self, forKey: .applyNetworkPolicyAmendment)
-			self = .applyNetworkPolicyAmendment(payload.networkPolicyAmendment)
-		} else {
-			throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Unsupported CommandExecutionApprovalDecision payload."))
+		self = try CodexCoding.decodeStringOrObject(
+			from: decoder,
+			typeName: "CommandExecutionApprovalDecision",
+			stringMapping: [
+				"accept": .accept,
+				"acceptForSession": .acceptForSession,
+				"decline": .decline,
+				"cancel": .cancel,
+			]
+		) { (_: KeyedDecodingContainer<CodingKeys>) in
+			try CodexCoding.decodeKeyedOneOf(
+				from: decoder,
+				typeName: "CommandExecutionApprovalDecision",
+				tries: [
+					(CodingKeys.acceptWithExecPolicyAmendment, { (container: KeyedDecodingContainer<CodingKeys>) in
+						let payload = try container.decode(ExecPolicyPayload.self, forKey: .acceptWithExecPolicyAmendment)
+						return .acceptWithExecPolicyAmendment(payload.execPolicyAmendment)
+					}),
+					(CodingKeys.applyNetworkPolicyAmendment, { (container: KeyedDecodingContainer<CodingKeys>) in
+						let payload = try container.decode(NetworkPolicyPayload.self, forKey: .applyNetworkPolicyAmendment)
+						return .applyNetworkPolicyAmendment(payload.networkPolicyAmendment)
+					}),
+				]
+			)
 		}
 	}
 
 	public func encode(to encoder: any Encoder) throws {
 		switch self {
 		case .accept:
-			var container = encoder.singleValueContainer()
-			try container.encode("accept")
+			try CodexCoding.encodeStringValue("accept", to: encoder)
 		case .acceptForSession:
-			var container = encoder.singleValueContainer()
-			try container.encode("acceptForSession")
+			try CodexCoding.encodeStringValue("acceptForSession", to: encoder)
 		case let .acceptWithExecPolicyAmendment(amendment):
 			var container = encoder.container(keyedBy: CodingKeys.self)
 			try container.encode(ExecPolicyPayload(execPolicyAmendment: amendment), forKey: .acceptWithExecPolicyAmendment)
@@ -382,11 +374,9 @@ public enum CommandExecutionApprovalDecision: Sendable, Codable, Equatable, Hash
 			var container = encoder.container(keyedBy: CodingKeys.self)
 			try container.encode(NetworkPolicyPayload(networkPolicyAmendment: amendment), forKey: .applyNetworkPolicyAmendment)
 		case .decline:
-			var container = encoder.singleValueContainer()
-			try container.encode("decline")
+			try CodexCoding.encodeStringValue("decline", to: encoder)
 		case .cancel:
-			var container = encoder.singleValueContainer()
-			try container.encode("cancel")
+			try CodexCoding.encodeStringValue("cancel", to: encoder)
 		}
 	}
 }

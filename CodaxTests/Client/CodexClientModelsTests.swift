@@ -3,6 +3,83 @@ import Testing
 @testable import Codax
 
 struct CodexClientModelsTests {
+	@Test func codexValueRoundTripsArbitraryPayload() throws {
+		let value = try decode(
+			CodexValue.self,
+			from: """
+			{
+			  "name": "Codax",
+			  "enabled": true,
+			  "items": [1, null, { "nested": "value" }]
+			}
+			"""
+		)
+
+		#expect(value == .object([
+			"name": .string("Codax"),
+			"enabled": .bool(true),
+			"items": .array([
+				.number(1),
+				.null,
+				.object(["nested": .string("value")]),
+			]),
+		]))
+	}
+
+	@Test func askForApprovalRoundTripsStringAndStructuredCases() throws {
+		let stringValue = try decode(AskForApproval.self, from: #""on-request""#)
+		#expect(stringValue == .onRequest)
+
+		let structured = try decode(
+			AskForApproval.self,
+			from: """
+			{
+			  "reject": {
+			    "sandbox_approval": true,
+			    "rules": false,
+			    "mcp_elicitations": true
+			  }
+			}
+			"""
+		)
+
+		#expect(structured == .reject(.init(sandboxApproval: true, rules: false, mcpElicitations: true)))
+	}
+
+	@Test func modelSupportEnumsDecodeStructuredPayloads() throws {
+		let automation = try decode(MacOsAutomationPermission.self, from: #"{"bundle_ids":["com.apple.Terminal"]}"#)
+		#expect(automation == .bundleIDs(["com.apple.Terminal"]))
+
+		let error = try decode(CodexErrorInfo.self, from: #"{"httpConnectionFailed":{"httpStatusCode":429}}"#)
+		#expect(error == .httpConnectionFailed(httpStatusCode: 429))
+
+		let source = try decode(
+			SubAgentSource.self,
+			from: #"{"thread_spawn":{"parent_thread_id":"thread-1","depth":2,"agent_nickname":"reviewer","agent_role":"critic"}}"#
+		)
+		#expect(source == .threadSpawn(parentThreadCodexId: "thread-1", depth: 2, agentNickname: "reviewer", agentRole: "critic"))
+	}
+
+	@Test func taggedModelSupportEnumsRoundTrip() throws {
+		let outputItem = try decode(
+			DynamicToolCallOutputContentItem.self,
+			from: #"{"type":"inputImage","imageUrl":"https://example.com/image.png"}"#
+		)
+		#expect(outputItem == .inputImage(imageUrl: "https://example.com/image.png"))
+
+		let parsedCommand = try decode(
+			ParsedCommand.self,
+			from: #"{"type":"list_files","cmd":"ls","path":"/tmp"}"#
+		)
+		#expect(parsedCommand == .listFiles(cmd: "ls", path: "/tmp"))
+
+		let fileChange = try decode(
+			FileChange.self,
+			from: #"{"type":"update","unified_diff":"@@ -1 +1 @@","move_path":"New.swift"}"#
+		)
+		#expect(fileChange == .update(unifiedDiff: "@@ -1 +1 @@", movePath: "New.swift"))
+	}
+
 	@Test func threadDecodesWithTypedThreadStatusAndNestedTypes() throws {
 		let thread = try decode(
 			Thread.self,
@@ -236,6 +313,29 @@ struct CodexClientModelsTests {
 			"type": .string("futureThing"),
 			"id": .string("item-6"),
 			"extra": .bool(true),
+		]))
+	}
+
+	@Test func threadItemEncodingPreservesUnderlyingWireShape() throws {
+		let item = try decode(
+			AgentMessageItem.self,
+			from: """
+			{
+			  "id": "item-7",
+			  "text": "Hello",
+			  "phase": "final_answer"
+			}
+			"""
+		)
+		let original = ThreadItem.agentMessage(item)
+
+		let encoded = try JSONEncoder().encode(original)
+		let value = try JSONDecoder().decode(CodexValue.self, from: encoded)
+
+		#expect(value == .object([
+			"id": .string("item-7"),
+			"text": .string("Hello"),
+			"phase": .string("final_answer"),
 		]))
 	}
 }

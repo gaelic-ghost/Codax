@@ -13,8 +13,10 @@ What is already real:
 - transport and process-launch hardening
 - a JSON-RPC `Connection` layer
 - a full generated connection-owned schema boundary
+- a SwiftData-backed durable thread read model
+- a dedicated persistence bridge between runtime types and SwiftData
 - initial compatibility gating for Codex CLI `0.111.x` and `0.112.x`
-- an early `NavigationSplitView` shell with environment-owned view-model state
+- an early `NavigationSplitView` shell with `@Query`-backed durable reads and environment-owned transient view-model state
 - layer reports grounded in the current `v0.112.0` schema baseline
 
 What is still early or incomplete:
@@ -54,6 +56,7 @@ The highest-value contribution areas right now are:
 - schema and report alignment
 - broader notification and app-behavior coverage
 - runtime and view-model refinement
+- SwiftData bridge and durable projection refinement
 - SwiftUI shell and pane-state cleanup
 - accessibility-first UI groundwork
 - documentation cleanup and consistency fixes
@@ -82,6 +85,7 @@ A few practical expectations:
 - if your change crosses layer boundaries, explain why that boundary shift is necessary
 - keep docs aligned with current roadmap milestones, layer boundaries, and schema-version framing
 - if you change `codex-schemas` or either generator script, regenerate the checked-in connection surface before build/test
+- if you change the durable projection mapping, keep the `@Query` views, `CodaxPersistenceBridge`, and SwiftData models aligned in the same pass
 - treat accessibility regressions, protocol drift, and untested behavior changes as high-risk
 
 ## Checks Before Opening a PR
@@ -97,7 +101,7 @@ xcodebuild -project Codax.xcodeproj -scheme Codax -destination 'platform=macOS' 
 
 The default `Codax` scheme test workflow uses the repo's `Codax.xctestplan`, with target-level parallelization disabled for the `CodaxTests` target.
 
-Current baseline verification is `82` passing tests in `9` suites.
+Current baseline verification is `87` passing tests in `10` suites.
 
 This repo does not currently have documented CI workflows, issue templates, or PR templates. Please do not assume hidden automation is going to catch missing verification for you.
 

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct ContentView: View {
 	@Environment(CodaxViewModel.self) private var viewModel
@@ -14,52 +15,53 @@ struct ContentView: View {
 	var body: some View {
 		@Bindable var bindableVM = vm
 
-		VStack(alignment: .leading, spacing: 16) {
-			Text(connectionLabel)
-				.font(.headline)
+		SelectedThreadStoreView(selectedThreadCodexId: viewModel.selectedThreadCodexId) { thread in
+			VStack(alignment: .leading, spacing: 16) {
+				Text(connectionLabel)
+					.font(.headline)
 
-			Text(compatibilityDescription)
-				.font(.subheadline)
-				.foregroundStyle(.secondary)
-
-			if let compatibilityDebugInfo = viewModel.compatibilityDebugInfo, !compatibilityDebugInfo.formattedDescription.isEmpty {
-				Text(compatibilityDebugInfo.formattedDescription)
-					.font(.caption.monospaced())
+				Text(compatibilityDescription)
+					.font(.subheadline)
 					.foregroundStyle(.secondary)
-					.textSelection(.enabled)
-			}
 
-			HStack {
-				Button("Connect") {
-					Task {
-						await viewModel.connect()
-					}
+				if let compatibilityDebugInfo = viewModel.compatibilityDebugInfo, !compatibilityDebugInfo.formattedDescription.isEmpty {
+					Text(compatibilityDebugInfo.formattedDescription)
+						.font(.caption.monospaced())
+						.foregroundStyle(.secondary)
+						.textSelection(.enabled)
 				}
-				.disabled(viewModel.connectionState != .disconnected)
 
-				Button("Start Thread") {
-					Task {
-						await viewModel.startThread()
+				HStack {
+					Button("Connect") {
+						Task {
+							await viewModel.connect()
+						}
 					}
+					.disabled(viewModel.connectionState != .disconnected)
+
+					Button("Start Thread") {
+						Task {
+							await viewModel.startThread()
+						}
+					}
+					.disabled(viewModel.connectionState != .connected)
 				}
-				.disabled(viewModel.connectionState != .connected)
-			}
 
-			Divider()
+				Divider()
 
-			Text(activeThreadTitle)
-				.font(.title3)
+				Text(activeThreadTitle(thread: thread))
+					.font(.title3)
 
-			if !(viewModel.activeThread?.turns.isEmpty ?? true) {
-				Text("Turn history available in the active thread.")
-					.foregroundStyle(.secondary)
-			} else {
-				Text("No turns started yet.")
-					.foregroundStyle(.secondary)
-			}
+				if !(thread?.turns.isEmpty ?? true) {
+					Text("Turn history available in the active thread.")
+						.foregroundStyle(.secondary)
+				} else {
+					Text("No turns started yet.")
+						.foregroundStyle(.secondary)
+				}
 
-			TextField("Start a turn", text: $bindableVM.turnInput, axis: .vertical)
-				.textFieldStyle(.roundedBorder)
+				TextField("Start a turn", text: $bindableVM.turnInput, axis: .vertical)
+					.textFieldStyle(.roundedBorder)
 
 				Button("Send Turn") {
 					Task {
@@ -69,17 +71,18 @@ struct ContentView: View {
 						bindableVM.turnInput = ""
 					}
 				}
-			.disabled(viewModel.activeThread == nil || bindableVM.turnInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+				.disabled(thread == nil || bindableVM.turnInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
-			if let error = viewModel.errorState {
-				Text(error.message)
-					.foregroundStyle(.red)
+				if let error = viewModel.errorState {
+					Text(error.message)
+						.foregroundStyle(.red)
+				}
+
+				Spacer()
 			}
-
-			Spacer()
+			.padding()
+			.navigationTitle("Session")
 		}
-		.padding()
-		.navigationTitle("Session")
 	}
 
 	private var connectionLabel: String {
@@ -109,11 +112,11 @@ struct ContentView: View {
 		}
 	}
 
-	private var activeThreadTitle: String {
-		if let name = viewModel.activeThread?.name, !name.isEmpty {
+	private func activeThreadTitle(thread: ThreadModel?) -> String {
+		if let name = thread?.name, !name.isEmpty {
 			return name
 		}
-		if let preview = viewModel.activeThread?.preview, !preview.isEmpty {
+		if let preview = thread?.preview, !preview.isEmpty {
 			return preview
 		}
 		return "No active thread"
@@ -121,6 +124,8 @@ struct ContentView: View {
 }
 
 #Preview {
+	let container = try! CodaxPersistenceBridge.makeModelContainer(inMemory: true)
 	ContentView()
-		.environment(CodaxViewModel())
+		.environment(CodaxViewModel(modelContainer: container))
+		.modelContainer(container)
 }

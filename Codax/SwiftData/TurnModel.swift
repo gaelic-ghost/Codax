@@ -8,6 +8,8 @@
 import Foundation
 import SwiftData
 
+// MARK: - Turn Model
+
 @Model
 final class TurnModel {
 	var id: UUID
@@ -19,6 +21,8 @@ final class TurnModel {
 	var codexErrorInfoData: Data?
 
 	var thread: ThreadModel?
+
+// MARK: Lifecycle
 
 	init(
 		id: UUID = UUID(),
@@ -61,6 +65,8 @@ final class TurnModel {
 		codexErrorInfoData = Self.encodeOptional(turn.error?.codexErrorInfo)
 	}
 
+// MARK: Derived Data
+
 	var status: TurnStatus? {
 		Self.decode(TurnStatus.self, from: statusData)
 	}
@@ -77,6 +83,8 @@ final class TurnModel {
 	var items: [ThreadItem] {
 		Self.decode([ThreadItem].self, from: itemsData) ?? []
 	}
+
+// MARK: Codable Helpers
 
 	private static func encode<T: Encodable>(_ value: T) -> Data? {
 		try? JSONEncoder().encode(value)

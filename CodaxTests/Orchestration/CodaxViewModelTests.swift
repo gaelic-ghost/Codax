@@ -1,14 +1,16 @@
 import Foundation
+import SwiftData
 import Testing
 @testable import Codax
 
 @MainActor
 struct CodaxViewModelTests {
 	@Test func connectSurfacesUnsupportedStartupCompatibility() async throws {
-		let factory = RuntimeFactoryRecorder()
-		let viewModel = CodaxViewModel(
-			runtimeFactory: {
-				await factory.markStarted()
+			let factory = RuntimeFactoryRecorder()
+			let modelContainer = try makeInMemoryModelContainer()
+			let viewModel = CodaxViewModel(
+				runtimeFactory: {
+					await factory.markStarted()
 				return makeFailingRuntimeCoordinator(
 					error: LocalCodexTransport.LaunchError.launchFailed(
 						command: "/usr/bin/env codex app-server --listen stdio://",
@@ -27,8 +29,10 @@ struct CodaxViewModelTests {
 						)
 					)
 				)
-			}
-		)
+				},
+				initializeParamsFactory: { makeInitializeParams() },
+				persistenceBridge: CodaxPersistenceBridge(modelContainer: modelContainer)
+			)
 
 		await viewModel.connect()
 
@@ -41,10 +45,11 @@ struct CodaxViewModelTests {
 		#expect(version == CodexCLIVersion(major: 0, minor: 113, patch: 0))
 	}
 
-	@Test func connectPerformsHandshakeAndStartsRuntimeOnce() async throws {
-		let factory = RuntimeFactoryRecorder()
-		let transport = ViewModelTestTransport()
-		let viewModel = makeConnectedViewModel(transport: transport, factory: factory)
+		@Test func connectPerformsHandshakeAndStartsRuntimeOnce() async throws {
+			let factory = RuntimeFactoryRecorder()
+			let transport = ViewModelTestTransport()
+			let modelContainer = try makeInMemoryModelContainer()
+			let viewModel = makeConnectedViewModel(transport: transport, modelContainer: modelContainer, factory: factory)
 
 		await viewModel.connect()
 		await viewModel.connect()
@@ -61,51 +66,58 @@ struct CodaxViewModelTests {
 		#expect(viewModel.loginState == .signedOut)
 	}
 
-	@Test func startThreadUpdatesActiveThreadAndSummaries() async throws {
-		let transport = ViewModelTestTransport()
-		let viewModel = makeConnectedViewModel(transport: transport)
+	@Test func startThreadPersistsSelectedThreadDetail() async throws {
+			let transport = ViewModelTestTransport()
+			let modelContainer = try makeInMemoryModelContainer()
+			let viewModel = makeConnectedViewModel(transport: transport, modelContainer: modelContainer)
 
-		await viewModel.connect()
-		await viewModel.startThread()
+			await viewModel.connect()
+			await viewModel.startThread()
 
-		#expect(viewModel.activeThread?.id == "thread-1")
-		#expect(viewModel.threads.count == 1)
-		#expect(await transport.sentMethods() == ["initialize", "initialized", "account/read", "thread/list", "thread/start"])
-	}
+			let persistedThread = try fetchThread(codexId: "thread-1", from: modelContainer)
+			#expect(viewModel.selectedThreadCodexId == "thread-1")
+			#expect(persistedThread?.codexId == "thread-1")
+			#expect(persistedThread?.hydrationState == .detail)
+			#expect(await transport.sentMethods() == ["initialize", "initialized", "account/read", "thread/list", "thread/start"])
+		}
 
-	@Test func startTurnAppendsTurnToActiveThread() async throws {
-		let transport = ViewModelTestTransport()
-		let viewModel = makeConnectedViewModel(transport: transport)
+	@Test func startTurnPersistsTurnOnSelectedThread() async throws {
+			let transport = ViewModelTestTransport()
+			let modelContainer = try makeInMemoryModelContainer()
+			let viewModel = makeConnectedViewModel(transport: transport, modelContainer: modelContainer)
 
-		await viewModel.connect()
-		await viewModel.startThread()
-		await viewModel.startTurn(inputText: "Hello, Codax")
+			await viewModel.connect()
+			await viewModel.startThread()
+			await viewModel.startTurn(inputText: "Hello, Codax")
 
-		#expect(viewModel.activeThread?.turns.count == 1)
-		#expect(viewModel.activeThread?.turns.first?.id == "turn-1")
-		#expect(await transport.sentMethods() == ["initialize", "initialized", "account/read", "thread/list", "thread/start", "turn/start"])
-	}
+			let persistedThread = try fetchThread(codexId: "thread-1", from: modelContainer)
+			#expect(persistedThread?.turns.count == 1)
+			#expect(persistedThread?.turns.first?.codexId == "turn-1")
+			#expect(await transport.sentMethods() == ["initialize", "initialized", "account/read", "thread/list", "thread/start", "turn/start"])
+		}
 
-	@Test func loadThreadsListsThreadsAndReadsBackSelectedThread() async throws {
-		let transport = ViewModelTestTransport()
-		let viewModel = makeConnectedViewModel(transport: transport)
+	@Test func loadThreadsPersistsSummariesAndHydratesSelection() async throws {
+			let transport = ViewModelTestTransport()
+			let modelContainer = try makeInMemoryModelContainer()
+			let viewModel = makeConnectedViewModel(transport: transport, modelContainer: modelContainer)
 
-		await viewModel.connect()
-		await viewModel.startThread()
+			await viewModel.connect()
+			await viewModel.startThread()
 
-		viewModel.activeThread = nil
-		viewModel.threads = []
+			viewModel.selectedThreadCodexId = nil
 
-		await viewModel.loadThreads()
+			await viewModel.loadThreads()
 
-		#expect(viewModel.activeThread?.id == "thread-1")
-		#expect(viewModel.threads.count == 1)
-		#expect(await transport.sentMethods() == ["initialize", "initialized", "account/read", "thread/list", "thread/start", "thread/list", "thread/read"])
-	}
+			let persistedThread = try fetchThread(codexId: "thread-1", from: modelContainer)
+			#expect(viewModel.selectedThreadCodexId == "thread-1")
+			#expect(persistedThread?.hydrationState == .detail)
+			#expect(await transport.sentMethods() == ["initialize", "initialized", "account/read", "thread/list", "thread/start", "thread/list", "thread/read"])
+		}
 
-	@Test func loginWithChatGPTStartsRealLoginFlow() async throws {
-		let transport = ViewModelTestTransport()
-		let viewModel = makeConnectedViewModel(transport: transport)
+		@Test func loginWithChatGPTStartsRealLoginFlow() async throws {
+			let transport = ViewModelTestTransport()
+			let modelContainer = try makeInMemoryModelContainer()
+			let viewModel = makeConnectedViewModel(transport: transport, modelContainer: modelContainer)
 
 		await viewModel.connect()
 		await viewModel.loginWithChatGPT()
@@ -115,9 +127,10 @@ struct CodaxViewModelTests {
 		#expect(await transport.sentMethods() == ["initialize", "initialized", "account/read", "thread/list", "account/login/start"])
 	}
 
-	@Test func notificationHandlingUpdatesViewModelState() async throws {
-		let transport = ViewModelTestTransport()
-		let viewModel = makeConnectedViewModel(transport: transport)
+		@Test func notificationHandlingUpdatesViewModelState() async throws {
+			let transport = ViewModelTestTransport()
+			let modelContainer = try makeInMemoryModelContainer()
+			let viewModel = makeConnectedViewModel(transport: transport, modelContainer: modelContainer)
 
 		await viewModel.connect()
 		await viewModel.startThread()
@@ -158,15 +171,17 @@ struct CodaxViewModelTests {
 			)
 		)
 
-		#expect(viewModel.authMode == .chatgpt)
-		#expect(viewModel.activeTurnPlan.count == 1)
-		#expect(viewModel.activeTurnDiff == "M ContentView.swift")
-		#expect(viewModel.activeThread?.status == .active(activeFlags: [.waitingOnApproval]))
-	}
+			#expect(viewModel.authMode == .chatgpt)
+			#expect(viewModel.activeTurnPlan.count == 1)
+			#expect(viewModel.activeTurnDiff == "M ContentView.swift")
+			let persistedThread = try fetchThread(codexId: "thread-1", from: modelContainer)
+			#expect(persistedThread?.status == .active(activeFlags: [.waitingOnApproval]))
+		}
 
-	@Test func serverRequestsBecomePendingUiStateAndResolveByNotification() async throws {
-		let transport = ViewModelTestTransport()
-		let viewModel = makeConnectedViewModel(transport: transport)
+		@Test func serverRequestsBecomePendingUiStateAndResolveByNotification() async throws {
+			let transport = ViewModelTestTransport()
+			let modelContainer = try makeInMemoryModelContainer()
+			let viewModel = makeConnectedViewModel(transport: transport, modelContainer: modelContainer)
 
 		await viewModel.connect()
 
@@ -384,13 +399,16 @@ private actor ViewModelTestTransport: CodexTransport {
 @MainActor
 private func makeConnectedViewModel(
 	transport: ViewModelTestTransport,
+	modelContainer: ModelContainer,
 	factory: RuntimeFactoryRecorder? = nil
 ) -> CodaxViewModel {
 	CodaxViewModel(
 		runtimeFactory: {
 			await factory?.markStarted()
 			return makeRuntimeCoordinator(transport: transport)
-		}
+		},
+		initializeParamsFactory: { makeInitializeParams() },
+		persistenceBridge: CodaxPersistenceBridge(modelContainer: modelContainer)
 	)
 }
 
@@ -418,6 +436,34 @@ private func makeFailingRuntimeCoordinator(error: Error) -> CodexRuntimeCoordina
 		transportFactory: { _ in
 			throw error
 		}
+	)
+}
+
+@MainActor
+private func makeInMemoryModelContainer() throws -> ModelContainer {
+	try CodaxPersistenceBridge.makeModelContainer(inMemory: true)
+}
+
+@MainActor
+private func fetchThread(codexId: String, from modelContainer: ModelContainer) throws -> ThreadModel? {
+	try modelContainer.mainContext.fetch(
+		FetchDescriptor<ThreadModel>(
+			predicate: #Predicate<ThreadModel> { $0.codexId == codexId }
+		)
+	).first
+}
+
+private func makeInitializeParams() -> InitializeParams {
+	InitializeParams(
+		clientInfo: ClientInfo(
+			name: "codax",
+			title: "Codax",
+			version: "0.0.0-test"
+		),
+		capabilities: InitializeCapabilities(
+			experimentalApi: false,
+			optOutNotificationMethods: nil
+		)
 	)
 }
 

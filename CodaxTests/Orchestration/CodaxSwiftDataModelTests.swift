@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import Testing
 @testable import Codax
 
@@ -17,10 +18,15 @@ struct CodaxSwiftDataModelTests {
 			codexId: "thread-1",
 			createdAt: 1,
 			updatedAt: 2,
+			hydrationState: .summary,
 			preview: "Thread",
 			ephemeral: false,
-			statusData: encode(ThreadStatus.idle)
-		)
+				modelProvider: "openai",
+				cwd: "/tmp/codax",
+				cliVersion: "0.112.0",
+				statusData: encode(ThreadStatus.idle),
+				sourceData: encode(SessionSource.appServer)
+			)
 		let project = Project(name: "Codax", rootPath: "/tmp/codax", threads: [thread])
 
 		#expect(project.thread(codexId: "thread-1") === thread)
@@ -29,16 +35,18 @@ struct CodaxSwiftDataModelTests {
 
 	@Test func threadModelApplyUpdatesRetainedFieldsOnly() {
 		let thread = makeThread(codexId: "thread-1", preview: "Before", updatedAt: 10)
-		let model = ThreadModel(thread: thread)
+		let model = ThreadModel(thread: thread, hydrationState: .summary)
 		let updated = makeThread(codexId: "thread-1", preview: "After", updatedAt: 20, name: "Renamed")
 
-		model.apply(thread: updated)
+		model.applySummary(thread: updated)
 
 		#expect(model.preview == "After")
 		#expect(model.updatedAt == 20)
 		#expect(model.name == "Renamed")
 		#expect(model.ephemeral == updated.ephemeral)
 		#expect(model.status == updated.status)
+		#expect(model.modelProvider == updated.modelProvider)
+		#expect(model.cwd == updated.cwd)
 	}
 
 	@Test func threadStatusRoundTripsThroughStatusData() {
@@ -48,9 +56,8 @@ struct CodaxSwiftDataModelTests {
 			updatedAt: 10,
 			status: .active(activeFlags: [.waitingOnApproval])
 		)
-		let model = ThreadModel(thread: thread)
-
-		#expect(model.status == thread.status)
+			let model = ThreadModel(thread: thread, hydrationState: .summary)
+			#expect(model.status == thread.status)
 	}
 
 	@Test func turnModelApplyUpdatesStatusItemsAndError() {
@@ -89,10 +96,15 @@ struct CodaxSwiftDataModelTests {
 			codexId: "thread-1",
 			createdAt: 1,
 			updatedAt: 1,
+			hydrationState: .summary,
 			preview: "Thread",
 			ephemeral: false,
-			statusData: Data("not-json".utf8)
-		)
+				modelProvider: "openai",
+				cwd: "/tmp/codax",
+				cliVersion: "0.112.0",
+				statusData: Data("not-json".utf8),
+				sourceData: encode(SessionSource.appServer)
+			)
 		let turn = TurnModel(
 			codexId: "turn-1",
 			statusData: Data("not-json".utf8),
@@ -101,6 +113,21 @@ struct CodaxSwiftDataModelTests {
 
 		#expect(thread.status == nil)
 		#expect(turn.status == nil)
+	}
+
+	@Test func threadHydrationStateAndTokenUsageRoundTrip() {
+		let thread = makeThread(codexId: "thread-1", preview: "Thread", updatedAt: 10)
+		let model = ThreadModel(thread: thread, hydrationState: .detail)
+		let tokenUsage = makeThreadTokenUsage()
+
+		model.setTokenUsage(tokenUsage)
+		model.setArchived(true)
+		model.setClosed(true)
+
+		#expect(model.hydrationState == .detail)
+		#expect(model.tokenUsage == tokenUsage)
+		#expect(model.isArchived)
+		#expect(model.isClosed)
 	}
 }
 
@@ -129,6 +156,26 @@ private func makeThread(
 		"gitInfo": NSNull(),
 		"name": name as Any,
 		"turns": [],
+	])
+}
+
+private func makeThreadTokenUsage() -> ThreadTokenUsage {
+	try! decode(ThreadTokenUsage.self, from: [
+		"total": [
+			"inputTokens": 10,
+			"cachedInputTokens": 0,
+			"outputTokens": 5,
+			"reasoningOutputTokens": 0,
+			"totalTokens": 15,
+		],
+		"last": [
+			"inputTokens": 10,
+			"cachedInputTokens": 0,
+			"outputTokens": 5,
+			"reasoningOutputTokens": 0,
+			"totalTokens": 15,
+		],
+		"modelContextWindow": 128000,
 	])
 }
 

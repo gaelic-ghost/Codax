@@ -6,69 +6,72 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct DetailView: View {
 	@Environment(CodaxViewModel.self) private var viewModel
 
 	var body: some View {
-		List {
-			Section("Compatibility") {
-				Text(compatibilityText)
-			}
+		SelectedThreadStoreView(selectedThreadCodexId: viewModel.selectedThreadCodexId) { thread in
+			List {
+				Section("Compatibility") {
+					Text(compatibilityText)
+				}
 
-			Section("Thread") {
-				if threadMetadata.isEmpty {
-					Text("No active thread")
-						.foregroundStyle(.secondary)
-				} else {
-					ForEach(threadMetadata, id: \.self) { row in
-						Text(row)
+				Section("Thread") {
+					if threadMetadata(thread: thread).isEmpty {
+						Text("No active thread")
+							.foregroundStyle(.secondary)
+					} else {
+						ForEach(threadMetadata(thread: thread), id: \.self) { row in
+							Text(row)
+						}
 					}
 				}
-			}
 
-			if let tokenUsageText = tokenUsageText {
-				Section("Token Usage") {
-					Text(tokenUsageText)
-				}
-			}
-
-			if !viewModel.activeTurnPlan.isEmpty {
-				Section("Plan") {
-					ForEach(Array(viewModel.activeTurnPlan.enumerated()), id: \.offset) { entry in
-						Text("\(entry.element.step) (\(entry.element.status.rawValue))")
+				if let tokenUsageText = tokenUsageText {
+					Section("Token Usage") {
+						Text(tokenUsageText)
 					}
 				}
-			}
 
-			if let diffText = viewModel.activeTurnDiff, !diffText.isEmpty {
-				Section("Diff") {
-					Text(diffText)
-						.textSelection(.enabled)
+				if !viewModel.activeTurnPlan.isEmpty {
+					Section("Plan") {
+						ForEach(Array(viewModel.activeTurnPlan.enumerated()), id: \.offset) { entry in
+							Text("\(entry.element.step) (\(entry.element.status.rawValue))")
+						}
+					}
 				}
-			}
 
-			if let activeError = viewModel.errorState {
-				Section("Error") {
-					Text(activeError.message)
-						.foregroundStyle(.red)
+				if let diffText = viewModel.activeTurnDiff, !diffText.isEmpty {
+					Section("Diff") {
+						Text(diffText)
+							.textSelection(.enabled)
+					}
 				}
-			}
 
-			if !viewModel.pendingUserRequests.isEmpty {
-				Section("Pending Requests") {
-					ForEach(viewModel.pendingUserRequests) { request in
-						VStack(alignment: .leading, spacing: 4) {
-							Text(request.title)
-							Text(request.summary)
-								.font(.caption)
-								.foregroundStyle(.secondary)
+				if let activeError = viewModel.errorState {
+					Section("Error") {
+						Text(activeError.message)
+							.foregroundStyle(.red)
+					}
+				}
+
+				if !viewModel.pendingUserRequests.isEmpty {
+					Section("Pending Requests") {
+						ForEach(viewModel.pendingUserRequests) { request in
+							VStack(alignment: .leading, spacing: 4) {
+								Text(request.title)
+								Text(request.summary)
+									.font(.caption)
+									.foregroundStyle(.secondary)
+							}
 						}
 					}
 				}
 			}
+			.navigationTitle("Details")
 		}
-		.navigationTitle("Details")
 	}
 
 	private var compatibilityText: String {
@@ -84,10 +87,10 @@ struct DetailView: View {
 		}
 	}
 
-	private var threadMetadata: [String] {
-		guard let thread = viewModel.activeThread else { return [] }
+	private func threadMetadata(thread: ThreadModel?) -> [String] {
+		guard let thread else { return [] }
 		return [
-			"Thread ID: \(thread.id)",
+			"Thread ID: \(thread.codexId)",
 			"Provider: \(thread.modelProvider)",
 			"CWD: \(thread.cwd)",
 			"CLI: \(thread.cliVersion)",
@@ -101,6 +104,8 @@ struct DetailView: View {
 }
 
 #Preview {
+	let container = try! CodaxPersistenceBridge.makeModelContainer(inMemory: true)
 	DetailView()
-		.environment(CodaxViewModel())
+		.environment(CodaxViewModel(modelContainer: container))
+		.modelContainer(container)
 }

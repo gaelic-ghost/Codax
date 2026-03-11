@@ -7,6 +7,7 @@
 
 import Foundation
 import Observation
+import SwiftData
 
 // MARK: - App State Projection
 
@@ -26,11 +27,7 @@ final class CodaxViewModel {
 	var errorState: CodaxViewModelError?
 	var compatibilityDebugInfo: CodaxCompatibilityDebugInfo?
 	var pendingUserRequests: [CodaxPendingUserRequest] = []
-
-	var threads: [Thread] {
-		get { threadSessionState.threads }
-		set { threadSessionState.replaceThreads(newValue) }
-	}
+	var hydratingThreadCodexIDs: Set<String> = []
 
 	var selectedThreadCodexId: String? {
 		get { threadSessionState.selectedThreadCodexId }
@@ -39,13 +36,8 @@ final class CodaxViewModel {
 				threadSessionState.selectedThreadCodexId = nil
 				return
 			}
-			threadSessionState.selectThread(codexId: newValue)
-		}
-	}
-
-	var activeThread: Thread? {
-		get { threadSessionState.selectedThread }
-		set { threadSessionState.setSelectedThread(newValue) }
+				threadSessionState.selectThread(codexId: newValue)
+			}
 	}
 
 	var activeThreadTokenUsage: ThreadTokenUsage? {
@@ -74,31 +66,38 @@ final class CodaxViewModel {
 
 	private let runtimeFactory: RuntimeFactory
 	private let initializeParamsFactory: InitializeParamsFactory
+	private let persistenceBridge: CodaxPersistenceBridge
 
 	private var runtimeCoordinator: CodexRuntimeCoordinator?
 	private var notificationTask: Task<Void, Never>?
 	private var serverRequestTask: Task<Void, Never>?
+	private var hydrationTask: Task<Void, Never>?
 	private var threadSessionState = CodaxViewModelThreadSessionState()
 
-	init() {
+	init(modelContainer: ModelContainer) {
 		self.runtimeFactory = { try await CodaxViewModel.makeRuntime() }
 		self.initializeParamsFactory = { CodaxViewModel.makeInitializeParams() }
+		self.persistenceBridge = CodaxPersistenceBridge(modelContainer: modelContainer)
 	}
 
 	internal init(
 		runtimeFactory: @escaping RuntimeFactory,
-		initializeParamsFactory: @escaping InitializeParamsFactory
+		initializeParamsFactory: @escaping InitializeParamsFactory,
+		persistenceBridge: CodaxPersistenceBridge
 	) {
 		self.runtimeFactory = runtimeFactory
 		self.initializeParamsFactory = initializeParamsFactory
+		self.persistenceBridge = persistenceBridge
 	}
 
 	internal convenience init(
-		runtimeFactory: @escaping RuntimeFactory
+		runtimeFactory: @escaping RuntimeFactory,
+		modelContainer: ModelContainer
 	) {
 		self.init(
 			runtimeFactory: runtimeFactory,
-			initializeParamsFactory: { CodaxViewModel.makeInitializeParams() }
+			initializeParamsFactory: { CodaxViewModel.makeInitializeParams() },
+			persistenceBridge: CodaxPersistenceBridge(modelContainer: modelContainer)
 		)
 	}
 
@@ -139,16 +138,16 @@ final class CodaxViewModel {
 					}
 				}
 			)
-			bindRuntimeStream(
-				storingIn: \CodaxViewModel.serverRequestTask,
-				stream: { await runtimeCoordinator.serverRequests() },
+				bindRuntimeStream(
+					storingIn: \CodaxViewModel.serverRequestTask,
+					stream: { await runtimeCoordinator.serverRequests() },
 				onElement: { viewModel, request in
 					viewModel.handle(request)
 				}
-			)
-			connectionState = .connected
-			await loadThreads()
-		} catch {
+				)
+				connectionState = .connected
+				await loadThreads()
+			} catch {
 			apply(connectError: error)
 			connectionState = .disconnected
 			await teardownRuntime()
@@ -194,7 +193,8 @@ final class CodaxViewModel {
 					searchTerm: nil
 				)
 			)
-			threadSessionState.replaceThreads(response.data)
+			try persistenceBridge.persistThreadList(response.data)
+			threadSessionState.pruneTransientState(validThreadCodexIDs: Set(response.data.map(\.id)))
 
 			let selectedThreadCodexId =
 				currentSelection.flatMap { threadID in
@@ -207,10 +207,15 @@ final class CodaxViewModel {
 			}
 
 			threadSessionState.selectThread(codexId: selectedThreadCodexId)
-			let detail = try await runtimeCoordinator.threadRead(
-				ThreadReadParams(threadId: selectedThreadCodexId, includeTurns: true)
+			try await hydrateThreadDetail(
+				threadCodexId: selectedThreadCodexId,
+				using: runtimeCoordinator,
+				force: true
 			)
-			threadSessionState.upsert(detail.thread)
+			startRecentHydration(
+				primaryThreadCodexId: selectedThreadCodexId,
+				using: runtimeCoordinator
+			)
 		} catch {
 			record(error)
 		}
@@ -237,9 +242,9 @@ final class CodaxViewModel {
 					ephemeral: nil,
 					experimentalRawEvents: false,
 					persistExtendedHistory: false
+					)
 				)
-			)
-			threadSessionState.upsert(response.thread)
+			try persistenceBridge.persistThreadDetail(response.thread)
 			threadSessionState.selectThread(codexId: response.thread.id)
 			threadSessionState.clearSelectedTransientState()
 		} catch {
@@ -271,16 +276,26 @@ final class CodaxViewModel {
 					personality: nil,
 					outputSchema: nil,
 					collaborationMode: nil
+					)
 				)
-			)
-			threadSessionState.merge(turn: response.turn, into: threadCodexId)
+			try persistenceBridge.persistTurn(response.turn, threadCodexId: threadCodexId)
 		} catch {
 			record(error)
 		}
 	}
 
-	func selectThread(codexId: String) {
+	func selectThread(codexId: String) async {
 		threadSessionState.selectThread(codexId: codexId)
+		guard connectionState == .connected, let runtimeCoordinator else { return }
+		do {
+			try await hydrateThreadDetail(
+				threadCodexId: codexId,
+				using: runtimeCoordinator,
+				force: false
+			)
+		} catch {
+			record(error)
+		}
 	}
 
 	func handle(_ notification: ServerNotificationEnvelope) {
@@ -369,6 +384,9 @@ private extension CodaxViewModel {
 	}
 
 	func teardownRuntime() async {
+		hydrationTask?.cancel()
+		hydrationTask = nil
+		hydratingThreadCodexIDs.removeAll()
 		notificationTask?.cancel()
 		notificationTask = nil
 		serverRequestTask?.cancel()
@@ -381,6 +399,57 @@ private extension CodaxViewModel {
 		runtimeCoordinator = nil
 		pendingLogin = nil
 		pendingUserRequests.removeAll()
+	}
+
+	func hydrateThreadDetail(
+		threadCodexId: String,
+		using runtimeCoordinator: CodexRuntimeCoordinator,
+		force: Bool
+	) async throws {
+		if !force, !(try persistenceBridge.shouldHydrateThreadDetail(codexId: threadCodexId, maxAge: 300)) {
+			return
+		}
+
+		hydratingThreadCodexIDs.insert(threadCodexId)
+		defer { hydratingThreadCodexIDs.remove(threadCodexId) }
+
+		let detail = try await runtimeCoordinator.threadRead(
+			ThreadReadParams(threadId: threadCodexId, includeTurns: true)
+		)
+		try persistenceBridge.persistThreadDetail(detail.thread)
+	}
+
+	func startRecentHydration(
+		primaryThreadCodexId: String,
+		using runtimeCoordinator: CodexRuntimeCoordinator
+	) {
+		hydrationTask?.cancel()
+		hydrationTask = Task { [weak self] in
+			guard let self else { return }
+			do {
+				let recentThreadCodexIDs = try self.persistenceBridge.recentThreadCodexIDs(
+					limit: 5,
+					excluding: primaryThreadCodexId
+				)
+				for threadCodexId in recentThreadCodexIDs {
+					guard !Task.isCancelled else { break }
+					if try self.persistenceBridge.shouldHydrateThreadDetail(
+						codexId: threadCodexId,
+						maxAge: 600
+					) {
+						try await self.hydrateThreadDetail(
+							threadCodexId: threadCodexId,
+							using: runtimeCoordinator,
+							force: false
+						)
+					}
+				}
+			} catch {
+				await MainActor.run {
+					self.record(error)
+				}
+			}
+		}
 	}
 
 	func refreshAccountState(refreshToken: Bool) async {
@@ -429,16 +498,55 @@ private extension CodaxViewModel {
 	func handleThreadNotification(_ notification: ServerNotificationEnvelope) -> Bool {
 		switch notification {
 			case let .threadStarted(notification):
-				threadSessionState.upsert(notification.thread)
 				threadSessionState.selectThread(codexId: notification.thread.id)
+				do {
+					try persistenceBridge.persistThreadDetail(notification.thread)
+				} catch {
+					record(error)
+				}
 				return true
 			case let .threadStatusChanged(notification):
-				threadSessionState.updateThread(codexId: notification.threadId) { thread in
-					thread.status = notification.status
+				do {
+					try persistenceBridge.persistThreadStatus(notification.status, for: notification.threadId)
+				} catch {
+					record(error)
+				}
+				return true
+			case let .threadArchived(notification):
+				do {
+					try persistenceBridge.persistThreadArchived(true, for: notification.threadId)
+				} catch {
+					record(error)
+				}
+				return true
+			case let .threadUnarchived(notification):
+				do {
+					try persistenceBridge.persistThreadArchived(false, for: notification.threadId)
+				} catch {
+					record(error)
+				}
+				return true
+			case let .threadClosed(notification):
+				do {
+					try persistenceBridge.persistThreadClosed(for: notification.threadId)
+				} catch {
+					record(error)
+				}
+				return true
+			case let .threadNameUpdated(notification):
+				do {
+					try persistenceBridge.persistThreadName(notification.threadName, for: notification.threadId)
+				} catch {
+					record(error)
 				}
 				return true
 			case let .threadTokenUsageUpdated(notification):
 				threadSessionState.setTokenUsage(notification.tokenUsage, for: notification.threadId)
+				do {
+					try persistenceBridge.persistThreadTokenUsage(notification.tokenUsage, for: notification.threadId)
+				} catch {
+					record(error)
+				}
 				return true
 			default:
 				return false
@@ -449,13 +557,20 @@ private extension CodaxViewModel {
 		switch notification {
 			case let .error(error):
 				errorState = CodaxViewModelError(message: error.error.message)
-				threadSessionState.merge(turnError: error.error, into: error.threadId, turnCodexId: error.turnId)
 				return true
 			case let .turnStarted(notification):
-				threadSessionState.merge(turn: notification.turn, into: notification.threadId)
+				do {
+					try persistenceBridge.persistTurn(notification.turn, threadCodexId: notification.threadId)
+				} catch {
+					record(error)
+				}
 				return true
 			case let .turnCompleted(notification):
-				threadSessionState.merge(turn: notification.turn, into: notification.threadId)
+				do {
+					try persistenceBridge.persistTurn(notification.turn, threadCodexId: notification.threadId)
+				} catch {
+					record(error)
+				}
 				return true
 			case let .turnPlanUpdated(notification):
 				threadSessionState.setTurnPlan(notification.plan, for: notification.threadId)

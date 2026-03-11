@@ -12,12 +12,14 @@ Codax is still early, but the protocol boundary is no longer partial:
 - the connection layer now represents every exported schema in `codex-schemas/v0.112.0`
 - the generated connection surface currently verifies as `433/433` schema exports represented
 - `CodaxViewModel` now starts a real ChatGPT login flow through runtime and tracks pending login state
-- thread loading now uses `thread/list` to populate summaries and `thread/read` to hydrate the selected thread
+- thread loading now uses `thread/list` to persist durable thread summaries, then `thread/read` to hydrate the selected thread into SwiftData
 - inbound server requests are surfaced into view-model-owned pending user-request state
+- SwiftData is now the durable read model for thread history, and SwiftUI reads that durable state through `@Query`
 
 The remaining unfinished work is above the connection layer:
 
 - richer approval, elicitation, and auth-refresh UX
+- broader durable projections for account, config, and catalog state
 - broader end-user polish and accessibility work
 
 ## Architecture
@@ -38,8 +40,9 @@ The remaining unfinished work is above the connection layer:
 ### Runtime And Above
 
 - `CodexRuntimeCoordinator` is the app-facing session boundary: it starts transport, owns `CodexConnection`, forwards typed streams, and exposes the typed request surface used by the app
-- `CodaxViewModel` consumes runtime only, projects app state, and owns UI-facing pending login, pending approval, and elicitation state
-- SwiftUI views sit above the view model and are not part of the protocol boundary
+- `CodaxPersistenceBridge` is the only app-side SwiftData writer: it maps runtime types into `Project`, `ThreadModel`, and `TurnModel`, owns hydration policy, and reconciles summary/detail updates
+- `CodaxViewModel` consumes runtime plus the persistence bridge, keeps only live session state, and owns UI-facing pending login, pending approval, elicitation, alerts, and hydration progress
+- SwiftUI views sit above the view model, fetch durable thread data from SwiftData with `@Query`, and use the view model only for transient state and actions
 
 ## Repository Layout
 
@@ -50,9 +53,9 @@ The remaining unfinished work is above the connection layer:
 - `Codax/Controllers/Runtime`
   - runtime ownership and stream forwarding
 - `Codax/Controllers/Orchestration`
-  - the `CodaxViewModel` app-state projection layer
+  - the `CodaxPersistenceBridge` and `CodaxViewModel` app-state layer
 - `Codax/Views`
-  - the current SwiftUI shell
+  - the current SwiftUI shell, now backed by SwiftData queries for durable thread state
 - `CodaxTests`
   - transport, connection, runtime, and orchestration tests
 - `Docs`
@@ -80,7 +83,7 @@ Current verified result:
 Project verification:
 
 - `xcodebuild -project /Users/galew/Workspace/Codax/Codax.xcodeproj -scheme Codax -sdk macosx test`
-- `82` tests passed in `9` suites
+- `87` tests passed in `10` suites
 
 ## Requirements
 
@@ -95,3 +98,4 @@ Project verification:
 - [CONNECTION_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/CONNECTION_SCHEMA_REPORT.md)
 - [TRANSPORT_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/TRANSPORT_SCHEMA_REPORT.md)
 - [ORCHESTRATION_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/ORCHESTRATION_SCHEMA_REPORT.md)
+- [UI_APP_SERVER_COVERAGE.md](/Users/galew/Workspace/Codax/Docs/UI_APP_SERVER_COVERAGE.md)

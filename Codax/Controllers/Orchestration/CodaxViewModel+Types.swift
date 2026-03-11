@@ -156,21 +156,10 @@ private extension RequestId {
 }
 
 struct CodaxViewModelThreadSessionState {
-	private(set) var order: [String] = []
-	private(set) var threadsByCodexId: [String: Thread] = [:]
 	private(set) var tokenUsageByThreadCodexId: [String: ThreadTokenUsage] = [:]
 	private(set) var turnPlanByThreadCodexId: [String: [TurnPlanStep]] = [:]
 	private(set) var turnDiffByThreadCodexId: [String: String] = [:]
 	var selectedThreadCodexId: String?
-
-	var threads: [Thread] {
-		order.compactMap { threadsByCodexId[$0] }
-	}
-
-	var selectedThread: Thread? {
-		guard let selectedThreadCodexId else { return nil }
-		return threadsByCodexId[selectedThreadCodexId]
-	}
 
 	var selectedTokenUsage: ThreadTokenUsage? {
 		guard let selectedThreadCodexId else { return nil }
@@ -187,59 +176,8 @@ struct CodaxViewModelThreadSessionState {
 		return turnDiffByThreadCodexId[selectedThreadCodexId]
 	}
 
-	mutating func replaceThreads(_ threads: [Thread]) {
-		order = threads.map(\.id)
-		threadsByCodexId = Dictionary(uniqueKeysWithValues: threads.map { ($0.id, $0) })
-		let validThreadIDs = Set(order)
-		tokenUsageByThreadCodexId = tokenUsageByThreadCodexId.filter { validThreadIDs.contains($0.key) }
-		turnPlanByThreadCodexId = turnPlanByThreadCodexId.filter { validThreadIDs.contains($0.key) }
-		turnDiffByThreadCodexId = turnDiffByThreadCodexId.filter { validThreadIDs.contains($0.key) }
-		if let selectedThreadCodexId, !validThreadIDs.contains(selectedThreadCodexId) {
-			self.selectedThreadCodexId = nil
-		}
-	}
-
-	mutating func setSelectedThread(_ thread: Thread?) {
-		guard let thread else { return }
-		upsert(thread)
-		selectedThreadCodexId = thread.id
-	}
-
 	mutating func selectThread(codexId: String) {
 		selectedThreadCodexId = codexId
-	}
-
-	mutating func upsert(_ thread: Thread) {
-		if !order.contains(thread.id) {
-			order.append(thread.id)
-		}
-		threadsByCodexId[thread.id] = thread
-	}
-
-	mutating func updateThread(codexId: String, mutation: (inout Thread) -> Void) {
-		guard var thread = threadsByCodexId[codexId] else { return }
-		mutation(&thread)
-		threadsByCodexId[codexId] = thread
-		if !order.contains(codexId) {
-			order.append(codexId)
-		}
-	}
-
-	mutating func merge(turn: Turn, into threadCodexId: String) {
-		updateThread(codexId: threadCodexId) { thread in
-			if let index = thread.turns.firstIndex(where: { $0.id == turn.id }) {
-				thread.turns[index] = turn
-			} else {
-				thread.turns.append(turn)
-			}
-		}
-	}
-
-	mutating func merge(turnError: TurnError, into threadCodexId: String, turnCodexId: String) {
-		updateThread(codexId: threadCodexId) { thread in
-			guard let index = thread.turns.firstIndex(where: { $0.id == turnCodexId }) else { return }
-			thread.turns[index].error = turnError
-		}
 	}
 
 	mutating func setTokenUsage(_ tokenUsage: ThreadTokenUsage?, for threadCodexId: String) {
@@ -263,5 +201,14 @@ struct CodaxViewModelThreadSessionState {
 
 	mutating func clearSelection() {
 		selectedThreadCodexId = nil
+	}
+
+	mutating func pruneTransientState(validThreadCodexIDs: Set<String>) {
+		tokenUsageByThreadCodexId = tokenUsageByThreadCodexId.filter { validThreadCodexIDs.contains($0.key) }
+		turnPlanByThreadCodexId = turnPlanByThreadCodexId.filter { validThreadCodexIDs.contains($0.key) }
+		turnDiffByThreadCodexId = turnDiffByThreadCodexId.filter { validThreadCodexIDs.contains($0.key) }
+		if let selectedThreadCodexId, !validThreadCodexIDs.contains(selectedThreadCodexId) {
+			self.selectedThreadCodexId = nil
+		}
 	}
 }

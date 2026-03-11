@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct CodaxApp: App {
@@ -14,9 +15,16 @@ struct CodaxApp: App {
 		// ...of all scenes.
 		// See docs for more information.
 	@Environment(\.scenePhase) private var aggScenePhase
-	@State private var viewModel = CodaxViewModel()
+	private let modelContainer: ModelContainer
+	@State private var viewModel: CodaxViewModel
 	@State private var columnVis = NavigationSplitViewVisibility.automatic
 	@State private var prefferedColumn = NavigationSplitViewColumn.content
+
+	init() {
+		let modelContainer = try! CodaxPersistenceBridge.makeModelContainer()
+		self.modelContainer = modelContainer
+		_viewModel = State(initialValue: CodaxViewModel(modelContainer: modelContainer))
+	}
 
     var body: some Scene {
 		// Primary `Scene` for main three-pane window.
@@ -25,19 +33,28 @@ struct CodaxApp: App {
 				columnVisibility: $columnVis,
 				preferredCompactColumn: $prefferedColumn) {
 						// sidebar:
-					SidebarView(
-						selection: Binding(
-							get: { viewModel.selectedThreadCodexId },
-							set: { viewModel.selectedThreadCodexId = $0 }
+						SidebarView(
+							selection: Binding(
+								get: { viewModel.selectedThreadCodexId },
+								set: { newValue in
+									guard let newValue else {
+										viewModel.selectedThreadCodexId = nil
+										return
+									}
+									Task {
+										await viewModel.selectThread(codexId: newValue)
+									}
+								}
+							)
 						)
-					)
 				} content: {
 					ContentView()
 				} detail: {
 					DetailView()
 				}
-		}
-		.environment(viewModel)
+			}
+			.environment(viewModel)
+			.modelContainer(modelContainer)
 
     }
 }

@@ -4,6 +4,7 @@
 
 - `Transport -> Connection -> Runtime -> ViewModel -> Views`
 - `CodexConnection` is the only app-server boundary
+- SwiftData is the durable read model for thread history and hydrated thread detail
 - the separate client layer has been removed
 - the connection schema generator and verifier currently report `433/433` exported schema types represented
 
@@ -17,21 +18,26 @@
 - [x] generated connection-owned Swift representation for every exported schema in `codex-schemas/v0.112.0`
 - [x] connection schema verification gate via `node Tools/update_connection_schema_progress.js --verify`
 - [x] generated schema output ignored in `.gitignore`
+- [x] dedicated `CodaxPersistenceBridge` as the only app-side SwiftData writer
+- [x] `@Query`-backed thread list and selected-thread reads in SwiftUI
+- [x] selected-plus-recent thread hydration policy with durable summary/detail reconciliation
 
 ## What Still Needs Work
 
 ### UI and app behavior
 
 - [ ] Add real approval, elicitation, and auth-refresh UX
-- [ ] Continue account/login polish around pending-login and auth-refresh flows
+- [ ] Persist durable account, config, and catalog projections where offline or delayed rendering matters
+- [ ] Continue account/login polish around pending-login, browser handoff, and auth-refresh flows
 - [ ] Improve item, diff, plan, and realtime rendering
 - [ ] Continue accessibility-first UI refinement
 
 ### Automation and quality
 
 - [ ] Add automated verification that regenerates the connection schema and fails CI on coverage drift
+- [ ] Add automated verification for the UI-facing app-server coverage tracker
 - [ ] Add targeted tests for the full generated connection boundary where useful
 
 ## Immediate Priority
 
-The protocol typing pass and the transport/runtime cleanup pass are complete. The highest-value next work is app behavior above that boundary: approvals, elicitation flows, auth-refresh behavior, and UI polish.
+The protocol typing pass, transport/runtime cleanup, and durable-thread persistence split are complete. The highest-value next work is app behavior above that boundary: approvals, elicitation flows, auth-refresh behavior, richer durable projections, and UI polish.

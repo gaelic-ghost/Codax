@@ -4,7 +4,7 @@
 
 Codax currently has a usable but intentionally narrow `codex app-server` client surface against the pinned `v0.112.0` schemas.
 
-The implemented request side is enough for the current app shell and orchestration slice:
+The implemented request side is NOT enough and needs to be expanded:
 
 - `initialize`
 - `initialized`
@@ -19,7 +19,7 @@ The implemented request side is enough for the current app shell and orchestrati
 
 The implemented server-request side is broader at the envelope level: the full current `ServerRequest.ts` method union is decoded. After the current client-boundary cleanup, those request payloads are also typed and follow the `codexId` naming boundary in Swift.
 
-The implemented server-notification side is still curated rather than exhaustive. Codax decodes the subset needed by the current orchestration flow and connection tests, but not the full `ServerNotification.ts` union.
+The implemented server-notification side is woefully inadequate and should be completed. Codax does not decode the full `ServerNotification.ts` union.
 
 ## Coverage Scope And Sources
 
@@ -32,7 +32,7 @@ This report is grounded in:
 Current coverage should be read in three buckets:
 
 - implemented and typed
-- implemented but still lossy or intentionally open-ended
+- incomplete: still lossy or intentionally open-ended
 - not yet implemented
 
 ## Implemented Client Requests
@@ -85,7 +85,7 @@ Codax currently decodes and exposes this server-notification subset:
 - `item/reasoning/summaryTextDelta`
 - `item/reasoning/summaryPartAdded`
 
-This subset is enough for the current orchestration reducer to keep account state, active thread state, turn state, token usage, plan state, diff state, and core item streaming reasonably current.
+This subset is NOT ENOUGH. It only supports the current orchestration reducer to keep account state, active thread state, turn state, token usage, plan state, diff state, and core item streaming reasonably current.
 
 Everything else in `ServerNotification.ts` currently falls through to `.unknown(method:raw:)`.
 
@@ -109,7 +109,7 @@ This surface is now typed end-to-end in Swift and follows the current client nam
 
 The envelope coverage is complete. The remaining caveat is not method coverage, but how much of some open-ended nested payloads are represented as specific schema-backed types versus explicit fallback wrappers such as `CodexValue`.
 
-## Partially Modeled Surfaces
+## INCOMPLETE/Partially Modeled Surfaces
 
 The biggest partial areas after this pass are these:
 
@@ -126,7 +126,7 @@ The biggest partial areas after this pass are these:
 
 These areas are usable, but they are not yet full schema parity.
 
-## Missing Client Request Coverage
+## MISSING Client Request Coverage
 
 The largest uncovered request areas in `ClientRequest.ts` are:
 
@@ -182,7 +182,7 @@ The largest uncovered request areas in `ClientRequest.ts` are:
 
 These are not currently wrapped by `CodexClient` and are therefore not available to orchestration or UI through the current typed client surface.
 
-## Missing Notification Coverage
+## MISSING Notification Coverage
 
 The biggest remaining notification gap is breadth, not the base envelope mechanism.
 
@@ -245,7 +245,7 @@ These slices would extend the current app meaningfully while staying aligned wit
 
 ## Conclusion
 
-Codax currently covers the app-server surface well enough for:
+Codax is WOEFULLY INADEQUATE and only covers the app-server surface well enough for:
 
 - process launch and handshake
 - account bootstrap and login initiation/cancel
@@ -254,10 +254,10 @@ Codax currently covers the app-server surface well enough for:
 - decoding the full current server-request method union
 - consuming a useful curated subset of server notifications
 
-What remains is not the basic transport or envelope mechanism. The remaining work is API breadth:
+What remains is CRITICAL API breadth which MUST BE RECTIFIED:
 
 - more request wrappers
 - broader notification coverage
 - fuller typed modeling for the remaining open-ended or currently deferred surfaces
 
-That makes the next steps concrete: build out missing request wrappers and notification coverage by workflow, rather than reworking the lower layers again.
+That makes the next steps concrete: build out ALL MISSING API COVERAGE.

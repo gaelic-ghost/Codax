@@ -7,7 +7,7 @@
 
 import Foundation
 
-	// MARK: - Auth Layer Types
+	// MARK: - Orchestration Layer Auth Types
 
 public enum AuthMode: String, Sendable, Codable {
 	case apikey
@@ -50,15 +50,21 @@ public enum Account: Sendable, Codable {
 	}
 
 	public init(from decoder: any Decoder) throws {
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-		switch try container.decode(Kind.self, forKey: .type) {
-			case .apiKey:
-				self = .apiKey
-			case .chatgpt:
-				self = .chatgpt(
-					email: try container.decode(String.self, forKey: .email),
-					planType: try container.decode(PlanType.self, forKey: .planType)
-				)
+		let (kind, container) = try CodexCoding.decodeTaggedKind(
+			from: decoder,
+			codingKeys: CodingKeys.self,
+			typeKey: .type,
+			kindType: Kind.self,
+			typeName: "Account"
+		)
+		switch kind {
+		case .apiKey:
+			self = .apiKey
+		case .chatgpt:
+			self = .chatgpt(
+				email: try container.decode(String.self, forKey: .email),
+				planType: try container.decode(PlanType.self, forKey: .planType)
+			)
 		}
 	}
 

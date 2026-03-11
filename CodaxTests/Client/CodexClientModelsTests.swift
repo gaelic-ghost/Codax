@@ -467,6 +467,26 @@ struct CodexClientModelsTests {
 		#expect(loginId == "login-1")
 		#expect(authURL == URL(string: "https://example.com/auth")!)
 	}
+
+	@Test func orchestrationAccountRoundTripsTaggedEncoding() throws {
+		let account = Account.chatgpt(email: "gale@example.com", planType: .plus)
+		let data = try JSONEncoder().encode(account)
+		let value = try JSONDecoder().decode(CodexValue.self, from: data)
+		let decoded = try JSONDecoder().decode(Account.self, from: data)
+
+		#expect(value == .object([
+			"type": .string("chatgpt"),
+			"email": .string("gale@example.com"),
+			"planType": .string("plus"),
+		]))
+
+		guard case let .chatgpt(email, planType) = decoded else {
+			Issue.record("Expected chatgpt account.")
+			return
+		}
+		#expect(email == "gale@example.com")
+		#expect(planType == .plus)
+	}
 }
 
 private extension TurnStatus {

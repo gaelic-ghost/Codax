@@ -9,81 +9,6 @@ import Foundation
 
 	// MARK: - Client Layer `Thread` Types
 
-public struct GitInfo: Sendable, Codable, Equatable, Hashable {
-	public var sha: String?
-	public var branch: String?
-	// TODO: Use Foundation.URL
-	public var originUrl: String?
-}
-
-public enum SessionSource: Sendable, Codable, Equatable, Hashable {
-	case cli
-	case vscode
-	case exec
-	case appServer
-	case subAgent(SubAgentSource)
-	case unknown
-
-	public init(from decoder: any Decoder) throws {
-		let container = try decoder.singleValueContainer()
-		if let rawValue = try? container.decode(String.self) {
-			switch rawValue {
-			case "cli":
-				self = .cli
-			case "vscode":
-				self = .vscode
-			case "exec":
-				self = .exec
-			case "appServer":
-				self = .appServer
-			case "unknown":
-				self = .unknown
-			default:
-				throw DecodingError.dataCorrupted(
-					.init(codingPath: decoder.codingPath, debugDescription: "Unsupported SessionSource value: \(rawValue)")
-				)
-			}
-			return
-		}
-
-		let keyed = try decoder.container(keyedBy: CodingKeys.self)
-		if keyed.contains(.subAgent) {
-			self = .subAgent(try keyed.decode(SubAgentSource.self, forKey: .subAgent))
-		} else {
-			throw DecodingError.dataCorrupted(
-				.init(codingPath: decoder.codingPath, debugDescription: "Unsupported SessionSource payload.")
-			)
-		}
-	}
-
-	public func encode(to encoder: any Encoder) throws {
-		switch self {
-		case .cli:
-			var container = encoder.singleValueContainer()
-			try container.encode("cli")
-		case .vscode:
-			var container = encoder.singleValueContainer()
-			try container.encode("vscode")
-		case .exec:
-			var container = encoder.singleValueContainer()
-			try container.encode("exec")
-		case .appServer:
-			var container = encoder.singleValueContainer()
-			try container.encode("appServer")
-		case let .subAgent(rawValue):
-			var container = encoder.container(keyedBy: CodingKeys.self)
-			try container.encode(rawValue, forKey: .subAgent)
-		case .unknown:
-			var container = encoder.singleValueContainer()
-			try container.encode("unknown")
-		}
-	}
-
-	private enum CodingKeys: String, CodingKey {
-		case subAgent
-	}
-}
-
 	// MARK: Base Type
 
 public struct Thread: Identifiable, Sendable, Codable, Equatable, Hashable {
@@ -266,3 +191,81 @@ public struct ThreadStartedNotification: Sendable, Codable {
 }
 
 	// MARK: Errors
+
+
+	// MARK: Other
+
+public struct GitInfo: Sendable, Codable, Equatable, Hashable {
+	public var sha: String?
+	public var branch: String?
+		// TODO: Use Foundation.URL
+	public var originUrl: String?
+}
+
+public enum SessionSource: Sendable, Codable, Equatable, Hashable {
+	case cli
+	case vscode
+	case exec
+	case appServer
+	case subAgent(SubAgentSource)
+	case unknown
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.singleValueContainer()
+		if let rawValue = try? container.decode(String.self) {
+			switch rawValue {
+				case "cli":
+					self = .cli
+				case "vscode":
+					self = .vscode
+				case "exec":
+					self = .exec
+				case "appServer":
+					self = .appServer
+				case "unknown":
+					self = .unknown
+				default:
+					throw DecodingError.dataCorrupted(
+						.init(codingPath: decoder.codingPath, debugDescription: "Unsupported SessionSource value: \(rawValue)")
+					)
+			}
+			return
+		}
+
+		let keyed = try decoder.container(keyedBy: CodingKeys.self)
+		if keyed.contains(.subAgent) {
+			self = .subAgent(try keyed.decode(SubAgentSource.self, forKey: .subAgent))
+		} else {
+			throw DecodingError.dataCorrupted(
+				.init(codingPath: decoder.codingPath, debugDescription: "Unsupported SessionSource payload.")
+			)
+		}
+	}
+
+	public func encode(to encoder: any Encoder) throws {
+		switch self {
+			case .cli:
+				var container = encoder.singleValueContainer()
+				try container.encode("cli")
+			case .vscode:
+				var container = encoder.singleValueContainer()
+				try container.encode("vscode")
+			case .exec:
+				var container = encoder.singleValueContainer()
+				try container.encode("exec")
+			case .appServer:
+				var container = encoder.singleValueContainer()
+				try container.encode("appServer")
+			case let .subAgent(rawValue):
+				var container = encoder.container(keyedBy: CodingKeys.self)
+				try container.encode(rawValue, forKey: .subAgent)
+			case .unknown:
+				var container = encoder.singleValueContainer()
+				try container.encode("unknown")
+		}
+	}
+
+	private enum CodingKeys: String, CodingKey {
+		case subAgent
+	}
+}

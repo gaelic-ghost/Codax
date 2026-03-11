@@ -7,6 +7,8 @@
 
 import Foundation
 
+// TODO: Organize this file
+
 public enum MessagePhase: String, Sendable, Codable, Equatable, Hashable {
 	case commentary
 	case finalAnswer = "final_answer"

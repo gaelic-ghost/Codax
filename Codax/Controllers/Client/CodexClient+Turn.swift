@@ -9,13 +9,6 @@ import Foundation
 
 	// MARK: - Client Layer `Turn` Types
 
-public enum TurnStatus: String, Sendable, Codable, Equatable {
-	case completed
-	case interrupted
-	case failed
-	case inProgress
-}
-
 	// MARK: Base Types
 
 public struct Turn: Identifiable, Sendable, Codable, Equatable, Hashable {
@@ -133,6 +126,15 @@ public struct TurnError: Sendable, Codable, Equatable, Hashable {
 	public var message: String
 	public var codexErrorInfo: CodexErrorInfo?
 	public var additionalDetails: String?
+}
+
+	// MARK: Other
+
+public enum TurnStatus: String, Sendable, Codable, Equatable {
+	case completed
+	case interrupted
+	case failed
+	case inProgress
 }
 
 public enum ReasoningSummary: String, Sendable, Codable, Equatable, Hashable {

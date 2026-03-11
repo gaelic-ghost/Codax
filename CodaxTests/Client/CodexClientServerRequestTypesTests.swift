@@ -3,7 +3,7 @@ import Testing
 @testable import Codax
 
 struct CodexClientServerRequestTypesTests {
-	@Test func fileChangeApprovalParamsDecodeWithCodexIdentifiers() throws {
+	@Test func fileChangeApprovalParamsDecodeWithTypedIdentifiers() throws {
 		let params = try decode(
 			FileChangeRequestApprovalParams.self,
 			from: """
@@ -17,9 +17,9 @@ struct CodexClientServerRequestTypesTests {
 			"""
 		)
 
-		#expect(params.threadCodexId == "thread-1")
-		#expect(params.turnCodexId == "turn-1")
-		#expect(params.itemCodexId == "item-1")
+		#expect(params.threadId == "thread-1")
+		#expect(params.turnId == "turn-1")
+		#expect(params.itemId == "item-1")
 		#expect(params.reason == "Need write access")
 		#expect(params.grantRoot == "/tmp")
 	}
@@ -62,25 +62,25 @@ struct CodexClientServerRequestTypesTests {
 			"""
 		)
 
-		#expect(params.threadCodexId == "thread-1")
-		#expect(params.turnCodexId == "turn-1")
-		#expect(params.itemCodexId == "item-1")
+		#expect(params.threadId == "thread-1")
+		#expect(params.turnId == "turn-1")
+		#expect(params.itemId == "item-1")
 		#expect(params.commandActions?.count == 1)
 		#expect(params.additionalPermissions?.network?.enabled == true)
-		#expect(params.proposedExecPolicyAmendment == ExecPolicyAmendment(["curl", "https://example.com"]))
+		#expect(params.proposedExecpolicyAmendment == ExecPolicyAmendment(["curl", "https://example.com"]))
 		#expect(params.proposedNetworkPolicyAmendments == [NetworkPolicyAmendment(host: "example.com", action: .allow)])
 		#expect(params.availableDecisions?.count == 3)
 	}
 
 	@Test func execCommandApprovalParamsRoundTripPreservesWireKeys() throws {
 		let params = ExecCommandApprovalParams(
-			conversationCodexId: "thread-1",
+			conversationId: "thread-1",
 			callId: "call-1",
 			approvalId: "approval-1",
 			command: ["echo", "hi"],
 			cwd: "/tmp",
 			reason: "Need approval",
-			parsedCommand: [.read(cmd: "cat README.md", name: "README.md", path: "/tmp/README.md")]
+			parsedCmd: [.read(cmd: "cat README.md", name: "README.md", path: "/tmp/README.md")]
 		)
 
 		let data = try JSONEncoder().encode(params)
@@ -89,21 +89,20 @@ struct CodexClientServerRequestTypesTests {
 		#expect(object["conversationId"] as? String == "thread-1")
 		#expect(object["callId"] as? String == "call-1")
 		#expect(object["parsedCmd"] is [Any])
-		#expect(object["conversationCodexId"] == nil)
 	}
 
 	@Test func reviewDecisionEncodesStructuredAmendments() throws {
-		let decision = ReviewDecision.networkPolicyAmendment(
-			NetworkPolicyAmendment(host: "example.com", action: .allow)
-		)
+		let decision = ReviewDecision.networkPolicyAmendment([
+			"host": .string("example.com"),
+			"action": .string("allow"),
+		])
 
 		let data = try JSONEncoder().encode(decision)
 		let object = try jsonObject(from: data)
 		let payload = object["network_policy_amendment"] as? [String: Any]
-		let nested = payload?["network_policy_amendment"] as? [String: Any]
 
-		#expect(nested?["host"] as? String == "example.com")
-		#expect(nested?["action"] as? String == "allow")
+		#expect(payload?["host"] as? String == "example.com")
+		#expect(payload?["action"] as? String == "allow")
 	}
 
 	@Test func commandExecutionApprovalDecisionRoundTripsStructuredCases() throws {
@@ -118,7 +117,11 @@ struct CodexClientServerRequestTypesTests {
 			"""
 		)
 
-		#expect(decision == .acceptWithExecPolicyAmendment(ExecPolicyAmendment(["rg", "TODO"])))
+		#expect(
+			decision == .acceptWithExecpolicyAmendment([
+				"execpolicy_amendment": .array([.string("rg"), .string("TODO")]),
+			])
+		)
 
 		let encoded = try JSONEncoder().encode(decision)
 		let object = try jsonObject(from: encoded)
@@ -156,8 +159,8 @@ struct CodexClientServerRequestTypesTests {
 		}
 
 		#expect(id == .int(42))
-		#expect(params.conversationCodexId == "thread-1")
-		#expect(params.parsedCommand == [.unknown(cmd: "echo hi")])
+		#expect(params.conversationId == "thread-1")
+		#expect(params.parsedCmd == [.unknown(cmd: "echo hi")])
 	}
 }
 

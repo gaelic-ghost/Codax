@@ -81,15 +81,12 @@ public actor CodexRuntimeCoordinator {
 		activeConnection
 	}
 
-	public nonisolated func notifications() -> AsyncStream<ServerNotificationEnvelope> {
+	public func notifications() -> AsyncStream<ServerNotificationEnvelope> {
 		AsyncStream { continuation in
 			let id = UUID()
-
-			Task {
-				let shouldFinishImmediately = await self.addNotificationContinuation(continuation, id: id)
-				if shouldFinishImmediately {
-					continuation.finish()
-				}
+			let shouldFinishImmediately = addNotificationContinuation(continuation, id: id)
+			if shouldFinishImmediately {
+				continuation.finish()
 			}
 
 			continuation.onTermination = { _ in
@@ -100,15 +97,12 @@ public actor CodexRuntimeCoordinator {
 		}
 	}
 
-	public nonisolated func serverRequests() -> AsyncStream<ServerRequestEnvelope> {
+	public func serverRequests() -> AsyncStream<ServerRequestEnvelope> {
 		AsyncStream { continuation in
 			let id = UUID()
-
-			Task {
-				let shouldFinishImmediately = await self.addServerRequestContinuation(continuation, id: id)
-				if shouldFinishImmediately {
-					continuation.finish()
-				}
+			let shouldFinishImmediately = addServerRequestContinuation(continuation, id: id)
+			if shouldFinishImmediately {
+				continuation.finish()
 			}
 
 			continuation.onTermination = { _ in

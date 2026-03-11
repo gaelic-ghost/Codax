@@ -360,7 +360,7 @@ private extension CodaxOrchestrator {
 		notificationTask?.cancel()
 		notificationTask = Task { [weak self] in
 			guard let self else { return }
-			let stream = runtimeCoordinator.notifications()
+			let stream = await runtimeCoordinator.notifications()
 			for await notification in stream {
 				guard !Task.isCancelled else { break }
 				await MainActor.run {
@@ -381,7 +381,7 @@ private extension CodaxOrchestrator {
 		serverRequestTask?.cancel()
 		serverRequestTask = Task { [weak self] in
 			guard let self else { return }
-			let stream = runtimeCoordinator.serverRequests()
+			let stream = await runtimeCoordinator.serverRequests()
 			for await request in stream {
 				guard !Task.isCancelled else { break }
 				await MainActor.run {

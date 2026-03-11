@@ -285,7 +285,7 @@ private actor OrchestratorTestTransport: CodexTransport {
 			"path": "/tmp/\(id)",
 			"cwd": "/tmp",
 			"cliVersion": "0.112.0",
-			"source": NSNull(),
+			"source": "appServer",
 			"agentNickname": NSNull(),
 			"agentRole": NSNull(),
 			"gitInfo": NSNull(),

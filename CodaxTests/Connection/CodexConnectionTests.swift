@@ -3,7 +3,7 @@ import Testing
 @testable import Codax
 
 struct CodexConnectionTests {
-	@Test func jsonRPCErrorObjectDecodesCodexValueData() throws {
+	@Test func jsonRPCErrorObjectDecodesJSONValueData() throws {
 		let data = Data(
 			"""
 			{
@@ -30,7 +30,7 @@ struct CodexConnectionTests {
 		let connection = CodexConnection(transport: transport)
 
 		let task = Task {
-			try await connection.request(method: "test/echo", params: EchoParams(value: "hello"), as: EchoResult.self)
+			try await connection._request(method: "test/echo", params: EchoParams(value: "hello"), as: EchoResult.self)
 		}
 
 		let sent = try await waitForSentMessage(at: 0, transport: transport)
@@ -52,10 +52,10 @@ struct CodexConnectionTests {
 		let connection = CodexConnection(transport: transport)
 
 		let firstTask = Task {
-			try await connection.request(method: "test/first", params: EmptyParams(), as: EchoResult.self)
+			try await connection._request(method: "test/first", params: EmptyParams(), as: EchoResult.self)
 		}
 		let secondTask = Task {
-			try await connection.request(method: "test/second", params: EmptyParams(), as: EchoResult.self)
+			try await connection._request(method: "test/second", params: EmptyParams(), as: EchoResult.self)
 		}
 
 		let firstSent = try await waitForSentMessage(at: 0, transport: transport)
@@ -79,7 +79,7 @@ struct CodexConnectionTests {
 		let connection = CodexConnection(transport: transport)
 
 		let task = Task {
-			try await connection.request(method: "test/error", params: EmptyParams(), as: EchoResult.self)
+			try await connection._request(method: "test/error", params: EmptyParams(), as: EchoResult.self)
 		}
 
 		let sent = try await waitForSentMessage(at: 0, transport: transport)
@@ -109,7 +109,7 @@ struct CodexConnectionTests {
 		let connection = CodexConnection(transport: transport)
 
 		let task = Task {
-			try await connection.request(method: "test/ignore", params: EmptyParams(), as: EchoResult.self)
+			try await connection._request(method: "test/ignore", params: EmptyParams(), as: EchoResult.self)
 		}
 
 		let sent = try await waitForSentMessage(at: 0, transport: transport)
@@ -130,7 +130,7 @@ struct CodexConnectionTests {
 		let connection = CodexConnection(transport: transport)
 
 		let task = Task {
-			try await connection.request(method: "test/stop", params: EmptyParams(), as: EchoResult.self)
+			try await connection._request(method: "test/stop", params: EmptyParams(), as: EchoResult.self)
 		}
 
 		_ = try await waitForSentMessage(at: 0, transport: transport)
@@ -147,7 +147,7 @@ struct CodexConnectionTests {
 		}
 	}
 
-	@Test func notificationsDecodeTypedAndUnknownCases() async throws {
+	@Test func notificationsDecodeTypedCases() async throws {
 		let transport = TestTransport()
 		let connection = CodexConnection(transport: transport)
 		var iterator = connection.notifications().makeAsyncIterator()
@@ -170,7 +170,7 @@ struct CodexConnectionTests {
 			#expect(Bool(false))
 			return
 		}
-		#expect(notification.threadCodexId == "thread-1")
+		#expect(notification.threadId == "thread-1")
 		guard case let .active(activeFlags) = notification.status else {
 			#expect(Bool(false))
 			return
@@ -188,28 +188,14 @@ struct CodexConnectionTests {
 		]))
 
 		let second = await iterator.next()
-		guard case let .agentMessageDelta(notification)? = second else {
+		guard case let .itemAgentMessageDelta(notification)? = second else {
 			#expect(Bool(false))
 			return
 		}
-		#expect(notification.threadCodexId == "thread-1")
-		#expect(notification.turnCodexId == "turn-1")
-		#expect(notification.itemCodexId == "item-1")
+		#expect(notification.threadId == "thread-1")
+		#expect(notification.turnId == "turn-1")
+		#expect(notification.itemId == "item-1")
 		#expect(notification.delta == "Hello")
-
-		try await transport.enqueueReceive(data: encodedJSONObject([
-			"method": "totally/unknown",
-			"params": ["value": true],
-		]))
-
-		let third = await iterator.next()
-		guard case let .unknown(method, raw)? = third else {
-			#expect(Bool(false))
-			return
-		}
-		#expect(method == "totally/unknown")
-		let rawObject = try jsonObject(from: raw)
-		#expect((rawObject["value"] as? Bool) == true)
 	}
 
 	@Test func inboundServerRequestRoutesToHandlerAndWritesResponse() async throws {
@@ -281,7 +267,7 @@ struct CodexConnectionTests {
 		)
 
 		let task = Task {
-			try await connection.request(method: "test/retry", params: EmptyParams(), as: EchoResult.self)
+			try await connection._request(method: "test/retry", params: EmptyParams(), as: EchoResult.self)
 		}
 
 		let firstSent = try await waitForSentMessage(at: 0, transport: transport)
@@ -318,7 +304,7 @@ struct CodexConnectionTests {
 		)
 
 		let task = Task {
-			try await connection.request(method: "test/retry", params: EmptyParams(), as: EchoResult.self)
+			try await connection._request(method: "test/retry", params: EmptyParams(), as: EchoResult.self)
 		}
 
 		for index in 0..<3 {
@@ -362,7 +348,7 @@ struct CodexConnectionTests {
 		)
 
 		let task = Task {
-			try await connection.request(method: "test/retry", params: EmptyParams(), as: EchoResult.self)
+			try await connection._request(method: "test/retry", params: EmptyParams(), as: EchoResult.self)
 		}
 
 		let firstSent = try await waitForSentMessage(at: 0, transport: transport)
@@ -396,7 +382,7 @@ struct CodexConnectionTests {
 		let connection = CodexConnection(transport: transport)
 
 		let task = Task {
-			try await connection.request(method: "test/invalid", params: EmptyParams(), as: EchoResult.self)
+			try await connection._request(method: "test/invalid", params: EmptyParams(), as: EchoResult.self)
 		}
 
 		_ = try await waitForSentMessage(at: 0, transport: transport)

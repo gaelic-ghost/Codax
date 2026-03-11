@@ -73,13 +73,13 @@ struct CodaxSwiftDataModelTests {
 	@Test func turnModelSerializedFieldsRoundTrip() {
 		let error = TurnError(
 			message: "Rate limited",
-			codexErrorInfo: .responseTooManyFailedAttempts(httpStatusCode: 429),
+			codexErrorInfo: .responseTooManyFailedAttempts(["httpStatusCode": .number(429)]),
 			additionalDetails: "retry later"
 		)
 		let turn = makeTurn(codexId: "turn-1", text: "Hello", status: .completed, error: error)
 		let model = TurnModel(turn: turn)
 
-		#expect(model.status == .completed)
+		#expect(model.status == TurnStatus.completed)
 		#expect(model.items == turn.items)
 		#expect(model.error == error)
 	}
@@ -123,7 +123,7 @@ private func makeThread(
 		"path": NSNull(),
 		"cwd": "/tmp",
 		"cliVersion": "0.111.0",
-		"source": NSNull(),
+		"source": "appServer",
 		"agentNickname": NSNull(),
 		"agentRole": NSNull(),
 		"gitInfo": NSNull(),

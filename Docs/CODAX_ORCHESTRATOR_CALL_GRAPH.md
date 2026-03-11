@@ -2,16 +2,19 @@
 
 ## Status
 
-This document is now a high-level note rather than a trustworthy detailed call graph.
-
-The reason is straightforward: the connection layer has been fully migrated to a connection-only schema boundary, while `CodaxOrchestrator` still contains stale references to the deleted client layer and old model conveniences. A line-by-line call graph would freeze incorrect assumptions into documentation.
+This document is a high-level call-flow note for the current architecture.
 
 ## Current Accurate Statement
 
 - `CodaxOrchestrator` sits above `CodexRuntimeCoordinator`
-- `CodexRuntimeCoordinator` should sit directly on `CodexConnection`
-- the current orchestrator implementation still needs cleanup to reflect that architecture
+- `CodexRuntimeCoordinator` sits directly on `CodexConnection`
+- `CodexConnection` sits directly on `LocalCodexTransport`
+- `LocalCodexTransport` owns local `codex app-server` process launch, stdio framing, stderr capture, and shutdown
 
-## Next Documentation Condition
+## Practical Flow
 
-This file should be regenerated in detail only after runtime and orchestration have been updated to consume `CodexConnection` directly.
+- views call `CodaxOrchestrator`
+- `CodaxOrchestrator` drives `CodexRuntimeCoordinator`
+- `CodexRuntimeCoordinator` starts `LocalCodexTransport` and `CodexConnection`
+- typed requests flow downward into `CodexConnection`
+- typed notifications and server requests flow back upward through runtime into orchestration

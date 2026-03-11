@@ -14,8 +14,6 @@ Codax is still early, but the protocol boundary is no longer partial:
 
 The remaining unfinished work is above the connection layer:
 
-- runtime and orchestration cleanup after client-layer removal
-- UI/state adaptation to the schema-owned connection models
 - approval, elicitation, and auth-refresh behavior
 - broader end-user polish and accessibility work
 
@@ -37,7 +35,7 @@ The remaining unfinished work is above the connection layer:
 ### Runtime And Above
 
 - `CodexRuntimeCoordinator` constructs `LocalCodexTransport`, injects it into `CodexConnection`, and forwards typed notification and server-request streams
-- `CodaxOrchestrator` still has stale app-model integration to clean up above the connection/runtime seam
+- `CodaxOrchestrator` consumes the runtime’s connection-only boundary and projects typed state for the app
 - SwiftUI views sit above orchestration and are not part of the protocol boundary
 
 ## Repository Layout
@@ -72,6 +70,11 @@ Current verified result:
 - `47/47` client requests represented through typed `CodexConnection` methods
 - `44/44` server notifications represented through `ServerNotificationEnvelope`
 - `8/8` server requests represented through `ServerRequestEnvelope`
+
+Project verification:
+
+- `xcodebuild -project /Users/galew/Workspace/Codax/Codax.xcodeproj -scheme Codax -sdk macosx test`
+- `76` tests passed in `9` suites
 
 ## Requirements
 

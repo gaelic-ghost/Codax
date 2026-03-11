@@ -20,18 +20,6 @@
 
 ## What Still Needs Work
 
-### Runtime cleanup
-
-- [ ] Remove stale deleted-client references from `CodexRuntimeCoordinator`
-- [ ] Make runtime own and expose `CodexConnection` directly
-- [ ] Update runtime tests to use the connection-only boundary
-
-### Orchestration cleanup
-
-- [ ] Remove stale client-based calling paths from `CodaxOrchestrator`
-- [ ] Adapt orchestration state updates to the schema-owned connection types
-- [ ] Replace old convenience assumptions like `codexId` where the schema owns `id`
-
 ### UI and app behavior
 
 - [ ] Finish login behavior beyond placeholders
@@ -42,9 +30,8 @@
 ### Automation and quality
 
 - [ ] Add automated verification that regenerates the connection schema and fails CI on coverage drift
-- [ ] Replace or remove stale client-layer tests and docs that no longer match the code
 - [ ] Add targeted tests for the full generated connection boundary where useful
 
 ## Immediate Priority
 
-The protocol typing pass is complete. The highest-value next work is deleting the remaining runtime and orchestration assumptions that still expect the removed client layer.
+The protocol typing pass and the transport/runtime cleanup pass are complete. The highest-value next work is app behavior above that boundary: approvals, elicitation flows, auth-refresh behavior, and UI polish.

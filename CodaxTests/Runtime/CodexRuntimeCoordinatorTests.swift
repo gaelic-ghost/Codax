@@ -8,8 +8,8 @@ struct CodexRuntimeCoordinatorTests {
 		let coordinator = makeRuntimeCoordinator(transport: transport)
 		try await coordinator.start()
 
-		var firstIterator = coordinator.notifications().makeAsyncIterator()
-		var secondIterator = coordinator.notifications().makeAsyncIterator()
+		var firstIterator = await coordinator.notifications().makeAsyncIterator()
+		var secondIterator = await coordinator.notifications().makeAsyncIterator()
 
 		try await transport.enqueueReceive(data: encodedJSONObject([
 			"method": "thread/status/changed",
@@ -45,8 +45,8 @@ struct CodexRuntimeCoordinatorTests {
 		let coordinator = makeRuntimeCoordinator(transport: transport)
 		try await coordinator.start()
 
-		var firstIterator = coordinator.serverRequests().makeAsyncIterator()
-		var secondIterator = coordinator.serverRequests().makeAsyncIterator()
+		var firstIterator = await coordinator.serverRequests().makeAsyncIterator()
+		var secondIterator = await coordinator.serverRequests().makeAsyncIterator()
 
 		try await transport.enqueueReceive(data: encodedJSONObject([
 			"id": 17,
@@ -85,7 +85,7 @@ struct CodexRuntimeCoordinatorTests {
 		let coordinator = makeRuntimeCoordinator(transport: transport)
 		try await coordinator.start()
 
-		var iterator = coordinator.serverRequests().makeAsyncIterator()
+		var iterator = await coordinator.serverRequests().makeAsyncIterator()
 
 		try await transport.enqueueReceive(data: encodedJSONObject([
 			"id": 7,
@@ -119,8 +119,8 @@ struct CodexRuntimeCoordinatorTests {
 		let coordinator = makeRuntimeCoordinator(transport: transport)
 		try await coordinator.start()
 
-		var notificationIterator = coordinator.notifications().makeAsyncIterator()
-		var requestIterator = coordinator.serverRequests().makeAsyncIterator()
+		var notificationIterator = await coordinator.notifications().makeAsyncIterator()
+		var requestIterator = await coordinator.serverRequests().makeAsyncIterator()
 
 		await coordinator.stop()
 

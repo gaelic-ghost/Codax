@@ -723,6 +723,14 @@ function emitIntersectionStruct(name, intersectionNode, definitions) {
   return emitStruct(name, merged);
 }
 
+function dynamicCodingKeysDecl() {
+  return `\tprivate struct CodingKeys: CodingKey {\n\t\tvar stringValue: String\n\t\tvar intValue: Int?\n\n\t\tinit?(stringValue: String) {\n\t\t\tself.stringValue = stringValue\n\t\t\tself.intValue = nil\n\t\t}\n\n\t\tinit?(intValue: Int) {\n\t\t\tself.stringValue = String(intValue)\n\t\t\tself.intValue = intValue\n\t\t}\n\t}\n`;
+}
+
+function codingKeyExpr(rawKey) {
+  return `CodingKeys(stringValue: ${JSON.stringify(rawKey)})!`;
+}
+
 function emitTaggedUnion(name, members, definitions) {
   const discriminatorKey = taggedUnionDiscriminator({ kind: "union", members }, definitions);
   if (!discriminatorKey) {
@@ -743,7 +751,7 @@ function emitTaggedUnion(name, members, definitions) {
     if (payloadFields.length === 0) {
       caseDecls.push(`\tcase ${caseName}`);
       decodeCases.push(`\t\tcase "${typeField.value.value}": self = .${caseName}`);
-      encodeCases.push(`\t\tcase .${caseName}: try container.encode("${typeField.value.value}", forKey: .${discriminatorSwiftName})`);
+      encodeCases.push(`\t\tcase .${caseName}: try container.encode("${typeField.value.value}", forKey: ${codingKeyExpr(discriminatorKey)})`);
       continue;
     }
     const assoc = payloadFields
@@ -752,10 +760,10 @@ function emitTaggedUnion(name, members, definitions) {
     caseDecls.push(`\tcase ${caseName}(${assoc})`);
     const decodeBindings = payloadFields
       .map((field) => {
-        const swiftName = swiftIdentifier(field.key).replace(/`/g, "");
+        const labelName = swiftIdentifier(field.key).replace(/`/g, "");
         const fn = field.optional ? "decodeIfPresent" : "decode";
         const baseType = swiftType(field.value).replace(/\?$/, "");
-        return `${swiftName}: try container.${fn}(${baseType}.self, forKey: .${swiftName})`;
+        return `${labelName}: try container.${fn}(${baseType}.self, forKey: ${codingKeyExpr(field.key)})`;
       })
       .join(", ");
     decodeCases.push(`\t\tcase "${typeField.value.value}": self = .${caseName}(${decodeBindings})`);
@@ -766,23 +774,12 @@ function emitTaggedUnion(name, members, definitions) {
       .map((field) => {
         const swiftName = swiftIdentifier(field.key).replace(/`/g, "");
         const fn = field.optional ? "encodeIfPresent" : "encode";
-        return `\t\t\ttry container.${fn}(${swiftName}, forKey: .${swiftName})`;
+        return `\t\t\ttry container.${fn}(${swiftName}, forKey: ${codingKeyExpr(field.key)})`;
       })
       .join("\n");
-    encodeCases.push(`\t\tcase let .${caseName}(${pattern}):\n\t\t\ttry container.encode("${typeField.value.value}", forKey: .${discriminatorSwiftName})\n${encodePayload}`);
+    encodeCases.push(`\t\tcase let .${caseName}(${pattern}):\n\t\t\ttry container.encode("${typeField.value.value}", forKey: ${codingKeyExpr(discriminatorKey)})\n${encodePayload}`);
   }
-  const codingKeys = new Set([discriminatorKey]);
-  for (const member of members) {
-    const flattenedMember = flattenObjectNode(member, definitions);
-    for (const field of flattenedMember.fields) codingKeys.add(field.key);
-  }
-  const codingKeyDecls = [...codingKeys]
-    .map((key) => {
-      const swiftName = swiftIdentifier(key).replace(/`/g, "");
-      return swiftName === key ? `\t\tcase ${swiftName}` : `\t\tcase ${swiftName} = "${key}"`;
-    })
-    .join("\n");
-  return `public enum ${name}: Sendable, Codable, Equatable, Hashable {\n${caseDecls.join("\n")}\n\n\tprivate enum CodingKeys: String, CodingKey {\n${codingKeyDecls}\n\t}\n\n\tpublic init(from decoder: any Decoder) throws {\n\t\tlet container = try decoder.container(keyedBy: CodingKeys.self)\n\t\tswitch try container.decode(String.self, forKey: .${discriminatorSwiftName}) {\n${decodeCases.join("\n")}\n\t\tdefault: throw DecodingError.dataCorruptedError(forKey: .${discriminatorSwiftName}, in: container, debugDescription: "Unsupported ${name} discriminator.")\n\t\t}\n\t}\n\n\tpublic func encode(to encoder: any Encoder) throws {\n\t\tvar container = encoder.container(keyedBy: CodingKeys.self)\n\t\tswitch self {\n${encodeCases.join("\n")}\n\t\t}\n\t}\n}\n`;
+  return `public enum ${name}: Sendable, Codable, Equatable, Hashable {\n${caseDecls.join("\n")}\n\n${dynamicCodingKeysDecl().trimEnd()}\n\n\tpublic init(from decoder: any Decoder) throws {\n\t\tlet container = try decoder.container(keyedBy: CodingKeys.self)\n\t\tswitch try container.decode(String.self, forKey: ${codingKeyExpr(discriminatorKey)}) {\n${decodeCases.join("\n")}\n\t\tdefault: throw DecodingError.dataCorruptedError(forKey: ${codingKeyExpr(discriminatorKey)}, in: container, debugDescription: "Unsupported ${name} discriminator.")\n\t\t}\n\t}\n\n\tpublic func encode(to encoder: any Encoder) throws {\n\t\tvar container = encoder.container(keyedBy: CodingKeys.self)\n\t\tswitch self {\n${encodeCases.join("\n")}\n\t\t}\n\t}\n}\n`;
 }
 
 function emitWrappedUnion(name, members) {
@@ -803,21 +800,17 @@ function emitWrappedUnion(name, members) {
     const field = member.fields[0];
     const caseName = swiftCaseName(field.key);
     caseDecls.push(`\tcase ${caseName}(${swiftType(field.value)})`);
-    decodeCases.push(`\t\tif container.contains(.${swiftIdentifier(field.key).replace(/`/g, "")}) { self = .${caseName}(try container.decode(${swiftType(field.value).replace(/\?$/, "")}.self, forKey: .${swiftIdentifier(field.key).replace(/`/g, "")})); return }`);
-    encodeCases.push(`\t\tcase let .${caseName}(value):\n\t\t\ttry keyed.encode(value, forKey: .${swiftIdentifier(field.key).replace(/`/g, "")})`);
+    decodeCases.push(`\t\tif container.contains(${codingKeyExpr(field.key)}) { self = .${caseName}(try container.decode(${swiftType(field.value).replace(/\?$/, "")}.self, forKey: ${codingKeyExpr(field.key)})); return }`);
+    encodeCases.push(`\t\tcase let .${caseName}(value):\n\t\t\ttry keyed.encode(value, forKey: ${codingKeyExpr(field.key)})`);
   }
-  const keyDecls = members
-    .filter((member) => member.kind === "object")
-    .map((member) => {
-      const field = member.fields[0];
-      const swiftName = swiftIdentifier(field.key).replace(/`/g, "");
-      return swiftName === field.key ? `\t\tcase ${swiftName}` : `\t\tcase ${swiftName} = "${field.key}"`;
-    })
-    .join("\n");
+  const stringDecodeCases = decodeCases.filter((line) => line.includes("single"));
+  const containerDecodeCases = decodeCases.filter((line) => line.includes("container"));
   const stringEncodeCases = encodeCases.filter((line) => line.includes("single.encode"));
   const keyedEncodeCases = encodeCases.filter((line) => line.includes("keyed.encode"));
-  return `public enum ${name}: Sendable, Codable, Equatable, Hashable {\n${caseDecls.join("\n")}\n\n\tprivate enum CodingKeys: String, CodingKey {\n${keyDecls}\n\t}\n\n\tpublic init(from decoder: any Decoder) throws {\n\t\tlet single = try decoder.singleValueContainer()\n${decodeCases.filter((line) => line.includes("single")).join("\n")}\n\t\tlet container = try decoder.container(keyedBy: CodingKeys.self)\n${decodeCases.filter((line) => line.includes("container")).join("\n")}\n\t\tthrow DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Unsupported ${name} payload."))\n\t}\n\n\tpublic func encode(to encoder: any Encoder) throws {\n\t\tswitch self {\n${stringEncodeCases.join("\n")}\n${keyedEncodeCases
-    .map((line) => line.replace("keyed.encode", "encoder.container(keyedBy: CodingKeys.self).encode"))
+  return `public enum ${name}: Sendable, Codable, Equatable, Hashable {\n${caseDecls.join("\n")}\n\n${dynamicCodingKeysDecl().trimEnd()}\n\n\tpublic init(from decoder: any Decoder) throws {\n${stringDecodeCases.length > 0 ? "\t\tlet single = try decoder.singleValueContainer()\n" : ""}${stringDecodeCases.join("\n")}\n${containerDecodeCases.length > 0 ? "\t\tlet container = try decoder.container(keyedBy: CodingKeys.self)\n" : ""}${containerDecodeCases.join("\n")}\n\t\tthrow DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Unsupported ${name} payload."))\n\t}\n\n\tpublic func encode(to encoder: any Encoder) throws {\n\t\tswitch self {\n${stringEncodeCases
+    .map((line) => line.replace(": try single.encode", ":\n\t\t\tvar single = encoder.singleValueContainer()\n\t\t\ttry single.encode"))
+    .join("\n")}\n${keyedEncodeCases
+    .map((line) => line.replace("\n\t\t\ttry keyed.encode", "\n\t\t\tvar keyed = encoder.container(keyedBy: CodingKeys.self)\n\t\t\ttry keyed.encode"))
     .join("\n")}\n\t\t}\n\t}\n}\n`;
 }
 
@@ -978,12 +971,12 @@ function emitConnectionAPI(definitions) {
     .map(({ method, paramsType, responseType }) => {
       const name = methodFunctionName(method);
       if (paramsType) {
-        return `\tpublic func ${name}(_ params: ${paramsType}) async throws -> ${responseType} {\n\t\ttry await _request(method: "${method}", params: params, as: ${responseType}.self)\n\t}`;
+        return `\tfunc ${name}(_ params: ${paramsType}) async throws -> ${responseType} {\n\t\ttry await _request(method: "${method}", params: params, as: ${responseType}.self)\n\t}`;
       }
-      return `\tpublic func ${name}() async throws -> ${responseType} {\n\t\ttry await _request(method: "${method}", params: CodexEmptyParams(), as: ${responseType}.self)\n\t}`;
+      return `\tfunc ${name}() async throws -> ${responseType} {\n\t\ttry await _request(method: "${method}", params: CodexEmptyParams(), as: ${responseType}.self)\n\t}`;
     })
     .join("\n\n");
-  return `private struct CodexEmptyParams: Sendable, Encodable {}\n\npublic extension CodexConnection {\n${methods}\n\n\tpublic func initialized() async throws {\n\t\ttry await _notify(method: "initialized")\n\t}\n}\n`;
+  return `private struct CodexEmptyParams: Sendable, Encodable {}\n\npublic extension CodexConnection {\n${methods}\n\n\tfunc initialized() async throws {\n\t\ttry await _notify(method: "initialized")\n\t}\n}\n`;
 }
 
 function emitServerNotificationEnvelope(definitions) {

@@ -44,6 +44,10 @@ Verified by [connection-schema-progress.md](/Users/galew/Workspace/Codax/Docs/co
 - [`generate_connection_schema.js`](/Users/galew/Workspace/Codax/Tools/generate_connection_schema.js)
 - [`update_connection_schema_progress.js`](/Users/galew/Workspace/Codax/Tools/update_connection_schema_progress.js)
 
-## Current Limitation
+## Verification
 
-The connection layer is complete as a schema boundary, but the rest of the app has not fully caught up yet. Runtime and orchestration still contain stale assumptions from the removed client layer, and those higher layers are what currently block a full app build.
+The connection boundary and its current callers verify cleanly with:
+
+- `node Tools/generate_connection_schema.js`
+- `node Tools/update_connection_schema_progress.js --verify`
+- `xcodebuild -project /Users/galew/Workspace/Codax/Codax.xcodeproj -scheme Codax -sdk macosx test`

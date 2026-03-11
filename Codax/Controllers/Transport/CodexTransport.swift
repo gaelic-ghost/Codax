@@ -264,7 +264,7 @@ private extension LocalCodexTransport {
 		lifecycleState = .running(processIdentifier: process.processIdentifier)
 	}
 
-	func installStdoutHandler(on handle: FileHandle) {
+	nonisolated func installStdoutHandler(on handle: FileHandle) {
 		handle.readabilityHandler = { [weak self] handle in
 			let data = handle.availableData
 			Task {
@@ -273,7 +273,7 @@ private extension LocalCodexTransport {
 		}
 	}
 
-	func installStderrHandler(on handle: FileHandle) {
+	nonisolated func installStderrHandler(on handle: FileHandle) {
 		handle.readabilityHandler = { [weak self] handle in
 			let data = handle.availableData
 			Task {

@@ -20,12 +20,20 @@ Current verified state:
 
 ## What Is Still Incomplete
 
-The remaining gaps are not schema coverage gaps. They are application-integration gaps:
+The remaining gaps are not schema coverage gaps.
 
-- runtime still references the deleted client layer
-- orchestration still references deleted client APIs and old convenience properties
-- approval, elicitation, and auth-refresh behaviors are not finished in the app layer
-- UI reduction of the full schema surface is still partial
+What still remains is app behavior above the protocol boundary:
+
+- approval UX and decision flows
+- elicitation and auth-refresh UX
+- broader UI/state reduction of the full schema surface
+- end-user polish and accessibility refinement
+
+## Verification
+
+- `node Tools/generate_connection_schema.js`
+- `node Tools/update_connection_schema_progress.js --verify`
+- `xcodebuild -project /Users/galew/Workspace/Codax/Codax.xcodeproj -scheme Codax -sdk macosx test`
 
 ## Reference
 

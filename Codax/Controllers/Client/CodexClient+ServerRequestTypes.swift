@@ -7,7 +7,7 @@
 
 import Foundation
 
-// MARK: - Client Layer Server Request Handling Types
+// MARK: - Client Layer Server Request Types
 
 public protocol CodexServerRequestHandler: Sendable {
 	func handle(_ request: ServerRequestEnvelope) async -> ServerRequestResult
@@ -75,6 +75,19 @@ public enum ServerRequestResult: Sendable {
 	case commandApproval(CommandExecutionRequestApprovalResponse)
 	case execCommandApproval(ExecCommandApprovalResponse)
 	case unhandled
+}
+
+// MARK: Auth Types
+
+public struct ChatgptAuthTokensRefreshParams: Sendable, Codable {
+	public var reason: String
+	public var previousAccountId: String?
+}
+
+public struct ChatgptAuthTokensRefreshResponse: Sendable, Codable {
+	public var accessToken: String
+	public var chatgptAccountId: String
+	public var chatgptPlanType: String?
 }
 
 public enum ReviewDecision: Sendable, Codable, Equatable, Hashable {
@@ -161,6 +174,8 @@ public enum ReviewDecision: Sendable, Codable, Equatable, Hashable {
 	}
 }
 
+// MARK: File Change Types
+
 public struct FileChangeRequestApprovalResponse: Sendable, Codable, Equatable, Hashable {
 	public var decision: FileChangeApprovalDecision
 }
@@ -188,6 +203,8 @@ public struct FileChangeRequestApprovalParams: Sendable, Codable, Equatable, Has
 	}
 }
 
+// MARK: Apply Patch Types
+
 public struct ApplyPatchApprovalResponse: Sendable, Codable, Equatable, Hashable {
 	public var decision: ReviewDecision
 }
@@ -207,6 +224,8 @@ public struct ApplyPatchApprovalParams: Sendable, Codable, Equatable, Hashable {
 		case grantRoot
 	}
 }
+
+// MARK: Tool Request Types
 
 public struct ToolRequestUserInputResponse: Sendable, Codable, Equatable, Hashable {
 	public var answers: [String: ToolRequestUserInputAnswer]
@@ -260,6 +279,8 @@ public struct DynamicToolCallResponse: Sendable, Codable, Equatable, Hashable {
 	public var success: Bool
 }
 
+// MARK: MCP Types
+
 public enum McpServerElicitationMode: String, Sendable, Codable, Equatable, Hashable {
 	case form
 	case url
@@ -297,6 +318,8 @@ public enum McpServerElicitationAction: String, Sendable, Codable, Equatable, Ha
 	case decline
 	case cancel
 }
+
+// MARK: Command Types
 
 public struct CommandExecutionRequestApprovalResponse: Sendable, Codable, Equatable, Hashable {
 	public var decision: CommandExecutionApprovalDecision

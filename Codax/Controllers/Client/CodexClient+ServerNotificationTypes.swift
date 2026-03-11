@@ -166,8 +166,14 @@ public enum ThreadStatus: Sendable, Codable, Equatable, Hashable {
 	}
 
 	public init(from decoder: any Decoder) throws {
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-		switch try container.decode(Kind.self, forKey: .type) {
+		let (kind, container) = try CodexCoding.decodeTaggedKind(
+			from: decoder,
+			codingKeys: CodingKeys.self,
+			typeKey: .type,
+			kindType: Kind.self,
+			typeName: "ThreadStatus"
+		)
+		switch kind {
 		case .notLoaded:
 			self = .notLoaded
 		case .idle:

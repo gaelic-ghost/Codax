@@ -1,5 +1,5 @@
 //
-//  CodexClient+Account.swift
+//  CodexClient+AccountTypes.swift
 //  Codax
 //
 //  Created by Gale Williams on 3/8/26.
@@ -9,29 +9,11 @@ import Foundation
 
 	// MARK: - Client Layer Account/Auth Types
 
-public enum CancelLoginAccountStatus: String, Sendable, Codable {
-	case canceled
-	case notFound
-}
-
-public struct CancelLoginAccountResponse: Sendable, Codable {
-	public var status: CancelLoginAccountStatus
-}
-
-public struct ChatgptAuthTokensRefreshParams: Sendable, Codable {
-	public var reason: String
-	public var previousAccountId: String?
-}
+	// MARK: Get Account
 
 public struct GetAccountResponse: Sendable, Codable {
 	public var account: Account?
 	public var requiresOpenaiAuth: Bool
-}
-
-public struct ChatgptAuthTokensRefreshResponse: Sendable, Codable {
-	public var accessToken: String
-	public var chatgptAccountId: String
-	public var chatgptPlanType: String?
 }
 
 public struct GetAccountParams: Sendable, Codable {
@@ -42,6 +24,17 @@ public struct GetAccountParams: Sendable, Codable {
 	}
 }
 
+	// MARK: Cancel Login
+
+public enum CancelLoginAccountStatus: String, Sendable, Codable {
+	case canceled
+	case notFound
+}
+
+public struct CancelLoginAccountResponse: Sendable, Codable {
+	public var status: CancelLoginAccountStatus
+}
+
 public struct CancelLoginAccountParams: Sendable, Codable {
 	public var loginId: String
 
@@ -49,6 +42,8 @@ public struct CancelLoginAccountParams: Sendable, Codable {
 		self.loginId = loginId
 	}
 }
+
+	// MARK: Login
 
 public enum LoginAccountParams: Sendable, Codable {
 	case apiKey(apiKey: String)
@@ -70,11 +65,17 @@ public enum LoginAccountParams: Sendable, Codable {
 	}
 
 	public init(from decoder: any Decoder) throws {
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-		switch try container.decode(Kind.self, forKey: .type) {
-			case .apiKey:
-				self = .apiKey(apiKey: try container.decode(String.self, forKey: .apiKey))
-			case .chatgpt:
+		let (kind, container) = try CodexCoding.decodeTaggedKind(
+			from: decoder,
+			codingKeys: CodingKeys.self,
+			typeKey: .type,
+			kindType: Kind.self,
+			typeName: "LoginAccountParams"
+		)
+		switch kind {
+				case .apiKey:
+					self = .apiKey(apiKey: try container.decode(String.self, forKey: .apiKey))
+				case .chatgpt:
 				self = .chatgpt
 			case .chatgptAuthTokens:
 				self = .chatgptAuthTokens(
@@ -120,11 +121,17 @@ public enum LoginAccountResponse: Sendable, Codable {
 	}
 
 	public init(from decoder: any Decoder) throws {
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-		switch try container.decode(Kind.self, forKey: .type) {
-			case .apiKey:
-				self = .apiKey
-			case .chatgpt:
+		let (kind, container) = try CodexCoding.decodeTaggedKind(
+			from: decoder,
+			codingKeys: CodingKeys.self,
+			typeKey: .type,
+			kindType: Kind.self,
+			typeName: "LoginAccountResponse"
+		)
+		switch kind {
+				case .apiKey:
+					self = .apiKey
+				case .chatgpt:
 				self = .chatgpt(
 					loginId: try container.decode(String.self, forKey: .loginId),
 					authURL: try container.decode(URL.self, forKey: .authUrl)
@@ -148,4 +155,3 @@ public enum LoginAccountResponse: Sendable, Codable {
 		}
 	}
 }
-

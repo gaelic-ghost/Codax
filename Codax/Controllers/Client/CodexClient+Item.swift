@@ -57,8 +57,14 @@ public enum PatchChangeKind: Sendable, Codable, Equatable, Hashable {
 	}
 
 	public init(from decoder: any Decoder) throws {
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-		switch try container.decode(Kind.self, forKey: .type) {
+		let (kind, container) = try CodexCoding.decodeTaggedKind(
+			from: decoder,
+			codingKeys: CodingKeys.self,
+			typeKey: .type,
+			kindType: Kind.self,
+			typeName: "PatchChangeKind"
+		)
+		switch kind {
 		case .add:
 			self = .add
 		case .delete:
@@ -104,8 +110,14 @@ public enum WebSearchAction: Sendable, Codable, Equatable, Hashable {
 	}
 
 	public init(from decoder: any Decoder) throws {
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-		switch try container.decode(Kind.self, forKey: .type) {
+		let (kind, container) = try CodexCoding.decodeTaggedKind(
+			from: decoder,
+			codingKeys: CodingKeys.self,
+			typeKey: .type,
+			kindType: Kind.self,
+			typeName: "WebSearchAction"
+		)
+		switch kind {
 		case .search:
 			self = .search(
 				query: try container.decodeIfPresent(String.self, forKey: .query),
@@ -165,8 +177,14 @@ public enum CommandAction: Sendable, Codable, Equatable, Hashable {
 	}
 
 	public init(from decoder: any Decoder) throws {
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-		switch try container.decode(Kind.self, forKey: .type) {
+		let (kind, container) = try CodexCoding.decodeTaggedKind(
+			from: decoder,
+			codingKeys: CodingKeys.self,
+			typeKey: .type,
+			kindType: Kind.self,
+			typeName: "CommandAction"
+		)
+		switch kind {
 		case .read:
 			self = .read(
 				command: try container.decode(String.self, forKey: .command),
@@ -776,21 +794,21 @@ public enum ThreadItem: Sendable, Codable, Equatable, Hashable {
 
 	public func encode(to encoder: any Encoder) throws {
 		switch self {
-		case let .userMessage(item): try item.encode(to: encoder)
-		case let .agentMessage(item): try item.encode(to: encoder)
-		case let .plan(item): try item.encode(to: encoder)
-		case let .reasoning(item): try item.encode(to: encoder)
-		case let .commandExecution(item): try item.encode(to: encoder)
-		case let .fileChange(item): try item.encode(to: encoder)
-		case let .mcpToolCall(item): try item.encode(to: encoder)
-		case let .dynamicToolCall(item): try item.encode(to: encoder)
-		case let .collabAgentToolCall(item): try item.encode(to: encoder)
-		case let .webSearch(item): try item.encode(to: encoder)
-		case let .imageView(item): try item.encode(to: encoder)
-		case let .imageGeneration(item): try item.encode(to: encoder)
-		case let .enteredReviewMode(item): try item.encode(to: encoder)
-		case let .exitedReviewMode(item): try item.encode(to: encoder)
-		case let .contextCompaction(item): try item.encode(to: encoder)
+		case let .userMessage(item): try CodexCoding.encodeTaggedObject(item, kind: Kind.userMessage, to: encoder)
+		case let .agentMessage(item): try CodexCoding.encodeTaggedObject(item, kind: Kind.agentMessage, to: encoder)
+		case let .plan(item): try CodexCoding.encodeTaggedObject(item, kind: Kind.plan, to: encoder)
+		case let .reasoning(item): try CodexCoding.encodeTaggedObject(item, kind: Kind.reasoning, to: encoder)
+		case let .commandExecution(item): try CodexCoding.encodeTaggedObject(item, kind: Kind.commandExecution, to: encoder)
+		case let .fileChange(item): try CodexCoding.encodeTaggedObject(item, kind: Kind.fileChange, to: encoder)
+		case let .mcpToolCall(item): try CodexCoding.encodeTaggedObject(item, kind: Kind.mcpToolCall, to: encoder)
+		case let .dynamicToolCall(item): try CodexCoding.encodeTaggedObject(item, kind: Kind.dynamicToolCall, to: encoder)
+		case let .collabAgentToolCall(item): try CodexCoding.encodeTaggedObject(item, kind: Kind.collabAgentToolCall, to: encoder)
+		case let .webSearch(item): try CodexCoding.encodeTaggedObject(item, kind: Kind.webSearch, to: encoder)
+		case let .imageView(item): try CodexCoding.encodeTaggedObject(item, kind: Kind.imageView, to: encoder)
+		case let .imageGeneration(item): try CodexCoding.encodeTaggedObject(item, kind: Kind.imageGeneration, to: encoder)
+		case let .enteredReviewMode(item): try CodexCoding.encodeTaggedObject(item, kind: Kind.enteredReviewMode, to: encoder)
+		case let .exitedReviewMode(item): try CodexCoding.encodeTaggedObject(item, kind: Kind.exitedReviewMode, to: encoder)
+		case let .contextCompaction(item): try CodexCoding.encodeTaggedObject(item, kind: Kind.contextCompaction, to: encoder)
 		case let .unknown(raw): try raw.encode(to: encoder)
 		}
 	}

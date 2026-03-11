@@ -58,6 +58,11 @@ extension CodexValue {
 		let data = try JSONEncoder().encode(value)
 		return try decoder.decode(T.self, from: data)
 	}
+
+	static func encode<T: Encodable>(_ value: T, using encoder: JSONEncoder = JSONEncoder()) throws -> CodexValue {
+		let data = try encoder.encode(value)
+		return try JSONDecoder().decode(CodexValue.self, from: data)
+	}
 }
 
 enum CodexCoding {
@@ -123,6 +128,25 @@ enum CodexCoding {
 	static func encodeStringValue(_ value: String, to encoder: any Encoder) throws {
 		var container = encoder.singleValueContainer()
 		try container.encode(value)
+	}
+
+	static func encodeTaggedObject<T: Encodable, Kind: RawRepresentable>(
+		_ value: T,
+		kind: Kind,
+		typeKey: String = "type",
+		to encoder: any Encoder
+	) throws
+	where Kind.RawValue == String
+	{
+		let encoded = try CodexValue.encode(value)
+		guard case var .object(object) = encoded else {
+			throw EncodingError.invalidValue(
+				value,
+				.init(codingPath: encoder.codingPath, debugDescription: "Tagged payloads must encode as JSON objects.")
+			)
+		}
+		object[typeKey] = .string(kind.rawValue)
+		try CodexValue.object(object).encode(to: encoder)
 	}
 }
 

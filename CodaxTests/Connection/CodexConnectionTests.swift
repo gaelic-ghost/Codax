@@ -214,13 +214,13 @@ struct CodexConnectionTests {
 
 	@Test func inboundServerRequestRoutesToHandlerAndWritesResponse() async throws {
 		let transport = TestTransport()
-		let handler = TestRequestHandler { request in
+		let responder = TestRequestResponder { request in
 			guard case .execCommandApproval = request else {
 				return .unhandled
 			}
 			return .execCommandApproval(ExecCommandApprovalResponse(decision: .approved))
 		}
-		let connection = CodexConnection(transport: transport, requestHandler: handler)
+		let connection = CodexConnection(transport: transport, requestResponder: responder)
 
 		await connection.start()
 		try await transport.enqueueReceive(data: encodedJSONObject([
@@ -244,8 +244,8 @@ struct CodexConnectionTests {
 
 	@Test func unhandledServerRequestReturnsMethodNotFound() async throws {
 		let transport = TestTransport()
-		let handler = TestRequestHandler { _ in .unhandled }
-		let connection = CodexConnection(transport: transport, requestHandler: handler)
+		let responder = TestRequestResponder { _ in .unhandled }
+		let connection = CodexConnection(transport: transport, requestResponder: responder)
 
 		await connection.start()
 		try await transport.enqueueReceive(data: encodedJSONObject([
@@ -426,10 +426,10 @@ private struct EchoResult: Sendable, Codable, Equatable {
 
 private struct EmptyParams: Sendable, Codable {}
 
-private struct TestRequestHandler: CodexServerRequestHandler {
-	let handler: @Sendable (ServerRequestEnvelope) async -> ServerRequestResult
+private struct TestRequestResponder: CodexServerRequestResponder {
+	let handler: @Sendable (ServerRequestEnvelope) async -> ServerRequestResponse
 
-	func handle(_ request: ServerRequestEnvelope) async -> ServerRequestResult {
+	func handle(_ request: ServerRequestEnvelope) async -> ServerRequestResponse {
 		await handler(request)
 	}
 }

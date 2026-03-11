@@ -9,12 +9,6 @@ import Foundation
 
 	// MARK: - Orchestration Layer Types
 
-struct CodaxOrchestrationRuntime {
-	let process: CodexProcess?
-	let connection: CodexConnection
-	let client: CodexClient
-}
-
 public enum CodaxCompatibilityState: Sendable, Equatable {
 	case unknown
 	case checking

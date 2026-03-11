@@ -13,7 +13,7 @@ import Observation
 @MainActor
 @Observable
 final class CodaxOrchestrator {
-	typealias RuntimeFactory = () async throws -> CodaxOrchestrationRuntime
+	typealias RuntimeFactory = () async throws -> CodexRuntimeCoordinator
 	typealias InitializeParamsFactory = () -> InitializeParams
 
 	var account: Account?
@@ -34,10 +34,9 @@ final class CodaxOrchestrator {
 	private let runtimeFactory: RuntimeFactory
 	private let initializeParamsFactory: InitializeParamsFactory
 
-	private var process: CodexProcess?
-	private var connection: CodexConnection?
-	private var client: CodexClient?
+	private var runtimeCoordinator: CodexRuntimeCoordinator?
 	private var notificationTask: Task<Void, Never>?
+	private var serverRequestTask: Task<Void, Never>?
 	private var activeThreadCodexId: String?
 
 	init() {
@@ -69,11 +68,11 @@ final class CodaxOrchestrator {
 
 	func connect() async {
 		guard connectionState != .connecting else { return }
-		guard !(connectionState == .connected && connection != nil) else {
+		guard !(connectionState == .connected && runtimeCoordinator != nil) else {
 			connectionState = .connected
 			return
 		}
-		if connection != nil {
+		if runtimeCoordinator != nil {
 			await teardownRuntime()
 		}
 
@@ -87,16 +86,16 @@ final class CodaxOrchestrator {
 		activeError = nil
 
 		do {
-			let runtime = try await runtimeFactory()
-			process = runtime.process
-			connection = runtime.connection
-			client = runtime.client
+			let runtimeCoordinator = try await runtimeFactory()
+			self.runtimeCoordinator = runtimeCoordinator
+			try await runtimeCoordinator.start()
 
 			let params = initializeParamsFactory()
-			_ = try await runtime.client.initialize(params)
-			try await runtime.client.sendInitialized()
+			_ = try await runtimeCoordinator.initialize(params)
+			try await runtimeCoordinator.sendInitialized()
 
-			startNotificationTask(connection: runtime.connection)
+			startNotificationTask(runtimeCoordinator: runtimeCoordinator)
+			startServerRequestTask(runtimeCoordinator: runtimeCoordinator)
 			connectionState = .connected
 			await loadThreads()
 		} catch {
@@ -111,7 +110,7 @@ final class CodaxOrchestrator {
 	}
 
 	func loadThreads() async {
-		guard let client, connectionState == .connected else { return }
+		guard connectionState == .connected, let client = await runtimeCoordinator?.client() else { return }
 
 		isLoadingThreads = true
 		defer { isLoadingThreads = false }
@@ -137,7 +136,7 @@ final class CodaxOrchestrator {
 	}
 
 	func startThread() async {
-		guard let client, connectionState == .connected else { return }
+		guard connectionState == .connected, let client = await runtimeCoordinator?.client() else { return }
 
 		activeError = nil
 
@@ -172,7 +171,7 @@ final class CodaxOrchestrator {
 	}
 
 	func startTurn(inputText: String) async {
-		guard let client, connectionState == .connected else { return }
+		guard connectionState == .connected, let client = await runtimeCoordinator?.client() else { return }
 		guard let threadCodexId = activeThread?.codexId ?? activeThreadCodexId else { return }
 
 		let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -278,6 +277,21 @@ final class CodaxOrchestrator {
 		}
 	}
 
+	func handle(_ request: ServerRequestEnvelope) {
+		switch request {
+		case .chatgptAuthRefresh,
+			.fileChangeApproval,
+			.applyPatchApproval,
+			.userInput,
+			.dynamicToolCall,
+			.mcpServerElicitation,
+			.commandApproval,
+			.execCommandApproval,
+			.unknown:
+			return
+		}
+	}
+
 	func refreshCompatibility() async {
 		compatibility = .checking
 		let debugSnapshot = await compatibilityProbe.debugProbeCompatibility()
@@ -290,18 +304,8 @@ final class CodaxOrchestrator {
 // MARK: - Internal Helpers
 
 private extension CodaxOrchestrator {
-	struct DefaultServerRequestHandler: CodexServerRequestHandler {
-		func handle(_ request: ServerRequestEnvelope) async -> ServerRequestResult {
-			.unhandled
-		}
-	}
-
-	static func makeRuntime() async throws -> CodaxOrchestrationRuntime {
-		let process = CodexProcess()
-		let transport = try await process.launchBundledCodex(arguments: [])
-		let connection = CodexConnection(transport: transport, requestHandler: DefaultServerRequestHandler())
-		let client = CodexClient(connection: connection)
-		return CodaxOrchestrationRuntime(process: process, connection: connection, client: client)
+	static func makeRuntime() async throws -> CodexRuntimeCoordinator {
+		CodexRuntimeCoordinator()
 	}
 
 	static func makeInitializeParams() -> InitializeParams {
@@ -324,11 +328,11 @@ private extension CodaxOrchestrator {
 		)
 	}
 
-	func startNotificationTask(connection: CodexConnection) {
+	func startNotificationTask(runtimeCoordinator: CodexRuntimeCoordinator) {
 		notificationTask?.cancel()
 		notificationTask = Task { [weak self] in
 			guard let self else { return }
-			let stream = connection.notifications()
+			let stream = runtimeCoordinator.notifications()
 			for await notification in stream {
 				guard !Task.isCancelled else { break }
 				await MainActor.run {
@@ -345,21 +349,31 @@ private extension CodaxOrchestrator {
 		}
 	}
 
+	func startServerRequestTask(runtimeCoordinator: CodexRuntimeCoordinator) {
+		serverRequestTask?.cancel()
+		serverRequestTask = Task { [weak self] in
+			guard let self else { return }
+			let stream = runtimeCoordinator.serverRequests()
+			for await request in stream {
+				guard !Task.isCancelled else { break }
+				await MainActor.run {
+					self.handle(request)
+				}
+			}
+		}
+	}
+
 	func teardownRuntime() async {
 		notificationTask?.cancel()
 		notificationTask = nil
+		serverRequestTask?.cancel()
+		serverRequestTask = nil
 
-		if let connection {
-			await connection.stop()
+		if let runtimeCoordinator {
+			await runtimeCoordinator.stop()
 		}
 
-		if let process {
-			await process.terminate()
-		}
-
-		process = nil
-		connection = nil
-		client = nil
+		runtimeCoordinator = nil
 	}
 
 	func upsertThread(_ thread: Thread) {

@@ -9,8 +9,8 @@ import Foundation
 
 // MARK: - Client Layer Server Request Types
 
-public protocol CodexServerRequestHandler: Sendable {
-	func handle(_ request: ServerRequestEnvelope) async -> ServerRequestResult
+public protocol CodexServerRequestResponder: Sendable {
+	func handle(_ request: ServerRequestEnvelope) async -> ServerRequestResponse
 }
 
 nonisolated public enum ServerRequestEnvelope: Sendable {
@@ -65,7 +65,7 @@ extension ServerRequestEnvelope {
 	}
 }
 
-public enum ServerRequestResult: Sendable {
+public enum ServerRequestResponse: Sendable {
 	case chatgptAuthRefresh(ChatgptAuthTokensRefreshResponse)
 	case fileChangeApproval(FileChangeRequestApprovalResponse)
 	case applyPatchApproval(ApplyPatchApprovalResponse)

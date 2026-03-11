@@ -316,19 +316,18 @@ private func makeConnectedOrchestrator(
 		),
 		runtimeFactory: {
 			await factory?.markStarted()
-			let connection = CodexConnection(transport: transport, requestHandler: TestRequestHandler { _ in .unhandled })
-			let client = CodexClient(connection: connection)
-			return CodaxOrchestrationRuntime(process: nil, connection: connection, client: client)
+			return makeRuntimeCoordinator(transport: transport)
 		}
 	)
 }
 
-private struct TestRequestHandler: CodexServerRequestHandler {
-	let handler: @Sendable (ServerRequestEnvelope) async -> ServerRequestResult
-
-	func handle(_ request: ServerRequestEnvelope) async -> ServerRequestResult {
-		await handler(request)
-	}
+private func makeRuntimeCoordinator(transport: OrchestratorTestTransport) -> CodexRuntimeCoordinator {
+	CodexRuntimeCoordinator(
+		processFactory: {
+			CodexProcess(executableURL: URL(fileURLWithPath: "/usr/bin/true"), baseArguments: [])
+		},
+		transportLauncher: { _, _ in transport }
+	)
 }
 
 private func encodedJSONObject(_ object: [String: Any]) throws -> Data {

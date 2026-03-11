@@ -60,7 +60,7 @@ public actor CodexConnection {
 	typealias Random = @Sendable () -> Double
 
 	let trans: CodexTransport
-	let reqHandler: CodexServerRequestHandler?
+	let reqResponder: CodexServerRequestResponder?
 	private let encoder = JSONEncoder()
 	private let decoder = JSONDecoder()
 	private let retryConfiguration: RetryConfiguration
@@ -75,10 +75,10 @@ public actor CodexConnection {
 
 	public init(
 		transport tr: any CodexTransport,
-		requestHandler rH: (any CodexServerRequestHandler)? = nil
+		requestResponder rH: (any CodexServerRequestResponder)? = nil
 	) {
 		self.trans = tr
-		self.reqHandler = rH
+		self.reqResponder = rH
 		self.retryConfiguration = .default
 		self.sleep = { try await Task.sleep(nanoseconds: $0) }
 		self.random = { Double.random(in: 0 ..< 1) }
@@ -86,7 +86,7 @@ public actor CodexConnection {
 
 	internal init(
 		transport tr: any CodexTransport,
-		requestHandler rH: (any CodexServerRequestHandler)? = nil,
+		requestResponder rH: (any CodexServerRequestResponder)? = nil,
 		maxRetryCount: Int,
 		retryBaseDelayNanos: UInt64,
 		retryMaxDelayNanos: UInt64,
@@ -95,7 +95,7 @@ public actor CodexConnection {
 		random: @escaping Random
 	) {
 		self.trans = tr
-		self.reqHandler = rH
+		self.reqResponder = rH
 		self.retryConfiguration = RetryConfiguration(
 			maxRetryCount: maxRetryCount,
 			baseDelayNanos: retryBaseDelayNanos,
@@ -350,15 +350,15 @@ private extension CodexConnection {
 	}
 
 	private func handleServerRequest(_ request: ServerRequestEnvelope) async throws {
-		guard let reqHandler else {
+		guard let reqResponder else {
 			try await sendErrorResponse(
 				id: request.id,
-				error: JSONRPCErrorObject(code: -32601, message: "No server request handler is installed.")
+				error: JSONRPCErrorObject(code: -32601, message: "No server request responder is installed.")
 			)
 			return
 		}
 
-		switch await reqHandler.handle(request) {
+		switch await reqResponder.handle(request) {
 		case let .commandApproval(response):
 			try await sendResponse(id: request.id, result: response)
 		case let .fileChangeApproval(response):

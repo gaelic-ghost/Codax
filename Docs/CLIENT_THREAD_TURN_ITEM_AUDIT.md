@@ -2,67 +2,83 @@
 
 ## Summary
 
-This audit compares the current Swift client models for `Thread`, `Turn`, and `Item` against:
+The thread, turn, and item slice is materially stronger than it was when this audit was first written.
 
-- the local `v0.112.0` schemas in `../codex-schemas`
-- the upstream app-server README at [codex-rs/app-server/README.md](https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md)
+Current headline state:
 
-The conclusion is:
+- `Thread` and `Turn` are real typed models, not thin placeholder wrappers
+- `ThreadItem` is a tagged union with explicit known cases plus `.unknown(raw: CodexValue)`
+- known item variants now encode with their discriminator, so typed items round-trip cleanly
+- open-ended nested payloads still use `CodexValue` where upstream shape remains broad or not yet worth hardening
 
-- Codax did not tack extra custom fields onto `Thread` or `Turn`.
-- The real issue was under-modeling, especially around `Thread.status`, `Turn.status`, and `ThreadItem`.
-- The README adds one important runtime constraint beyond raw schema shape: live item history should still be treated as notification-driven because `turn/started` and `turn/completed` often carry empty `items`.
+## Current Strong Areas
 
-## Thread
+### Thread
 
-| Field / Area | Current Swift | Schema Grounding | Status |
-| --- | --- | --- | --- |
-| Base field list (`id`, `preview`, `ephemeral`, `modelProvider`, timestamps, paths, turns) | Present | `v2/Thread.ts` | Aligned |
-| `status` | `ThreadStatus` | `v2/ThreadStatus.ts` | Added now |
-| `source` | `SessionSource?` | `v2/Thread.ts`, `SessionSource.ts` | Added now, still optional in Swift |
-| `gitInfo` | `GitInfo?` | `v2/Thread.ts`, `GitInfo.ts` | Added now |
-| `approvalPolicy`, `sandbox` on thread start/resume responses | `JSONValue` aliases | schema is broader and nested | Lossy but acceptable for now |
+`Thread` now has typed ownership for important fields such as:
 
-Notes:
+- `status: ThreadStatus`
+- `source: SessionSource?`
+- `gitInfo: GitInfo?`
+- `approvalPolicy: AskForApproval`
+- `sandbox: SandboxPolicy`
 
-- `Thread.turns` remains valid, but callers should remember the schema only guarantees populated turns on `thread/read(includeTurns: true)`, `thread/resume`, `thread/fork`, and related read-style flows.
+This is no longer a generic JSON bucket.
 
-## Turn
+### Turn
 
-| Field / Area | Current Swift | Schema Grounding | Status |
-| --- | --- | --- | --- |
-| Base field list (`id`, `items`, `status`, `error`) | Present | `v2/Turn.ts` | Aligned |
-| `status` | `TurnStatus` enum | `v2/TurnStatus.ts` | Added now |
-| `error` | `TurnError` | `v2/TurnError.ts` | Aligned |
-| `input`, `summary`, `outputSchema`, `codexErrorInfo` | still use `JSONValue` in places | nested schema detail is broader | Lossy but acceptable for now |
+`Turn` now has meaningful typed structure for:
 
-README note:
+- `status: TurnStatus`
+- `items: [ThreadItem]`
+- `error: TurnError?`
 
-- `turn/started` and `turn/completed` should not be treated as reliable populated-item snapshots yet. Current app-server behavior still makes `item/*` notifications the canonical live item stream.
+Some nested fields still intentionally remain open-ended:
 
-## Item
+- `summary`
+- `outputSchema`
+- other schema-shaped payloads that are not yet stable enough to justify more DTOs
 
-| Area | Current Swift | Schema Grounding | Status |
-| --- | --- | --- | --- |
-| Base item type | `ThreadItem` tagged enum | `v2/ThreadItem.ts` | Added now |
-| `item/started` and `item/completed` notifications | typed with `ThreadItem` | `v2/ItemStartedNotification.ts`, `v2/ItemCompletedNotification.ts` | Added now |
-| Supported variants in this slice | `userMessage`, `agentMessage`, `plan`, `reasoning`, `commandExecution`, `fileChange`, `mcpToolCall`, `dynamicToolCall`, `webSearch`, `imageView`, `enteredReviewMode`, `exitedReviewMode`, `contextCompaction` | `v2/ThreadItem.ts` | Added now |
-| Remaining variants | not yet modeled as first-class Swift cases | `v2/ThreadItem.ts` union is broader | Intentionally deferred |
-| Unknown future variants | preserved as raw payload | forward compatibility | Added now |
+### ThreadItem
 
-## Missing But Intentionally Deferred
+`ThreadItem` is now the key discriminated union for orchestration-suitable item payloads.
 
-- full `ThreadItem` parity for every current upstream variant
-- deeper typed modeling for nested command/tool payloads
-- broader thread management methods such as list/fork/archive/rollback
-- typed policy/config DTO cleanup beyond the `Thread` and `Turn` base shapes
+Known cases encode and decode through explicit `"type"` discriminators.
 
-## Conclusion
+Unknown or future variants preserve raw payloads through:
 
-The client models are now grounded in the `v0.112.0` schema baseline for the `Thread` and `Turn` base contracts, and the biggest missing piece, `ThreadItem`, now exists as a real tagged union instead of a raw JSON placeholder.
+- `.unknown(raw: CodexValue)`
 
-What remains missing is mostly depth, not shape:
+That is the right boundary between strong typing and forward compatibility.
 
-- more `ThreadItem` variants
-- deeper nested payload typing
-- broader client surface coverage outside the current thread/turn slice
+## Current Use Of `CodexValue`
+
+The relevant remaining `CodexValue` usage is intentional.
+
+It is still appropriate for:
+
+- unknown item payloads
+- some broader nested request/response fields
+- schema-shaped blobs where the current app does not yet need stronger modeling
+
+This is no longer a duplicate or transport-only JSON tree. `CodexValue` is the canonical arbitrary-JSON representation in the client layer.
+
+## Current Gaps
+
+The main remaining gaps in this slice are:
+
+- more item variant coverage
+- deeper reduction of item streaming deltas into app-visible state
+- stronger typing for a few still-open nested payload fields where upstream shape has proven stable enough
+
+These are real modeling improvements, but they are no longer foundational cleanup problems.
+
+## Practical Conclusion
+
+This area should now be treated as an incremental modeling surface, not a structural architecture problem.
+
+The next work here should be driven by UI and orchestration needs:
+
+- add item variants the UI actually needs
+- tighten nested payload types where that buys clarity
+- keep `CodexValue` only for genuinely open or future-facing payloads

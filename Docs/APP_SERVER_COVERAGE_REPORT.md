@@ -2,42 +2,27 @@
 
 ## Summary
 
-Codax currently has a usable but intentionally narrow `codex app-server` client surface against the pinned `v0.112.0` schemas.
+Codax now has a coherent runtime and wire-model architecture, but its app-server coverage is still intentionally partial.
 
-The implemented request side is NOT enough and needs to be expanded:
+What is in good shape:
 
-- `initialize`
-- `initialized`
-- `thread/start`
-- `thread/resume`
-- `thread/read`
-- `turn/start`
-- `turn/interrupt`
-- `account/read`
-- `account/login/start`
-- `account/login/cancel`
+- local process launch and stdio transport
+- JSON-RPC request/response handling
+- retry handling for retryable overloads
+- typed request wrappers for the current startup/thread/turn/account slice
+- complete typed coverage of the current known server-request method union
+- a useful curated notification subset for the current UI
 
-The implemented server-request side is broader at the envelope level: the full current `ServerRequest.ts` method union is decoded. After the current client-boundary cleanup, those request payloads are also typed and follow the `codexId` naming boundary in Swift.
+What is still missing:
 
-The implemented server-notification side is woefully inadequate and should be completed. Codax does not decode the full `ServerNotification.ts` union.
-
-## Coverage Scope And Sources
-
-This report is grounded in:
-
-- current Swift client and orchestration code under `/Users/galew/Workspace/Codax/Codax/Controllers`
-- local pinned schemas under `/Users/galew/Workspace/codex-schemas/v0.112.0`
-- the upstream `codex-rs/app-server/README.md` for runtime-behavior notes only
-
-Current coverage should be read in three buckets:
-
-- implemented and typed
-- incomplete: still lossy or intentionally open-ended
-- not yet implemented
+- broader request coverage
+- broader notification coverage
+- real responder behavior for approvals, elicitation, and auth refresh
+- richer UI use of the item and delta stream
 
 ## Implemented Client Requests
 
-Codax currently exposes concrete `CodexClient` wrappers for these client-to-server methods:
+The current typed client request surface is:
 
 - `initialize`
 - `initialized`
@@ -50,20 +35,11 @@ Codax currently exposes concrete `CodexClient` wrappers for these client-to-serv
 - `account/login/start`
 - `account/login/cancel`
 
-These are all wired and usable in the current app flow.
-
-They are also the methods currently exercised by `CodaxOrchestrator` for:
-
-- compatibility-gated startup
-- initial handshake
-- active-thread bootstrap
-- thread start
-- turn start
-- account/login state bootstrap
+These are the methods currently used by the app-facing startup and thread flows.
 
 ## Implemented Server Notifications
 
-Codax currently decodes and exposes this server-notification subset:
+The currently typed notification subset is:
 
 - `error`
 - `serverRequest/resolved`
@@ -85,13 +61,13 @@ Codax currently decodes and exposes this server-notification subset:
 - `item/reasoning/summaryTextDelta`
 - `item/reasoning/summaryPartAdded`
 
-This subset is NOT ENOUGH. It only supports the current orchestration reducer to keep account state, active thread state, turn state, token usage, plan state, diff state, and core item streaming reasonably current.
+Everything else still falls back to `.unknown(method:raw:)`.
 
-Everything else in `ServerNotification.ts` currently falls through to `.unknown(method:raw:)`.
+That is enough for the current orchestrator to maintain active thread, turn, diff, plan, token-usage, and core account state, but it is still nowhere near full notification parity.
 
 ## Implemented Server Requests
 
-Codax currently decodes the full current `ServerRequest.ts` method union:
+The current typed server-request envelope covers:
 
 - `item/commandExecution/requestApproval`
 - `item/fileChange/requestApproval`
@@ -102,162 +78,58 @@ Codax currently decodes the full current `ServerRequest.ts` method union:
 - `applyPatchApproval`
 - `execCommandApproval`
 
-This surface is now typed end-to-end in Swift and follows the current client naming boundary:
+Coverage of the request-method union is effectively complete for the currently known schema surface.
 
-- durable entities use `id: UUID` plus `codexId: String`
-- server-owned references use `threadCodexId`, `turnCodexId`, `itemCodexId`, and similar explicit names
+The gap is behavioral, not envelope coverage:
 
-The envelope coverage is complete. The remaining caveat is not method coverage, but how much of some open-ended nested payloads are represented as specific schema-backed types versus explicit fallback wrappers such as `CodexValue`.
+- the runtime now surfaces every request on `serverRequests()`
+- the default `CodexServerRequestResponder` still returns `.unhandled`
+- Codax therefore still lacks real response policy for approvals, elicitation, and auth refresh
 
-## INCOMPLETE/Partially Modeled Surfaces
+## Partially Modeled Areas
 
-The biggest partial areas after this pass are these:
+The biggest partial areas are:
 
-- Server notifications:
-  envelope handling exists, but only a curated subset is decoded into typed notification cases
-- Thread and turn runtime semantics:
-  `Thread` and `Turn` are now substantially more idiomatic, but upstream runtime behavior still matters
-  `Thread.turns` is often empty except on `thread/resume`, `thread/fork`, and `thread/read(includeTurns: true)`
-  `Turn.items` is still not authoritative on `turn/started` and `turn/completed`; live item history should still be driven primarily by `item/*` notifications
-- Open-ended payloads:
-  some server-request payload areas remain intentionally wrapped in explicit client support types like `CodexValue` because upstream shape is open rather than fully closed
-- Item breadth:
-  the current `ThreadItem` union covers the highest-value variants first, but not the entire upstream variant universe yet
+- notification breadth
+- some open-ended nested payloads that still use `CodexValue`
+- broader item variant coverage
+- UI reduction of item-level streaming data
 
-These areas are usable, but they are not yet full schema parity.
+These are acceptable for the current slice, but they are still the main areas where the code intentionally stops short of full schema parity.
 
-## MISSING Client Request Coverage
+## Biggest Missing Request Areas
 
-The largest uncovered request areas in `ClientRequest.ts` are:
+The highest-value uncovered request groups remain:
 
-### Thread Lifecycle And Metadata
+- thread lifecycle and metadata methods such as list, archive, unarchive, naming, and metadata updates
+- turn and review expansion such as `turn/steer` and `review/start`
+- model/account utility methods such as model listing, rate-limit reads, and logout
+- config, MCP, skills, and app-management methods
+- search and conversation utility methods such as `fuzzyFileSearch` and summary helpers
 
-- `thread/fork`
-- `thread/archive`
-- `thread/unarchive`
-- `thread/unsubscribe`
-- `thread/name/set`
-- `thread/metadata/update`
-- `thread/compact/start`
-- `thread/rollback`
-- `thread/list`
-- `thread/loaded/list`
+The client architecture is ready for these. They are missing because the app has not implemented them yet, not because the lower layers are blocked.
 
-### Turn And Review Expansion
+## Biggest Missing Notification Areas
 
-- `turn/steer`
-- `review/start`
+The most obvious uncovered notification groups are:
 
-### Skills, Apps, Plugins, MCP, Admin, And Config
+- thread archive/unarchive/name/closure changes
+- account rate-limit changes
+- skills/app-list changes
+- realtime thread notifications
+- fuzzy-file-search session updates
+- more MCP and tool-progress notifications
+- platform warning and deprecation notifications
 
-- `skills/list`
-- `skills/remote/list`
-- `skills/remote/export`
-- `skills/config/write`
-- `app/list`
-- `plugin/install`
-- `mcpServer/oauth/login`
-- `config/mcpServer/reload`
-- `mcpServerStatus/list`
-- `config/read`
-- `config/value/write`
-- `config/batchWrite`
-- `configRequirements/read`
-- `externalAgentConfig/detect`
-- `externalAgentConfig/import`
-- `windowsSandbox/setupStart`
-
-### Utility And Account Endpoints
-
-- `model/list`
-- `experimentalFeature/list`
-- `account/logout`
-- `account/rateLimits/read`
-- `feedback/upload`
-- `command/exec`
-- `getConversationSummary`
-- `gitDiffToRemote`
-- `getAuthStatus`
-- `fuzzyFileSearch`
-
-These are not currently wrapped by `CodexClient` and are therefore not available to orchestration or UI through the current typed client surface.
-
-## MISSING Notification Coverage
-
-The biggest remaining notification gap is breadth, not the base envelope mechanism.
-
-Notable uncovered notifications from `ServerNotification.ts` include:
-
-- `thread/archived`
-- `thread/unarchived`
-- `thread/closed`
-- `skills/changed`
-- `thread/name/updated`
-- `account/rateLimits/updated`
-- `app/list/updated`
-- `item/plan/delta`
-- `item/mcpToolCall/progress`
-- `mcpServer/oauthLogin/completed`
-- `thread/compacted`
-- `model/rerouted`
-- `deprecationNotice`
-- `configWarning`
-- `fuzzyFileSearch/sessionUpdated`
-- `fuzzyFileSearch/sessionCompleted`
-- `thread/realtime/started`
-- `thread/realtime/itemAdded`
-- `thread/realtime/outputAudio/delta`
-- `thread/realtime/error`
-- `thread/realtime/closed`
-- `windows/worldWritableWarning`
-- `windowsSandbox/setupCompleted`
-- `rawResponseItem/completed`
-
-These methods are currently preserved only as unknown notification envelopes and are not applied to orchestration state.
-
-## Recommended Next Slices
-
-The highest-value next API slices are:
-
-1. Thread-management expansion
-- add `thread/list`, `thread/loaded/list`, and `thread/name/set`
-- this unlocks a more truthful sidebar and persistent thread browsing
-
-2. Notification breadth for current UI state
-- add `thread/name/updated`, `thread/archived`, `thread/unarchived`, `account/rateLimits/updated`, and `app/list/updated`
-- this improves fidelity without requiring broad new UI architecture
-
-3. Turn and review depth
-- add `turn/steer`
-- add `review/start`
-- broaden item and delta coverage where review or richer conversation rendering needs it
-
-4. Model and account utility endpoints
-- add `model/list`
-- add `account/rateLimits/read`
-- add `account/logout`
-
-5. Search and conversation utility
-- add `fuzzyFileSearch`
-- add `getConversationSummary`
-
-These slices would extend the current app meaningfully while staying aligned with how Codax is already structured.
+These currently survive only as unknown notification payloads.
 
 ## Conclusion
 
-Codax is WOEFULLY INADEQUATE and only covers the app-server surface well enough for:
+Codax is no longer blocked by transport or connection architecture. The architecture is in decent shape.
 
-- process launch and handshake
-- account bootstrap and login initiation/cancel
-- active-thread bootstrap
-- starting threads and turns
-- decoding the full current server-request method union
-- consuming a useful curated subset of server notifications
-
-What remains is CRITICAL API breadth which MUST BE RECTIFIED:
+The real coverage debt is now higher-level:
 
 - more request wrappers
-- broader notification coverage
-- fuller typed modeling for the remaining open-ended or currently deferred surfaces
-
-That makes the next steps concrete: build out ALL MISSING API COVERAGE.
+- more notification variants
+- real server-request response behavior
+- richer orchestration and UI use of the protocol data already available

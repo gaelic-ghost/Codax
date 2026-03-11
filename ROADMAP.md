@@ -112,7 +112,7 @@ Tickets:
 - [x] Wire the current thread, turn, account, and login wrappers through generic request routing.
 - [ ] Validate all current DTO shapes against real app-server payloads.
 - [ ] Add remaining typed client methods for thread management, listing, metadata, and other supported endpoints as needed.
-- [ ] Reduce generic `JSONValue` placeholders where stable DTOs are known.
+- [ ] Reduce generic `CodexValue` placeholders where stable DTOs are known.
 - [x] Keep account and login request/response DTO ownership in `Client`, with app-facing auth state remaining in `Orchestration`.
 
 Exit criteria:
@@ -150,7 +150,8 @@ Tickets:
 - [x] Inject a concrete `CodexClient` and transport or process startup path.
 - [x] Implement initial connect, thread-loading, and start-turn flows.
 - [ ] Complete login behavior beyond the current placeholder UX.
-- [ ] Implement a concrete `CodexServerRequestHandler`.
+- [x] Introduce a concrete server-request responder boundary and runtime ownership for request handling.
+- [ ] Implement real approval, elicitation, and auth-refresh response behavior on top of the current responder/runtime stream wiring.
 - [x] Map connection, compatibility, auth, and thread state into observable app state.
 - [ ] Tighten richer app-facing thread and item modeling as the client and UI evolve.
 

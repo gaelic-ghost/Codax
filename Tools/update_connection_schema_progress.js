@@ -401,7 +401,9 @@ function computeClosure(definitions) {
 }
 
 function renameType(name) {
-  return name === "JsonValue" ? "JSONValue" : name;
+  if (name === "JsonValue") return "JSONValue";
+  if (name === "Model") return "AppModel";
+  return name;
 }
 
 function swiftCaseName(value) {
@@ -508,7 +510,7 @@ function main() {
   const requestRows = clientRequestCases.map(({ method, paramsType }) => {
     const functionName = methodFunctionName(method);
     const responseType = CLIENT_REQUEST_RESPONSES[method] || "MISSING_RESPONSE_MAP";
-    const hasFunction = new RegExp(`public func ${functionName}\\(`).test(generatedSource);
+    const hasFunction = new RegExp(`(?:public\\s+)?func ${functionName}\\(`).test(generatedSource);
     const hasResponseType = responseType !== "MISSING_RESPONSE_MAP" && declarations.has(renameType(responseType));
     return [
       `\`${method}\``,

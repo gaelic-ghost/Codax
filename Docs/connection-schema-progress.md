@@ -1,6 +1,6 @@
 # Connection Schema Progress
 
-Generated on 2026-03-11T20:14:08.840Z.
+Generated on 2026-03-11T21:03:34.985Z.
 
 This tracker is derived from the pinned `codex-schemas/v0.112.0` tree and checked against `Codax/Controllers/Connection/CodexSchema.generated.swift`.
 
@@ -281,7 +281,7 @@ This tracker is derived from the pinned `codex-schemas/v0.112.0` tree and checke
 | `MergeStrategy` | `MergeStrategy` | `generated:enum` | `v2/MergeStrategy.ts` |
 | `MessagePhase` | `MessagePhase` | `generated:enum` | `MessagePhase.ts` |
 | `ModeKind` | `ModeKind` | `generated:enum` | `ModeKind.ts` |
-| `Model` | `Model` | `generated:struct` | `v2/Model.ts` |
+| `Model` | `AppModel` | `generated:struct` | `v2/Model.ts` |
 | `ModelAvailabilityNux` | `ModelAvailabilityNux` | `generated:struct` | `v2/ModelAvailabilityNux.ts` |
 | `ModelListParams` | `ModelListParams` | `generated:struct` | `v2/ModelListParams.ts` |
 | `ModelListResponse` | `ModelListResponse` | `generated:struct` | `v2/ModelListResponse.ts` |

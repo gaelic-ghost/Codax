@@ -150,7 +150,7 @@ struct CodexConnectionTests {
 	@Test func notificationsDecodeTypedCases() async throws {
 		let transport = TestTransport()
 		let connection = CodexConnection(transport: transport)
-		var iterator = connection.notifications().makeAsyncIterator()
+		var iterator = await connection.notifications().makeAsyncIterator()
 
 		await connection.start()
 

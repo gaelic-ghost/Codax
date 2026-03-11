@@ -12,18 +12,17 @@ What is already real:
 
 - transport and process-launch hardening
 - a JSON-RPC `Connection` layer
-- initial typed `Client` wrappers, including client-owned account and login DTOs
+- a full generated connection-owned schema boundary
 - initial compatibility gating for Codex CLI `0.111.x` and `0.112.x`
 - an early `NavigationSplitView` shell with environment-owned orchestration state
 - layer reports grounded in the current `v0.112.0` schema baseline
 
 What is still early or incomplete:
 
-- `Orchestration` is only partially complete
 - the current `NavigationSplitView` shell still needs broader pane behavior, polish, and accessibility work
 - broader UX polish
 - the full accessibility pass
-- broader notification coverage and deeper client DTO validation
+- broader reduction of the full typed schema surface into polished app behavior
 
 Please do not assume unfinished layers are stable just because the repo is public.
 
@@ -46,14 +45,14 @@ Please open an issue first, or otherwise coordinate before investing implementat
 - a change that cuts across multiple subsystems
 - a UI direction change with significant product impact
 
-For this repo in particular, that applies strongly to work spanning `Transport`, `Connection`, `Client`, `Orchestration`, and the current split-view UI shell.
+For this repo in particular, that applies strongly to work spanning `Transport`, `Connection`, `Runtime`, `Orchestration`, and the current split-view UI shell.
 
 ## Good First Contribution Areas
 
 The highest-value contribution areas right now are:
 
 - schema and report alignment
-- broader notification coverage and client DTO validation
+- broader notification and app-behavior coverage
 - orchestration refinement
 - SwiftUI shell and pane-state cleanup
 - accessibility-first UI groundwork
@@ -64,8 +63,6 @@ If you want deeper implementation context before changing protocol-facing code, 
 - [ROADMAP.md](/Users/galew/Workspace/Codax/ROADMAP.md)
 - [TRANSPORT_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/TRANSPORT_SCHEMA_REPORT.md)
 - [CONNECTION_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/CONNECTION_SCHEMA_REPORT.md)
-- [CLIENT_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/CLIENT_SCHEMA_REPORT.md)
-- [CLIENT_THREAD_TURN_ITEM_AUDIT.md](/Users/galew/Workspace/Codax/Docs/CLIENT_THREAD_TURN_ITEM_AUDIT.md)
 - [ORCHESTRATION_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/ORCHESTRATION_SCHEMA_REPORT.md)
 
 ## Development Workflow
@@ -80,7 +77,7 @@ Keep the workflow lightweight:
 A few practical expectations:
 
 - prefer small PRs over broad mixed changes
-- keep naming and terminology aligned with the existing `Transport`, `Connection`, `Client`, and `Orchestration` vocabulary
+- keep naming and terminology aligned with the existing `Transport`, `Connection`, `Runtime`, and `Orchestration` vocabulary
 - if your change crosses layer boundaries, explain why that boundary shift is necessary
 - keep docs aligned with current roadmap milestones, layer boundaries, and schema-version framing
 - treat accessibility regressions, protocol drift, and untested behavior changes as high-risk

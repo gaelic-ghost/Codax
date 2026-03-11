@@ -119,7 +119,8 @@ private extension CodexRuntimeCoordinator {
 		notificationTask?.cancel()
 		notificationTask = Task { [weak self] in
 			guard let self else { return }
-			for await notification in connection.notifications() {
+			let stream = await connection.notifications()
+			for await notification in stream {
 				guard !Task.isCancelled else { break }
 				await self.yield(notification: notification)
 			}

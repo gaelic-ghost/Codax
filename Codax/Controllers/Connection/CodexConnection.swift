@@ -182,15 +182,12 @@ public actor CodexConnection {
 		try await trans.send(payload)
 	}
 
-	public nonisolated func notifications() -> AsyncStream<ServerNotificationEnvelope> {
+	public func notifications() -> AsyncStream<ServerNotificationEnvelope> {
 		AsyncStream { continuation in
 			let id = UUID()
-
-			Task {
-				let shouldFinishImmediately = await self.addNotificationContinuation(continuation, id: id)
-				if shouldFinishImmediately {
-					continuation.finish()
-				}
+			let shouldFinishImmediately = addNotificationContinuation(continuation, id: id)
+			if shouldFinishImmediately {
+				continuation.finish()
 			}
 
 			continuation.onTermination = { _ in

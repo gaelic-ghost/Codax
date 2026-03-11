@@ -31,4 +31,4 @@ There is no separate client layer between transport and the app anymore.
 
 ## Current Conclusion
 
-Transport is now one local-session actor plus the probe seam. Remaining compile cleanup is above transport, in stale app-side SwiftData and orchestration integration.
+Transport is now one local-session actor plus the probe seam. Remaining work is above transport in product behavior and UI refinement, not in transport architecture.

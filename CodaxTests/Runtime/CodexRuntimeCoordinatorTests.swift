@@ -34,8 +34,8 @@ struct CodexRuntimeCoordinatorTests {
 			return
 		}
 
-		#expect(firstNotification.threadCodexId == "thread-1")
-		#expect(secondNotification.threadCodexId == "thread-1")
+		#expect(firstNotification.threadId == "thread-1")
+		#expect(secondNotification.threadId == "thread-1")
 
 		await coordinator.stop()
 	}
@@ -134,10 +134,7 @@ struct CodexRuntimeCoordinatorTests {
 
 private func makeRuntimeCoordinator(transport: RuntimeCoordinatorTestTransport) -> CodexRuntimeCoordinator {
 	CodexRuntimeCoordinator(
-		processFactory: {
-			CodexProcess(executableURL: URL(fileURLWithPath: "/usr/bin/true"), baseArguments: [])
-		},
-		transportLauncher: { _, _ in transport }
+		transportFactory: { _ in transport }
 	)
 }
 

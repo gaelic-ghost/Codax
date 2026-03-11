@@ -103,6 +103,9 @@ public enum ConnectionState: Sendable {
 	case connected
 }
 
+public typealias JSONValueObject = [String: JSONValue]
+public typealias RequestId = JSONRPCID
+
 public enum CodexConnectionError: Error, LocalizedError, Sendable {
 	case disconnected
 	case invalidMessage

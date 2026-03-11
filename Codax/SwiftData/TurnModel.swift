@@ -42,8 +42,7 @@ final class TurnModel {
 
 	convenience init(turn: Turn, thread: ThreadModel? = nil) {
 		self.init(
-			id: turn.id,
-			codexId: turn.codexId,
+			codexId: turn.id,
 			statusData: Self.encode(turn.status) ?? Data(),
 			errorMessage: turn.error?.message,
 			errorAdditionalDetails: turn.error?.additionalDetails,
@@ -54,8 +53,7 @@ final class TurnModel {
 	}
 
 	func apply(turn: Turn) {
-		id = turn.id
-		codexId = turn.codexId
+		codexId = turn.id
 		statusData = Self.encode(turn.status) ?? Data()
 		errorMessage = turn.error?.message
 		errorAdditionalDetails = turn.error?.additionalDetails

@@ -12,6 +12,7 @@ const connectionSwiftPaths = [
   path.join(repoRoot, "Codax", "Controllers", "Connection", "CodexConnection+Types.swift"),
 ];
 const trackerPath = path.join(repoRoot, "Docs", "connection-schema-progress.md");
+const verifyOnly = process.argv.includes("--verify");
 
 const CLIENT_REQUEST_RESPONSES = {
   "initialize": "InitializeResponse",
@@ -633,6 +634,22 @@ function main() {
   console.log(`Wrote ${path.relative(repoRoot, trackerPath)}`);
   console.log(`Reachable types: ${reachableRows.length}`);
   console.log(`Missing reachable types: ${missingReachableTypes.length}`);
+
+  if (verifyOnly) {
+    const failures = [];
+    if (missingExportedTypes.length > 0) failures.push(`missing exported types: ${missingExportedTypes.length}`);
+    if (missingReachableTypes.length > 0) failures.push(`missing reachable types: ${missingReachableTypes.length}`);
+    if (incompleteRequests > 0) failures.push(`incomplete client requests: ${incompleteRequests}`);
+    if (incompleteNotifications > 0) failures.push(`incomplete server notifications: ${incompleteNotifications}`);
+    if (incompleteServerRequests > 0) failures.push(`incomplete server requests: ${incompleteServerRequests}`);
+
+    if (failures.length > 0) {
+      console.error(`Connection schema verification failed: ${failures.join(", ")}`);
+      process.exit(1);
+    }
+
+    console.log("Connection schema verification passed.");
+  }
 }
 
 main();

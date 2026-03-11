@@ -10,8 +10,7 @@ import Foundation
 // MARK: Runtime Coordinator
 
 public actor CodexRuntimeCoordinator {
-	typealias ProcessFactory = @Sendable () -> CodexProcess
-	typealias TransportLauncher = @Sendable (CodexProcess, [String]) async throws -> any CodexTransport
+	typealias TransportFactory = @Sendable ([String]) async throws -> any CodexTransport
 
 	private final class DefaultServerRequestResponder: CodexServerRequestResponder {
 		private let handleRequest: @Sendable (ServerRequestEnvelope) async -> ServerRequestResponse
@@ -25,47 +24,36 @@ public actor CodexRuntimeCoordinator {
 		}
 	}
 
-	private let processFactory: ProcessFactory
-	private let transportLauncher: TransportLauncher
+	private let transportFactory: TransportFactory
 
-	private var process: CodexProcess?
-	private var connection: CodexConnection?
-	private var clientStorage: CodexClient?
+	private var activeConnection: CodexConnection?
 	private var notificationTask: Task<Void, Never>?
 	private var notificationContinuations: [UUID: AsyncStream<ServerNotificationEnvelope>.Continuation] = [:]
 	private var serverRequestContinuations: [UUID: AsyncStream<ServerRequestEnvelope>.Continuation] = [:]
 
 	public init() {
-		self.processFactory = { CodexProcess() }
-		self.transportLauncher = { process, arguments in
-			try await process.launchBundledCodex(arguments: arguments)
+		self.transportFactory = { arguments in
+			try await LocalCodexTransport.launch(arguments: arguments)
 		}
 	}
 
 	internal init(
-		processFactory: @escaping ProcessFactory,
-		transportLauncher: @escaping TransportLauncher
+		transportFactory: @escaping TransportFactory
 	) {
-		self.processFactory = processFactory
-		self.transportLauncher = transportLauncher
+		self.transportFactory = transportFactory
 	}
 
 	public func start(arguments: [String] = []) async throws {
-		guard connection == nil, clientStorage == nil else { return }
+		guard activeConnection == nil else { return }
 
-		let process = processFactory()
 		let responder = DefaultServerRequestResponder { [weak self] request in
 			guard let self else { return .unhandled }
 			await self.yield(serverRequest: request)
 			return .unhandled
 		}
-		let transport = try await transportLauncher(process, arguments)
+		let transport = try await transportFactory(arguments)
 		let connection = CodexConnection(transport: transport, requestResponder: responder)
-		let client = CodexClient(connection: connection)
-
-		self.process = process
-		self.connection = connection
-		self.clientStorage = client
+		self.activeConnection = connection
 
 		await connection.start()
 		startNotificationForwarding(for: connection)
@@ -76,21 +64,21 @@ public actor CodexRuntimeCoordinator {
 	}
 
 	public func initialize(_ params: InitializeParams) async throws -> InitializeResponse {
-		guard let clientStorage else {
+		guard let activeConnection else {
 			throw CodexConnectionError.disconnected
 		}
-		return try await clientStorage.initialize(params)
+		return try await activeConnection.initialize(params)
 	}
 
 	public func sendInitialized() async throws {
-		guard let clientStorage else {
+		guard let activeConnection else {
 			throw CodexConnectionError.disconnected
 		}
-		try await clientStorage.sendInitialized()
+		try await activeConnection.initialized()
 	}
 
-	public func client() -> CodexClient? {
-		clientStorage
+	public func connection() -> CodexConnection? {
+		activeConnection
 	}
 
 	public nonisolated func notifications() -> AsyncStream<ServerNotificationEnvelope> {
@@ -156,11 +144,8 @@ private extension CodexRuntimeCoordinator {
 		notificationTask = nil
 		task?.cancel()
 
-		let connection = self.connection
-		let process = self.process
-		self.connection = nil
-		self.process = nil
-		self.clientStorage = nil
+		let connection = self.activeConnection
+		self.activeConnection = nil
 
 		let notificationContinuations = Array(notificationContinuations.values)
 		self.notificationContinuations.removeAll()
@@ -171,10 +156,6 @@ private extension CodexRuntimeCoordinator {
 			await connection.stop()
 		}
 
-		if let process {
-			await process.terminate()
-		}
-
 		finish(notificationContinuations: notificationContinuations)
 		finish(serverRequestContinuations: serverRequestContinuations)
 	}
@@ -183,7 +164,7 @@ private extension CodexRuntimeCoordinator {
 		_ continuation: AsyncStream<ServerNotificationEnvelope>.Continuation,
 		id: UUID
 	) -> Bool {
-		guard connection != nil || notificationTask != nil else { return true }
+		guard activeConnection != nil || notificationTask != nil else { return true }
 		notificationContinuations[id] = continuation
 		return false
 	}
@@ -192,7 +173,7 @@ private extension CodexRuntimeCoordinator {
 		_ continuation: AsyncStream<ServerRequestEnvelope>.Continuation,
 		id: UUID
 	) -> Bool {
-		guard connection != nil || notificationTask != nil else { return true }
+		guard activeConnection != nil || notificationTask != nil else { return true }
 		serverRequestContinuations[id] = continuation
 		return false
 	}

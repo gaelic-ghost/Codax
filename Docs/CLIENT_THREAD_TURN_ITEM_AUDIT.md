@@ -1,84 +1,22 @@
-# Client Thread / Turn / Item Audit
+# Thread / Turn / Item Audit
 
 ## Summary
 
-The thread, turn, and item slice is materially stronger than it was when this audit was first written.
+This audit is now connection-owned, not client-owned.
 
-Current headline state:
+`Thread`, `Turn`, `ThreadItem`, and related protocol models now come from the generated connection schema graph in `Codax/Controllers/Connection/CodexSchema.generated.swift`.
 
-- `Thread` and `Turn` are real typed models, not thin placeholder wrappers
-- `ThreadItem` is a tagged union with explicit known cases plus `.unknown(raw: CodexValue)`
-- known item variants now encode with their discriminator, so typed items round-trip cleanly
-- open-ended nested payloads still use `CodexValue` where upstream shape remains broad or not yet worth hardening
+## Current State
 
-## Current Strong Areas
+- the app-server model graph is generated from the pinned schema set
+- public arbitrary-JSON client-layer escape hatches are gone
+- `JSONValue` is the connection-owned schema representation for JSON-shaped fields
+- thread, turn, and item protocol typing now follows the pinned schema contract rather than hand-curated client models
 
-### Thread
+## Important Constraint
 
-`Thread` now has typed ownership for important fields such as:
-
-- `status: ThreadStatus`
-- `source: SessionSource?`
-- `gitInfo: GitInfo?`
-- `approvalPolicy: AskForApproval`
-- `sandbox: SandboxPolicy`
-
-This is no longer a generic JSON bucket.
-
-### Turn
-
-`Turn` now has meaningful typed structure for:
-
-- `status: TurnStatus`
-- `items: [ThreadItem]`
-- `error: TurnError?`
-
-Some nested fields still intentionally remain open-ended:
-
-- `summary`
-- `outputSchema`
-- other schema-shaped payloads that are not yet stable enough to justify more DTOs
-
-### ThreadItem
-
-`ThreadItem` is now the key discriminated union for orchestration-suitable item payloads.
-
-Known cases encode and decode through explicit `"type"` discriminators.
-
-Unknown or future variants preserve raw payloads through:
-
-- `.unknown(raw: CodexValue)`
-
-That is the right boundary between strong typing and forward compatibility.
-
-## Current Use Of `CodexValue`
-
-The relevant remaining `CodexValue` usage is intentional.
-
-It is still appropriate for:
-
-- unknown item payloads
-- some broader nested request/response fields
-- schema-shaped blobs where the current app does not yet need stronger modeling
-
-This is no longer a duplicate or transport-only JSON tree. `CodexValue` is the canonical arbitrary-JSON representation in the client layer.
-
-## Current Gaps
-
-The main remaining gaps in this slice are:
-
-- more item variant coverage
-- deeper reduction of item streaming deltas into app-visible state
-- stronger typing for a few still-open nested payload fields where upstream shape has proven stable enough
-
-These are real modeling improvements, but they are no longer foundational cleanup problems.
+The generated protocol models are now schema-first. Higher app layers that still expect deleted convenience wrappers or renamed fields need to adapt to the generated model graph instead of reintroducing parallel DTOs.
 
 ## Practical Conclusion
 
-This area should now be treated as an incremental modeling surface, not a structural architecture problem.
-
-The next work here should be driven by UI and orchestration needs:
-
-- add item variants the UI actually needs
-- tighten nested payload types where that buys clarity
-- keep `CodexValue` only for genuinely open or future-facing payloads
+This is no longer a client-model cleanup area. It is now an app-adaptation area above a completed connection-owned schema boundary.

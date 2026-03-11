@@ -25,9 +25,9 @@ struct SidebarView: View {
 					Text("No threads yet")
 						.foregroundStyle(.secondary)
 				} else {
-					ForEach(orchestrator.threads, id: \.codexId) { thread in
+					ForEach(orchestrator.threads, id: \.id) { thread in
 						Text(displayTitle(for: thread))
-							.tag(thread.codexId)
+							.tag(thread.id)
 					}
 				}
 			}

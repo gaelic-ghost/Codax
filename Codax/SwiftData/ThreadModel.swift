@@ -49,8 +49,7 @@ final class ThreadModel {
 
 	convenience init(thread: Thread, project: Project? = nil) {
 		self.init(
-			id: thread.id,
-			codexId: thread.codexId,
+			codexId: thread.id,
 			createdAt: thread.createdAt,
 			updatedAt: thread.updatedAt,
 			preview: thread.preview,
@@ -63,8 +62,7 @@ final class ThreadModel {
 	}
 
 	func apply(thread: Thread) {
-		id = thread.id
-		codexId = thread.codexId
+		codexId = thread.id
 		createdAt = thread.createdAt
 		updatedAt = thread.updatedAt
 		preview = thread.preview

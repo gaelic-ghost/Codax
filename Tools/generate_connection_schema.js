@@ -517,6 +517,7 @@ function fieldType(field) {
 
 function renameType(name) {
   if (name === "JsonValue") return "JSONValue";
+  if (name === "Model") return "AppModel";
   return name;
 }
 

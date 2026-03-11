@@ -359,17 +359,17 @@ private extension CodexConnection {
 		}
 
 		switch await reqResponder.handle(request) {
-		case let .commandApproval(response):
+		case let .itemCommandExecutionRequestApproval(response):
 			try await sendResponse(id: request.id, result: response)
-		case let .fileChangeApproval(response):
+		case let .itemFileChangeRequestApproval(response):
 			try await sendResponse(id: request.id, result: response)
-		case let .userInput(response):
+		case let .itemToolRequestUserInput(response):
 			try await sendResponse(id: request.id, result: response)
-		case let .mcpServerElicitation(response):
+		case let .mcpServerElicitationRequest(response):
 			try await sendResponse(id: request.id, result: response)
-		case let .dynamicToolCall(response):
+		case let .itemToolCall(response):
 			try await sendResponse(id: request.id, result: response)
-		case let .chatgptAuthRefresh(response):
+		case let .accountChatgptAuthTokensRefresh(response):
 			try await sendResponse(id: request.id, result: response)
 		case let .applyPatchApproval(response):
 			try await sendResponse(id: request.id, result: response)

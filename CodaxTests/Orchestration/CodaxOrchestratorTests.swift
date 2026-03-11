@@ -70,7 +70,7 @@ struct CodaxOrchestratorTests {
 		await orchestrator.connect()
 		await orchestrator.startThread()
 
-		#expect(orchestrator.activeThread?.codexId == "thread-1")
+		#expect(orchestrator.activeThread?.id == "thread-1")
 		#expect(orchestrator.threads.count == 1)
 		#expect(await transport.sentMethods() == ["initialize", "initialized", "thread/start"])
 	}
@@ -84,7 +84,7 @@ struct CodaxOrchestratorTests {
 		await orchestrator.startTurn(inputText: "Hello, Codax")
 
 		#expect(orchestrator.activeThread?.turns.count == 1)
-		#expect(orchestrator.activeThread?.turns.first?.codexId == "turn-1")
+		#expect(orchestrator.activeThread?.turns.first?.id == "turn-1")
 		#expect(await transport.sentMethods() == ["initialize", "initialized", "thread/start", "turn/start"])
 	}
 
@@ -100,7 +100,7 @@ struct CodaxOrchestratorTests {
 
 		await orchestrator.loadThreads()
 
-		#expect(orchestrator.activeThread?.codexId == "thread-1")
+		#expect(orchestrator.activeThread?.id == "thread-1")
 		#expect(orchestrator.threads.count == 1)
 		#expect(await transport.sentMethods() == ["initialize", "initialized", "thread/start", "thread/read"])
 	}
@@ -123,7 +123,7 @@ struct CodaxOrchestratorTests {
 		orchestrator.handle(
 			.threadStatusChanged(
 				ThreadStatusChangedNotification(
-					threadCodexId: "thread-1",
+					threadId: "thread-1",
 					status: .active(activeFlags: [.waitingOnApproval])
 				)
 			)
@@ -131,8 +131,8 @@ struct CodaxOrchestratorTests {
 		orchestrator.handle(
 			.turnPlanUpdated(
 				TurnPlanUpdatedNotification(
-					threadCodexId: "thread-1",
-					turnCodexId: "turn-1",
+					threadId: "thread-1",
+					turnId: "turn-1",
 					explanation: "Testing",
 					plan: [TurnPlanStep(step: "Ship first slice", status: .inProgress)]
 				)
@@ -141,8 +141,8 @@ struct CodaxOrchestratorTests {
 		orchestrator.handle(
 			.turnDiffUpdated(
 				TurnDiffUpdatedNotification(
-					threadCodexId: "thread-1",
-					turnCodexId: "turn-1",
+					threadId: "thread-1",
+					turnId: "turn-1",
 					diff: "M ContentView.swift"
 				)
 			)
@@ -323,10 +323,7 @@ private func makeConnectedOrchestrator(
 
 private func makeRuntimeCoordinator(transport: OrchestratorTestTransport) -> CodexRuntimeCoordinator {
 	CodexRuntimeCoordinator(
-		processFactory: {
-			CodexProcess(executableURL: URL(fileURLWithPath: "/usr/bin/true"), baseArguments: [])
-		},
-		transportLauncher: { _, _ in transport }
+		transportFactory: { _ in transport }
 	)
 }
 

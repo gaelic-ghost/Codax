@@ -75,14 +75,14 @@ struct CodaxThreadSessionState {
 	}
 
 	mutating func replaceThreads(_ threads: [Thread]) {
-		order = threads.map(\.codexId)
-		threadsByCodexId = Dictionary(uniqueKeysWithValues: threads.map { ($0.codexId, $0) })
+		order = threads.map(\.id)
+		threadsByCodexId = Dictionary(uniqueKeysWithValues: threads.map { ($0.id, $0) })
 	}
 
 	mutating func setSelectedThread(_ thread: Thread?) {
 		guard let thread else { return }
 		upsert(thread)
-		selectedThreadCodexId = thread.codexId
+		selectedThreadCodexId = thread.id
 	}
 
 	mutating func selectThread(codexId: String) {
@@ -90,10 +90,10 @@ struct CodaxThreadSessionState {
 	}
 
 	mutating func upsert(_ thread: Thread) {
-		if !order.contains(thread.codexId) {
-			order.append(thread.codexId)
+		if !order.contains(thread.id) {
+			order.append(thread.id)
 		}
-		threadsByCodexId[thread.codexId] = thread
+		threadsByCodexId[thread.id] = thread
 	}
 
 	mutating func updateThread(codexId: String, mutation: (inout Thread) -> Void) {
@@ -107,7 +107,7 @@ struct CodaxThreadSessionState {
 
 	mutating func merge(turn: Turn, into threadCodexId: String) {
 		updateThread(codexId: threadCodexId) { thread in
-			if let index = thread.turns.firstIndex(where: { $0.codexId == turn.codexId }) {
+			if let index = thread.turns.firstIndex(where: { $0.id == turn.id }) {
 				thread.turns[index] = turn
 			} else {
 				thread.turns.append(turn)
@@ -117,7 +117,7 @@ struct CodaxThreadSessionState {
 
 	mutating func merge(turnError: TurnError, into threadCodexId: String, turnCodexId: String) {
 		updateThread(codexId: threadCodexId) { thread in
-			guard let index = thread.turns.firstIndex(where: { $0.codexId == turnCodexId }) else { return }
+			guard let index = thread.turns.firstIndex(where: { $0.id == turnCodexId }) else { return }
 			thread.turns[index].error = turnError
 		}
 	}

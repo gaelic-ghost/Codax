@@ -150,7 +150,7 @@ final class CodaxOrchestrator {
 	}
 
 	func loadThreads() async {
-		guard connectionState == .connected, let client = await runtimeCoordinator?.client() else { return }
+		guard connectionState == .connected, let connection = await runtimeCoordinator?.connection() else { return }
 
 		isLoadingThreads = true
 		defer { isLoadingThreads = false }
@@ -160,21 +160,21 @@ final class CodaxOrchestrator {
 		}
 
 		do {
-			let response = try await client.readThread(ThreadReadParams(threadCodexId: threadCodexId, includeTurns: true))
+			let response = try await connection.threadRead(ThreadReadParams(threadId: threadCodexId, includeTurns: true))
 			threadSessionState.upsert(response.thread)
-			threadSessionState.selectThread(codexId: response.thread.codexId)
+			threadSessionState.selectThread(codexId: response.thread.id)
 		} catch {
 			errorState = CodaxOrchestratorError(message: error.localizedDescription)
 		}
 	}
 
 	func startThread() async {
-		guard connectionState == .connected, let client = await runtimeCoordinator?.client() else { return }
+		guard connectionState == .connected, let connection = await runtimeCoordinator?.connection() else { return }
 
 		errorState = nil
 
 		do {
-			let response = try await client.startThread(
+			let response = try await connection.threadStart(
 				ThreadStartParams(
 					model: nil,
 					modelProvider: nil,
@@ -193,7 +193,7 @@ final class CodaxOrchestrator {
 				)
 			)
 			threadSessionState.upsert(response.thread)
-			threadSessionState.selectThread(codexId: response.thread.codexId)
+			threadSessionState.selectThread(codexId: response.thread.id)
 			threadSessionState.clearSelectedTransientState()
 		} catch {
 			errorState = CodaxOrchestratorError(message: error.localizedDescription)
@@ -201,7 +201,7 @@ final class CodaxOrchestrator {
 	}
 
 	func startTurn(inputText: String) async {
-		guard connectionState == .connected, let client = await runtimeCoordinator?.client() else { return }
+		guard connectionState == .connected, let connection = await runtimeCoordinator?.connection() else { return }
 		guard let threadCodexId = threadSessionState.selectedThreadCodexId else { return }
 
 		let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -210,9 +210,9 @@ final class CodaxOrchestrator {
 		errorState = nil
 
 		do {
-			let response = try await client.startTurn(
+			let response = try await connection.turnStart(
 				TurnStartParams(
-					threadCodexId: threadCodexId,
+					threadId: threadCodexId,
 					input: [.text(text: trimmed, textElements: [])],
 					cwd: nil,
 					approvalPolicy: nil,
@@ -242,7 +242,7 @@ final class CodaxOrchestrator {
 		switch notification {
 		case let .error(error):
 			errorState = CodaxOrchestratorError(message: error.error.message)
-			merge(turnError: error.error, intoThreadCodexId: error.threadCodexId, turnCodexId: error.turnCodexId)
+			merge(turnError: error.error, intoThreadCodexId: error.threadId, turnCodexId: error.turnId)
 
 		case let .accountUpdated(notification):
 			if let authMode = notification.authMode {
@@ -264,38 +264,40 @@ final class CodaxOrchestrator {
 
 		case let .threadStarted(notification):
 			threadSessionState.upsert(notification.thread)
-			threadSessionState.selectThread(codexId: notification.thread.codexId)
+			threadSessionState.selectThread(codexId: notification.thread.id)
 
 		case let .threadStatusChanged(notification):
-			threadSessionState.updateThread(codexId: notification.threadCodexId) { thread in
+			threadSessionState.updateThread(codexId: notification.threadId) { thread in
 				thread.status = notification.status
 			}
 
 		case let .threadTokenUsageUpdated(notification):
-			threadSessionState.setTokenUsage(notification.tokenUsage, for: notification.threadCodexId)
+			threadSessionState.setTokenUsage(notification.tokenUsage, for: notification.threadId)
 
 		case let .turnStarted(notification):
-			threadSessionState.merge(turn: notification.turn, into: notification.threadCodexId)
+			threadSessionState.merge(turn: notification.turn, into: notification.threadId)
 
 		case let .turnCompleted(notification):
-			threadSessionState.merge(turn: notification.turn, into: notification.threadCodexId)
+			threadSessionState.merge(turn: notification.turn, into: notification.threadId)
 
 		case let .turnPlanUpdated(notification):
-			threadSessionState.setTurnPlan(notification.plan, for: notification.threadCodexId)
+			threadSessionState.setTurnPlan(notification.plan, for: notification.threadId)
 
 		case let .turnDiffUpdated(notification):
-			threadSessionState.setTurnDiff(notification.diff, for: notification.threadCodexId)
+			threadSessionState.setTurnDiff(notification.diff, for: notification.threadId)
 
 		case .serverRequestResolved,
 			.itemStarted,
 			.itemCompleted,
-			.agentMessageDelta,
-			.commandExecutionOutputDelta,
-			.fileChangeOutputDelta,
-			.reasoningTextDelta,
-			.reasoningSummaryTextDelta,
-			.reasoningSummaryPartAdded,
-			.unknown:
+			.itemAgentMessageDelta,
+			.itemCommandExecutionOutputDelta,
+			.itemFileChangeOutputDelta,
+			.itemReasoningTextDelta,
+			.itemReasoningSummaryTextDelta,
+			.itemReasoningSummaryPartAdded:
+			return
+
+		default:
 			return
 		}
 	}
@@ -304,15 +306,14 @@ final class CodaxOrchestrator {
 
 	func handle(_ request: ServerRequestEnvelope) {
 		switch request {
-		case .chatgptAuthRefresh,
-			.fileChangeApproval,
+		case .itemFileChangeRequestApproval,
 			.applyPatchApproval,
-			.userInput,
-			.dynamicToolCall,
-			.mcpServerElicitation,
-			.commandApproval,
+			.itemToolRequestUserInput,
+			.itemToolCall,
+			.mcpServerElicitationRequest,
+			.itemCommandExecutionRequestApproval,
 			.execCommandApproval,
-			.unknown:
+			.accountChatgptAuthTokensRefresh:
 			return
 		}
 	}

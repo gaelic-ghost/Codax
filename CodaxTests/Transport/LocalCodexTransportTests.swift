@@ -2,11 +2,12 @@ import Foundation
 import Testing
 @testable import Codax
 
-struct StdioCodexTransportTests {
+@Suite(.serialized)
+struct LocalCodexTransportTests {
 	@Test func sendAppendsTrailingNewline() async throws {
 		let inbound = Pipe()
 		let outbound = Pipe()
-		let transport = StdioCodexTransport(
+		let transport = LocalCodexTransport(
 			input: inbound.fileHandleForWriting,
 			output: outbound.fileHandleForReading
 		)
@@ -22,7 +23,7 @@ struct StdioCodexTransportTests {
 	@Test func sendPreservesExistingTrailingNewline() async throws {
 		let inbound = Pipe()
 		let outbound = Pipe()
-		let transport = StdioCodexTransport(
+		let transport = LocalCodexTransport(
 			input: inbound.fileHandleForWriting,
 			output: outbound.fileHandleForReading
 		)
@@ -38,7 +39,7 @@ struct StdioCodexTransportTests {
 	@Test func receiveAssemblesFrameAcrossPartialReads() async throws {
 		let inbound = Pipe()
 		let outbound = Pipe()
-		let transport = StdioCodexTransport(
+		let transport = LocalCodexTransport(
 			input: inbound.fileHandleForWriting,
 			output: outbound.fileHandleForReading
 		)
@@ -59,7 +60,7 @@ struct StdioCodexTransportTests {
 	@Test func receiveQueuesMultipleFramesFromSingleRead() async throws {
 		let inbound = Pipe()
 		let outbound = Pipe()
-		let transport = StdioCodexTransport(
+		let transport = LocalCodexTransport(
 			input: inbound.fileHandleForWriting,
 			output: outbound.fileHandleForReading
 		)
@@ -75,7 +76,7 @@ struct StdioCodexTransportTests {
 	@Test func receiveIgnoresEmptyFrames() async throws {
 		let inbound = Pipe()
 		let outbound = Pipe()
-		let transport = StdioCodexTransport(
+		let transport = LocalCodexTransport(
 			input: inbound.fileHandleForWriting,
 			output: outbound.fileHandleForReading
 		)
@@ -94,7 +95,7 @@ struct StdioCodexTransportTests {
 	@Test func receiveThrowsClosedAfterClose() async throws {
 		let inbound = Pipe()
 		let outbound = Pipe()
-		let transport = StdioCodexTransport(
+		let transport = LocalCodexTransport(
 			input: inbound.fileHandleForWriting,
 			output: outbound.fileHandleForReading
 		)
@@ -112,7 +113,7 @@ struct StdioCodexTransportTests {
 	@Test func sendThrowsClosedAfterClose() async throws {
 		let inbound = Pipe()
 		let outbound = Pipe()
-		let transport = StdioCodexTransport(
+		let transport = LocalCodexTransport(
 			input: inbound.fileHandleForWriting,
 			output: outbound.fileHandleForReading
 		)
@@ -130,7 +131,7 @@ struct StdioCodexTransportTests {
 	@Test func closeResumesWaitingReceiver() async throws {
 		let inbound = Pipe()
 		let outbound = Pipe()
-		let transport = StdioCodexTransport(
+		let transport = LocalCodexTransport(
 			input: inbound.fileHandleForWriting,
 			output: outbound.fileHandleForReading
 		)
@@ -157,7 +158,7 @@ struct StdioCodexTransportTests {
 	@Test func eofWithLeftoverPartialBufferIsInvalidFrame() async throws {
 		let inbound = Pipe()
 		let outbound = Pipe()
-		let transport = StdioCodexTransport(
+		let transport = LocalCodexTransport(
 			input: inbound.fileHandleForWriting,
 			output: outbound.fileHandleForReading
 		)
@@ -185,7 +186,7 @@ struct StdioCodexTransportTests {
 	@Test func cleanEofWithoutPendingFrameIsEndOfStream() async throws {
 		let inbound = Pipe()
 		let outbound = Pipe()
-		let transport = StdioCodexTransport(
+		let transport = LocalCodexTransport(
 			input: inbound.fileHandleForWriting,
 			output: outbound.fileHandleForReading
 		)
@@ -212,7 +213,7 @@ struct StdioCodexTransportTests {
 	@Test func concurrentReceiveThrowsReceiveAlreadyPending() async throws {
 		let inbound = Pipe()
 		let outbound = Pipe()
-		let transport = StdioCodexTransport(
+		let transport = LocalCodexTransport(
 			input: inbound.fileHandleForWriting,
 			output: outbound.fileHandleForReading
 		)
@@ -245,5 +246,81 @@ struct StdioCodexTransportTests {
 
 		await transport.close()
 		_ = await first.value
+	}
+
+	@Test func launchTracksRunningStateAndCloseReturnsIdle() async throws {
+		let transport = try await LocalCodexTransport.launch(
+			executableURL: URL(fileURLWithPath: "/bin/sleep"),
+			baseArguments: [],
+			arguments: ["1"]
+		)
+
+		guard case let .running(processIdentifier) = await transport.state() else {
+			#expect(Bool(false))
+			return
+		}
+		#expect(processIdentifier != nil)
+
+		await transport.close()
+		#expect(await transport.state() == .idle)
+	}
+
+	@Test func launchFailureSurfacesLaunchErrorAndFailedState() async throws {
+		do {
+			_ = try await LocalCodexTransport.launch(
+				executableURL: URL(fileURLWithPath: "/definitely/missing/codex"),
+				baseArguments: [],
+				arguments: []
+			)
+			#expect(Bool(false))
+		} catch let error as LocalCodexTransport.LaunchError {
+			guard case let .launchFailed(command, reason, snapshot) = error else {
+				#expect(Bool(false))
+				return
+			}
+			#expect(command.contains("/definitely/missing/codex"))
+			#expect(!reason.isEmpty)
+			#expect(snapshot == nil)
+		}
+	}
+
+	@Test func terminationCapturesStderrAndClosesTransport() async throws {
+		let transport = try await LocalCodexTransport.launch(
+			executableURL: URL(fileURLWithPath: "/bin/sh"),
+			baseArguments: ["-c"],
+			arguments: ["printf 'boom\\n' >&2; exit 7"]
+		)
+
+		try await waitForCondition {
+			await transport.state() == .exited(status: 7)
+		}
+
+		let snapshot = await transport.stderrSnapshot()
+		#expect(snapshot?.text.contains("boom") == true)
+		#expect(snapshot?.truncated == false)
+
+		do {
+			_ = try await transport.receive()
+			#expect(Bool(false))
+		} catch let error as CodexTransportError {
+			#expect(error == .closed)
+		}
+	}
+
+	@Test func stderrSnapshotTruncatesLargeOutput() async throws {
+		let command = "i=0; while [ $i -lt 400 ]; do printf 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' >&2; i=$((i+1)); done; exit 1"
+		let transport = try await LocalCodexTransport.launch(
+			executableURL: URL(fileURLWithPath: "/bin/sh"),
+			baseArguments: ["-c"],
+			arguments: [command]
+		)
+
+		try await waitForCondition {
+			await transport.state() == .exited(status: 1)
+		}
+
+		let snapshot = await transport.stderrSnapshot()
+		#expect(snapshot?.text.isEmpty == false)
+		#expect(snapshot?.truncated == true)
 	}
 }

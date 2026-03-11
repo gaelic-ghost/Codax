@@ -74,7 +74,7 @@ struct DetailView: View {
 	private var threadMetadata: [String] {
 		guard let thread = orchestrator.activeThread else { return [] }
 		return [
-			"Thread ID: \(thread.codexId)",
+			"Thread ID: \(thread.id)",
 			"Provider: \(thread.modelProvider)",
 			"CWD: \(thread.cwd)",
 			"CLI: \(thread.cliVersion)",

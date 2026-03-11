@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import Codax
 
-struct CodexClientModelsTests {
+struct ConnectionSchemaModelTests {
 	@Test func jsonValueRoundTripsArbitraryPayload() throws {
 		let value = try decode(
 			JSONValue.self,

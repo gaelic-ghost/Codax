@@ -10,14 +10,23 @@ import Foundation
 // MARK: Runtime Coordinator
 
 public actor CodexRuntimeCoordinator {
-	typealias TransportFactory = @Sendable ([String]) async throws -> any CodexTransport
+	public struct StartupContext: Sendable {
+		public let transport: any CodexTransport
+		public let debugSnapshot: CodexCLIProbe.DebugSnapshot?
 
-	private final class DefaultServerRequestResponder: CodexServerRequestResponder {
-		private let handleRequest: @Sendable (ServerRequestEnvelope) async -> ServerRequestResponse
-
-		init(handleRequest: @escaping @Sendable (ServerRequestEnvelope) async -> ServerRequestResponse) {
-			self.handleRequest = handleRequest
+		public init(
+			transport: any CodexTransport,
+			debugSnapshot: CodexCLIProbe.DebugSnapshot? = nil
+		) {
+			self.transport = transport
+			self.debugSnapshot = debugSnapshot
 		}
+	}
+
+	typealias TransportFactory = @Sendable ([String]) async throws -> StartupContext
+
+	private struct ClosureServerRequestResponder: CodexServerRequestResponder {
+		let handleRequest: @Sendable (ServerRequestEnvelope) async -> ServerRequestResponse
 
 		func handle(_ request: ServerRequestEnvelope) async -> ServerRequestResponse {
 			await handleRequest(request)
@@ -30,10 +39,13 @@ public actor CodexRuntimeCoordinator {
 	private var notificationTask: Task<Void, Never>?
 	private var notificationContinuations: [UUID: AsyncStream<ServerNotificationEnvelope>.Continuation] = [:]
 	private var serverRequestContinuations: [UUID: AsyncStream<ServerRequestEnvelope>.Continuation] = [:]
+	private var startupDebugSnapshot: CodexCLIProbe.DebugSnapshot?
 
 	public init() {
 		self.transportFactory = { arguments in
-			try await LocalCodexTransport.launch(arguments: arguments)
+			let transport = try await LocalCodexTransport.launch(arguments: arguments)
+			let debugSnapshot = await transport.startupProbeDebugSnapshot()
+			return StartupContext(transport: transport, debugSnapshot: debugSnapshot)
 		}
 	}
 
@@ -43,52 +55,39 @@ public actor CodexRuntimeCoordinator {
 		self.transportFactory = transportFactory
 	}
 
-	public func start(arguments: [String] = []) async throws {
-		guard activeConnection == nil else { return }
+	public func start(arguments: [String] = []) async throws -> CodexCLIProbe.DebugSnapshot? {
+		guard activeConnection == nil else {
+			return startupDebugSnapshot
+		}
 
-		let responder = DefaultServerRequestResponder { [weak self] request in
+		let responder = ClosureServerRequestResponder { [weak self] request in
 			guard let self else { return .unhandled }
 			await self.yield(serverRequest: request)
 			return .unhandled
 		}
-		let transport = try await transportFactory(arguments)
-		let connection = CodexConnection(transport: transport, requestResponder: responder)
-		self.activeConnection = connection
+		let startup = try await transportFactory(arguments)
+		let connection = CodexConnection(transport: startup.transport, requestResponder: responder)
+		activeConnection = connection
+		startupDebugSnapshot = startup.debugSnapshot
 
 		await connection.start()
 		startNotificationForwarding(for: connection)
+		return startupDebugSnapshot
 	}
 
 	public func stop() async {
 		await shutdownRuntime()
 	}
 
-	public func initialize(_ params: InitializeParams) async throws -> InitializeResponse {
-		guard let activeConnection else {
-			throw CodexConnectionError.disconnected
-		}
-		return try await activeConnection.initialize(params)
-	}
-
-	public func sendInitialized() async throws {
-		guard let activeConnection else {
-			throw CodexConnectionError.disconnected
-		}
-		try await activeConnection.initialized()
-	}
-
-	public func connection() -> CodexConnection? {
-		activeConnection
-	}
-
 	public func notifications() -> AsyncStream<ServerNotificationEnvelope> {
 		AsyncStream { continuation in
 			let id = UUID()
-			let shouldFinishImmediately = addNotificationContinuation(continuation, id: id)
-			if shouldFinishImmediately {
+			guard activeConnection != nil || notificationTask != nil else {
 				continuation.finish()
+				return
 			}
 
+			notificationContinuations[id] = continuation
 			continuation.onTermination = { _ in
 				Task {
 					await self.removeNotificationContinuation(id: id)
@@ -100,11 +99,12 @@ public actor CodexRuntimeCoordinator {
 	public func serverRequests() -> AsyncStream<ServerRequestEnvelope> {
 		AsyncStream { continuation in
 			let id = UUID()
-			let shouldFinishImmediately = addServerRequestContinuation(continuation, id: id)
-			if shouldFinishImmediately {
+			guard activeConnection != nil || notificationTask != nil else {
 				continuation.finish()
+				return
 			}
 
+			serverRequestContinuations[id] = continuation
 			continuation.onTermination = { _ in
 				Task {
 					await self.removeServerRequestContinuation(id: id)
@@ -112,9 +112,20 @@ public actor CodexRuntimeCoordinator {
 			}
 		}
 	}
+
+	public func startupProbeDebugSnapshot() -> CodexCLIProbe.DebugSnapshot? {
+		startupDebugSnapshot
+	}
 }
 
-private extension CodexRuntimeCoordinator {
+extension CodexRuntimeCoordinator {
+	func requireConnection() throws -> CodexConnection {
+		guard let activeConnection else {
+			throw CodexConnectionError.disconnected
+		}
+		return activeConnection
+	}
+
 	func startNotificationForwarding(for connection: CodexConnection) {
 		notificationTask?.cancel()
 		notificationTask = Task { [weak self] in
@@ -139,8 +150,9 @@ private extension CodexRuntimeCoordinator {
 		notificationTask = nil
 		task?.cancel()
 
-		let connection = self.activeConnection
-		self.activeConnection = nil
+		let connection = activeConnection
+		activeConnection = nil
+		startupDebugSnapshot = nil
 
 		let notificationContinuations = Array(notificationContinuations.values)
 		self.notificationContinuations.removeAll()
@@ -151,34 +163,8 @@ private extension CodexRuntimeCoordinator {
 			await connection.stop()
 		}
 
-		finish(notificationContinuations: notificationContinuations)
-		finish(serverRequestContinuations: serverRequestContinuations)
-	}
-
-	func addNotificationContinuation(
-		_ continuation: AsyncStream<ServerNotificationEnvelope>.Continuation,
-		id: UUID
-	) -> Bool {
-		guard activeConnection != nil || notificationTask != nil else { return true }
-		notificationContinuations[id] = continuation
-		return false
-	}
-
-	func addServerRequestContinuation(
-		_ continuation: AsyncStream<ServerRequestEnvelope>.Continuation,
-		id: UUID
-	) -> Bool {
-		guard activeConnection != nil || notificationTask != nil else { return true }
-		serverRequestContinuations[id] = continuation
-		return false
-	}
-
-	func removeNotificationContinuation(id: UUID) {
-		notificationContinuations.removeValue(forKey: id)
-	}
-
-	func removeServerRequestContinuation(id: UUID) {
-		serverRequestContinuations.removeValue(forKey: id)
+		finish(continuations: notificationContinuations)
+		finish(continuations: serverRequestContinuations)
 	}
 
 	func yield(notification: ServerNotificationEnvelope) {
@@ -193,14 +179,16 @@ private extension CodexRuntimeCoordinator {
 		}
 	}
 
-	func finish(notificationContinuations: [AsyncStream<ServerNotificationEnvelope>.Continuation]) {
-		for continuation in notificationContinuations {
-			continuation.finish()
-		}
+	func removeNotificationContinuation(id: UUID) {
+		notificationContinuations.removeValue(forKey: id)
 	}
 
-	func finish(serverRequestContinuations: [AsyncStream<ServerRequestEnvelope>.Continuation]) {
-		for continuation in serverRequestContinuations {
+	func removeServerRequestContinuation(id: UUID) {
+		serverRequestContinuations.removeValue(forKey: id)
+	}
+
+	func finish<Element>(continuations: [AsyncStream<Element>.Continuation]) {
+		for continuation in continuations {
 			continuation.finish()
 		}
 	}

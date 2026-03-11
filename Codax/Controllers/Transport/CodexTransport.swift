@@ -34,12 +34,17 @@ public actor LocalCodexTransport: CodexTransport {
 	}
 
 	public enum LaunchError: Error, LocalizedError, Sendable {
-		case launchFailed(command: String, reason: String, stderrSnapshot: StderrSnapshot?)
+		case launchFailed(
+			command: String,
+			reason: String,
+			stderrSnapshot: StderrSnapshot?,
+			debugSnapshot: CodexCLIProbe.DebugSnapshot?
+		)
 		case transitionInProgress(state: LifecycleState)
 
 		public var errorDescription: String? {
 			switch self {
-				case let .launchFailed(command, reason, _):
+				case let .launchFailed(command, reason, _, _):
 					return "Failed to launch `\(command)`: \(reason)"
 				case let .transitionInProgress(state):
 					return "Transport transition already in progress: \(String(describing: state))"
@@ -64,6 +69,7 @@ public actor LocalCodexTransport: CodexTransport {
 
 	private var stderrBuffer = Data()
 	private var stderrWasTruncated = false
+	private var startupDebugSnapshot: CodexCLIProbe.DebugSnapshot?
 
 	public static func launch(arguments: [String] = []) async throws -> LocalCodexTransport {
 		let command = defaultLaunchCommand()
@@ -78,6 +84,7 @@ public actor LocalCodexTransport: CodexTransport {
 		executableURL: URL,
 		baseArguments: [String],
 		arguments: [String],
+		probe: CodexCLIProbe = CodexCLIProbe(),
 		maxRetainedStderrBytes: Int = 16_384
 	) async throws -> LocalCodexTransport {
 		let transport = LocalCodexTransport(
@@ -85,7 +92,7 @@ public actor LocalCodexTransport: CodexTransport {
 			baseArguments: baseArguments,
 			maxRetainedStderrBytes: maxRetainedStderrBytes
 		)
-		try await transport.start(arguments: arguments)
+		try await transport.start(arguments: arguments, probe: probe)
 		return transport
 	}
 
@@ -185,6 +192,10 @@ public actor LocalCodexTransport: CodexTransport {
 			truncated: stderrWasTruncated
 		)
 	}
+
+	public func startupProbeDebugSnapshot() -> CodexCLIProbe.DebugSnapshot? {
+		startupDebugSnapshot
+	}
 }
 
 private extension LocalCodexTransport {
@@ -202,7 +213,7 @@ private extension LocalCodexTransport {
 		)
 	}
 
-	func start(arguments: [String]) async throws {
+	func start(arguments: [String], probe: CodexCLIProbe) async throws {
 		switch lifecycleState {
 			case .idle, .exited, .failedLaunch:
 				break
@@ -216,6 +227,20 @@ private extension LocalCodexTransport {
 
 		lifecycleState = .launching
 		resetDiagnostics()
+		let command = ([executableURL.path] + baseArguments + arguments).joined(separator: " ")
+		let debugSnapshot = await probe.debugProbeCompatibility()
+		startupDebugSnapshot = debugSnapshot
+		print("[CodexCLIProbe]\n\(debugSnapshot.formattedDescription)")
+
+		if case let .unsupported(_, _, _, reason) = debugSnapshot.compatibility {
+			lifecycleState = .failedLaunch
+			throw LaunchError.launchFailed(
+				command: command,
+				reason: reason,
+				stderrSnapshot: nil,
+				debugSnapshot: debugSnapshot
+			)
+		}
 
 		let process = Process()
 		let stdinPipe = Pipe()
@@ -253,11 +278,11 @@ private extension LocalCodexTransport {
 			self.stdoutHandle = nil
 			self.stderrHandle = nil
 
-			let command = ([executableURL.path] + baseArguments + arguments).joined(separator: " ")
 			throw LaunchError.launchFailed(
 				command: command,
 				reason: error.localizedDescription,
-				stderrSnapshot: stderrSnapshot()
+				stderrSnapshot: stderrSnapshot(),
+				debugSnapshot: startupDebugSnapshot
 			)
 		}
 
@@ -293,6 +318,7 @@ private extension LocalCodexTransport {
 		terminalError = nil
 		stderrBuffer.removeAll(keepingCapacity: false)
 		stderrWasTruncated = false
+		startupDebugSnapshot = nil
 	}
 
 	func ingestStandardOutput(_ data: Data) {

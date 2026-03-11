@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct SidebarView: View {
-	@Environment(CodaxOrchestrator.self) private var orchestrator
+	@Environment(CodaxViewModel.self) private var viewModel
 	@Binding var selection: String?
 
 	var body: some View {
@@ -21,11 +21,11 @@ struct SidebarView: View {
 			}
 
 			Section("Threads") {
-				if orchestrator.threads.isEmpty {
+				if viewModel.threads.isEmpty {
 					Text("No threads yet")
 						.foregroundStyle(.secondary)
 				} else {
-					ForEach(orchestrator.threads, id: \.id) { thread in
+					ForEach(viewModel.threads, id: \.id) { thread in
 						Text(displayTitle(for: thread))
 							.tag(thread.id)
 					}
@@ -36,7 +36,7 @@ struct SidebarView: View {
 		.toolbar {
 			Button("New Thread") {
 				Task {
-					await orchestrator.startThread()
+					await viewModel.startThread()
 				}
 			}
 		}
@@ -45,7 +45,7 @@ struct SidebarView: View {
 
 
 	private var compatibilityBannerText: String? {
-		guard case let .unsupported(version, _, supportedRange, reason) = orchestrator.compatibility else {
+		guard case let .unsupported(version, _, supportedRange, reason) = viewModel.compatibility else {
 			return nil
 		}
 		let versionText = version?.displayString ?? "unknown version"
@@ -62,5 +62,5 @@ struct SidebarView: View {
 
 #Preview {
 	SidebarView(selection: .constant(nil))
-		.environment(CodaxOrchestrator())
+		.environment(CodaxViewModel())
 }

@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
-	@Environment(CodaxOrchestrator.self) private var orchestrator
+	@Environment(CodaxViewModel.self) private var viewModel
 	@State private var vm = ContentViewModel()
 
 	var body: some View {
@@ -22,7 +22,7 @@ struct ContentView: View {
 				.font(.subheadline)
 				.foregroundStyle(.secondary)
 
-			if let compatibilityDebugInfo = orchestrator.compatibilityDebugInfo, !compatibilityDebugInfo.formattedDescription.isEmpty {
+			if let compatibilityDebugInfo = viewModel.compatibilityDebugInfo, !compatibilityDebugInfo.formattedDescription.isEmpty {
 				Text(compatibilityDebugInfo.formattedDescription)
 					.font(.caption.monospaced())
 					.foregroundStyle(.secondary)
@@ -32,17 +32,17 @@ struct ContentView: View {
 			HStack {
 				Button("Connect") {
 					Task {
-						await orchestrator.connect()
+						await viewModel.connect()
 					}
 				}
-				.disabled(orchestrator.connectionState != .disconnected)
+				.disabled(viewModel.connectionState != .disconnected)
 
 				Button("Start Thread") {
 					Task {
-						await orchestrator.startThread()
+						await viewModel.startThread()
 					}
 				}
-				.disabled(orchestrator.connectionState != .connected)
+				.disabled(viewModel.connectionState != .connected)
 			}
 
 			Divider()
@@ -50,7 +50,7 @@ struct ContentView: View {
 			Text(activeThreadTitle)
 				.font(.title3)
 
-			if !(orchestrator.activeThread?.turns.isEmpty ?? true) {
+			if !(viewModel.activeThread?.turns.isEmpty ?? true) {
 				Text("Turn history available in the active thread.")
 					.foregroundStyle(.secondary)
 			} else {
@@ -64,14 +64,14 @@ struct ContentView: View {
 				Button("Send Turn") {
 					Task {
 						let input = bindableVM.turnInput
-						await orchestrator.startTurn(inputText: input)
-						guard orchestrator.errorState == nil else { return }
+						await viewModel.startTurn(inputText: input)
+						guard viewModel.errorState == nil else { return }
 						bindableVM.turnInput = ""
 					}
 				}
-			.disabled(orchestrator.activeThread == nil || bindableVM.turnInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+			.disabled(viewModel.activeThread == nil || bindableVM.turnInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
-			if let error = orchestrator.errorState {
+			if let error = viewModel.errorState {
 				Text(error.message)
 					.foregroundStyle(.red)
 			}
@@ -83,7 +83,7 @@ struct ContentView: View {
 	}
 
 	private var connectionLabel: String {
-		switch orchestrator.connectionState {
+		switch viewModel.connectionState {
 		case .disconnected:
 			return "Disconnected"
 		case .connecting:
@@ -94,7 +94,7 @@ struct ContentView: View {
 	}
 
 	private var compatibilityDescription: String {
-		switch orchestrator.compatibility {
+		switch viewModel.compatibility {
 		case .unknown:
 			return "Compatibility unknown."
 		case .checking:
@@ -110,10 +110,10 @@ struct ContentView: View {
 	}
 
 	private var activeThreadTitle: String {
-		if let name = orchestrator.activeThread?.name, !name.isEmpty {
+		if let name = viewModel.activeThread?.name, !name.isEmpty {
 			return name
 		}
-		if let preview = orchestrator.activeThread?.preview, !preview.isEmpty {
+		if let preview = viewModel.activeThread?.preview, !preview.isEmpty {
 			return preview
 		}
 		return "No active thread"
@@ -122,5 +122,5 @@ struct ContentView: View {
 
 #Preview {
 	ContentView()
-		.environment(CodaxOrchestrator())
+		.environment(CodaxViewModel())
 }

@@ -14,7 +14,7 @@ struct CodaxApp: App {
 		// ...of all scenes.
 		// See docs for more information.
 	@Environment(\.scenePhase) private var aggScenePhase
-	@State private var orchestrator = CodaxOrchestrator()
+	@State private var viewModel = CodaxViewModel()
 	@State private var columnVis = NavigationSplitViewVisibility.automatic
 	@State private var prefferedColumn = NavigationSplitViewColumn.content
 
@@ -27,8 +27,8 @@ struct CodaxApp: App {
 						// sidebar:
 					SidebarView(
 						selection: Binding(
-							get: { orchestrator.selectedThreadCodexId },
-							set: { orchestrator.selectedThreadCodexId = $0 }
+							get: { viewModel.selectedThreadCodexId },
+							set: { viewModel.selectedThreadCodexId = $0 }
 						)
 					)
 				} content: {
@@ -37,7 +37,7 @@ struct CodaxApp: App {
 					DetailView()
 				}
 		}
-		.environment(orchestrator)
+		.environment(viewModel)
 
     }
 }

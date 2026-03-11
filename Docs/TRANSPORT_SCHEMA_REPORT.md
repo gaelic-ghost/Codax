@@ -19,7 +19,7 @@ Current stack:
 - `CodexTransport`
 - `CodexConnection`
 - `CodexRuntimeCoordinator`
-- `CodaxOrchestrator`
+- `CodaxViewModel`
 - SwiftUI views
 
 There is no separate client layer between transport and the app anymore.
@@ -28,6 +28,7 @@ There is no separate client layer between transport and the app anymore.
 
 - [`CodexTransport.swift`](/Users/galew/Workspace/Codax/Codax/Controllers/Transport/CodexTransport.swift)
 - [`CodexCLIProbe.swift`](/Users/galew/Workspace/Codax/Codax/Controllers/Transport/CodexCLIProbe.swift)
+- transport startup probing feeds the runtime startup path; schema generation remains a connection concern owned by [`generate_connection_schema.js`](/Users/galew/Workspace/Codax/Tools/generate_connection_schema.js)
 
 ## Current Conclusion
 

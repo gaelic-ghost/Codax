@@ -2,7 +2,7 @@
 
 ## Current Architecture Baseline
 
-- `Transport -> Connection -> Runtime -> Orchestration -> Views`
+- `Transport -> Connection -> Runtime -> ViewModel -> Views`
 - `CodexConnection` is the only app-server boundary
 - the separate client layer has been removed
 - the connection schema generator and verifier currently report `433/433` exported schema types represented
@@ -22,8 +22,8 @@
 
 ### UI and app behavior
 
-- [ ] Finish login behavior beyond placeholders
 - [ ] Add real approval, elicitation, and auth-refresh UX
+- [ ] Continue account/login polish around pending-login and auth-refresh flows
 - [ ] Improve item, diff, plan, and realtime rendering
 - [ ] Continue accessibility-first UI refinement
 

@@ -979,6 +979,19 @@ function emitConnectionAPI(definitions) {
   return `private struct CodexEmptyParams: Sendable, Encodable {}\n\npublic extension CodexConnection {\n${methods}\n\n\tfunc initialized() async throws {\n\t\ttry await _notify(method: "initialized")\n\t}\n}\n`;
 }
 
+function emitRuntimeAPI(definitions) {
+  const methods = clientRequestCases(definitions)
+    .map(({ method, paramsType, responseType }) => {
+      const name = methodFunctionName(method);
+      if (paramsType) {
+        return `\tfunc ${name}(_ params: ${paramsType}) async throws -> ${responseType} {\n\t\ttry await requireConnection().${name}(params)\n\t}`;
+      }
+      return `\tfunc ${name}() async throws -> ${responseType} {\n\t\ttry await requireConnection().${name}()\n\t}`;
+    })
+    .join("\n\n");
+  return `public extension CodexRuntimeCoordinator {\n${methods}\n\n\tfunc initialized() async throws {\n\t\ttry await requireConnection().initialized()\n\t}\n}\n`;
+}
+
 function emitServerNotificationEnvelope(definitions) {
   const cases = serverNotificationCases(definitions);
   const caseDecls = cases.map(({ caseName, paramsType }) => `\tcase ${caseName}(${paramsType})`).join("\n");
@@ -1036,6 +1049,7 @@ function main() {
     emitServerNotificationEnvelope(definitions),
     emitServerRequestSupport(definitions),
     emitConnectionAPI(definitions),
+    emitRuntimeAPI(definitions),
     emitRequestResponseMap(),
   ].join("\n");
   fs.mkdirSync(outputDir, { recursive: true });

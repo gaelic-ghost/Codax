@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct DetailView: View {
-	@Environment(CodaxOrchestrator.self) private var orchestrator
+	@Environment(CodaxViewModel.self) private var viewModel
 
 	var body: some View {
 		List {
@@ -33,25 +33,38 @@ struct DetailView: View {
 				}
 			}
 
-			if !orchestrator.activeTurnPlan.isEmpty {
+			if !viewModel.activeTurnPlan.isEmpty {
 				Section("Plan") {
-					ForEach(Array(orchestrator.activeTurnPlan.enumerated()), id: \.offset) { entry in
+					ForEach(Array(viewModel.activeTurnPlan.enumerated()), id: \.offset) { entry in
 						Text("\(entry.element.step) (\(entry.element.status.rawValue))")
 					}
 				}
 			}
 
-			if let diffText = orchestrator.activeTurnDiff, !diffText.isEmpty {
+			if let diffText = viewModel.activeTurnDiff, !diffText.isEmpty {
 				Section("Diff") {
 					Text(diffText)
 						.textSelection(.enabled)
 				}
 			}
 
-			if let activeError = orchestrator.errorState {
+			if let activeError = viewModel.errorState {
 				Section("Error") {
 					Text(activeError.message)
 						.foregroundStyle(.red)
+				}
+			}
+
+			if !viewModel.pendingUserRequests.isEmpty {
+				Section("Pending Requests") {
+					ForEach(viewModel.pendingUserRequests) { request in
+						VStack(alignment: .leading, spacing: 4) {
+							Text(request.title)
+							Text(request.summary)
+								.font(.caption)
+								.foregroundStyle(.secondary)
+						}
+					}
 				}
 			}
 		}
@@ -59,7 +72,7 @@ struct DetailView: View {
 	}
 
 	private var compatibilityText: String {
-		switch orchestrator.compatibility {
+		switch viewModel.compatibility {
 		case .unknown:
 			return "Compatibility unknown."
 		case .checking:
@@ -72,7 +85,7 @@ struct DetailView: View {
 	}
 
 	private var threadMetadata: [String] {
-		guard let thread = orchestrator.activeThread else { return [] }
+		guard let thread = viewModel.activeThread else { return [] }
 		return [
 			"Thread ID: \(thread.id)",
 			"Provider: \(thread.modelProvider)",
@@ -82,12 +95,12 @@ struct DetailView: View {
 	}
 
 	private var tokenUsageText: String? {
-		guard let usage = orchestrator.activeThreadTokenUsage else { return nil }
+		guard let usage = viewModel.activeThreadTokenUsage else { return nil }
 		return "Tokens: \(usage.total.totalTokens) total, \(usage.total.inputTokens) input, \(usage.total.outputTokens) output"
 	}
 }
 
 #Preview {
 	DetailView()
-		.environment(CodaxOrchestrator())
+		.environment(CodaxViewModel())
 }

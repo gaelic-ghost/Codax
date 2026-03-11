@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import Codax
 
-struct CodexClientServerRequestTypesTests {
+struct ConnectionServerRequestSchemaTests {
 	@Test func fileChangeApprovalParamsDecodeWithTypedIdentifiers() throws {
 		let params = try decode(
 			FileChangeRequestApprovalParams.self,

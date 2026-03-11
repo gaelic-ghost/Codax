@@ -274,13 +274,14 @@ struct LocalCodexTransportTests {
 			)
 			#expect(Bool(false))
 		} catch let error as LocalCodexTransport.LaunchError {
-			guard case let .launchFailed(command, reason, snapshot) = error else {
+			guard case let .launchFailed(command, reason, snapshot, debugSnapshot) = error else {
 				#expect(Bool(false))
 				return
 			}
 			#expect(command.contains("/definitely/missing/codex"))
 			#expect(!reason.isEmpty)
 			#expect(snapshot == nil)
+			#expect(debugSnapshot != nil)
 		}
 	}
 

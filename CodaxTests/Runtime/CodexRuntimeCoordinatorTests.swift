@@ -3,10 +3,29 @@ import Testing
 @testable import Codax
 
 struct CodexRuntimeCoordinatorTests {
+	@Test func startReturnsStartupDebugSnapshot() async throws {
+		let transport = RuntimeCoordinatorTestTransport()
+		let snapshot = CodexCLIProbe.DebugSnapshot(
+			inheritedPath: "/usr/bin",
+			detectedCodexPath: "/usr/local/bin/codex",
+			compatibility: .supported(
+				version: CodexCLIVersion(major: 0, minor: 112, patch: 0),
+				path: "/usr/local/bin/codex"
+			),
+			attempts: []
+		)
+		let coordinator = makeRuntimeCoordinator(transport: transport, debugSnapshot: snapshot)
+
+		let startedSnapshot = try await coordinator.start()
+
+		#expect(startedSnapshot == snapshot)
+		await coordinator.stop()
+	}
+
 	@Test func notificationsStreamForwardsToMultipleSubscribers() async throws {
 		let transport = RuntimeCoordinatorTestTransport()
 		let coordinator = makeRuntimeCoordinator(transport: transport)
-		try await coordinator.start()
+		_ = try await coordinator.start()
 
 		var firstIterator = await coordinator.notifications().makeAsyncIterator()
 		var secondIterator = await coordinator.notifications().makeAsyncIterator()
@@ -43,7 +62,7 @@ struct CodexRuntimeCoordinatorTests {
 	@Test func serverRequestsStreamForwardsToMultipleSubscribers() async throws {
 		let transport = RuntimeCoordinatorTestTransport()
 		let coordinator = makeRuntimeCoordinator(transport: transport)
-		try await coordinator.start()
+		_ = try await coordinator.start()
 
 		var firstIterator = await coordinator.serverRequests().makeAsyncIterator()
 		var secondIterator = await coordinator.serverRequests().makeAsyncIterator()
@@ -80,10 +99,72 @@ struct CodexRuntimeCoordinatorTests {
 		await coordinator.stop()
 	}
 
+	@Test func typedRequestsForwardThroughRuntimeBoundary() async throws {
+		let transport = RuntimeCoordinatorTestTransport()
+		let coordinator = makeRuntimeCoordinator(transport: transport)
+		_ = try await coordinator.start()
+
+		try await transport.enqueueReceive(data: encodedJSONObject([
+			"id": 0,
+			"result": ["userAgent": "runtime-test"],
+		]))
+		let initializeResponse = try await coordinator.initialize(
+			InitializeParams(
+				clientInfo: ClientInfo(name: "codax", title: "Codax", version: "0.0.0"),
+				capabilities: InitializeCapabilities(experimentalApi: false, optOutNotificationMethods: nil)
+			)
+		)
+		#expect(initializeResponse.userAgent == "runtime-test")
+
+		try await transport.enqueueReceive(data: encodedJSONObject([
+			"id": 1,
+			"result": [
+				"thread": makeThreadPayload(id: "thread-1"),
+				"model": "gpt-5",
+				"modelProvider": "openai",
+				"serviceTier": NSNull(),
+				"cwd": "/tmp",
+				"approvalPolicy": "on-request",
+				"sandbox": ["type": "dangerFullAccess"],
+				"reasoningEffort": NSNull(),
+			],
+		]))
+		let threadResponse = try await coordinator.threadStart(
+			ThreadStartParams(
+				model: nil,
+				modelProvider: nil,
+				serviceTier: nil,
+				cwd: nil,
+				approvalPolicy: nil,
+				sandbox: nil,
+				config: nil,
+				serviceName: nil,
+				baseInstructions: nil,
+				developerInstructions: nil,
+				personality: nil,
+				ephemeral: nil,
+				experimentalRawEvents: false,
+				persistExtendedHistory: false
+			)
+		)
+		#expect(threadResponse.thread.id == "thread-1")
+
+		try await transport.enqueueReceive(data: encodedJSONObject([
+			"id": 2,
+			"result": ["thread": makeThreadPayload(id: "thread-1")],
+		]))
+		let readResponse = try await coordinator.threadRead(
+			ThreadReadParams(threadId: "thread-1", includeTurns: true)
+		)
+		#expect(readResponse.thread.id == "thread-1")
+
+		await coordinator.stop()
+	}
+
 	@Test func unhandledServerRequestsStillReturnMethodNotFound() async throws {
 		let transport = RuntimeCoordinatorTestTransport()
 		let coordinator = makeRuntimeCoordinator(transport: transport)
-		try await coordinator.start()
+		_ = try await coordinator.start()
 
 		var iterator = await coordinator.serverRequests().makeAsyncIterator()
 
@@ -117,7 +198,7 @@ struct CodexRuntimeCoordinatorTests {
 	@Test func stopFinishesNotificationAndServerRequestStreams() async throws {
 		let transport = RuntimeCoordinatorTestTransport()
 		let coordinator = makeRuntimeCoordinator(transport: transport)
-		try await coordinator.start()
+		_ = try await coordinator.start()
 
 		var notificationIterator = await coordinator.notifications().makeAsyncIterator()
 		var requestIterator = await coordinator.serverRequests().makeAsyncIterator()
@@ -132,9 +213,17 @@ struct CodexRuntimeCoordinatorTests {
 	}
 }
 
-private func makeRuntimeCoordinator(transport: RuntimeCoordinatorTestTransport) -> CodexRuntimeCoordinator {
+private func makeRuntimeCoordinator(
+	transport: RuntimeCoordinatorTestTransport,
+	debugSnapshot: CodexCLIProbe.DebugSnapshot? = nil
+) -> CodexRuntimeCoordinator {
 	CodexRuntimeCoordinator(
-		transportFactory: { _ in transport }
+		transportFactory: { _ in
+			CodexRuntimeCoordinator.StartupContext(
+				transport: transport,
+				debugSnapshot: debugSnapshot
+			)
+		}
 	)
 }
 
@@ -199,4 +288,25 @@ private func jsonObject(from data: Data) throws -> [String: Any] {
 		throw TestFailure(message: "Expected JSON object payload.")
 	}
 	return object
+}
+
+private func makeThreadPayload(id: String) -> [String: Any] {
+	[
+		"id": id,
+		"preview": "New thread",
+		"ephemeral": false,
+		"modelProvider": "openai",
+		"createdAt": 1,
+		"updatedAt": 1,
+		"status": ["type": "idle"],
+		"path": "/tmp/\(id)",
+		"cwd": "/tmp",
+		"cliVersion": "0.112.0",
+		"source": "appServer",
+		"agentNickname": NSNull(),
+		"agentRole": NSNull(),
+		"gitInfo": NSNull(),
+		"name": "Thread \(id)",
+		"turns": [],
+	]
 }

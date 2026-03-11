@@ -9,7 +9,7 @@ import Foundation
 
 	// MARK: - Orchestration Layer Auth Types
 
-public enum LoginState: Sendable {
+public enum LoginState: Sendable, Equatable {
 	case signedOut
 	case authorizing
 	case signedIn

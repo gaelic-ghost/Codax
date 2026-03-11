@@ -51,3 +51,5 @@ The connection boundary and its current callers verify cleanly with:
 - `node Tools/generate_connection_schema.js`
 - `node Tools/update_connection_schema_progress.js --verify`
 - `xcodebuild -project /Users/galew/Workspace/Codax/Codax.xcodeproj -scheme Codax -sdk macosx test`
+
+Current project verification baseline is `82` passing tests in `9` suites.

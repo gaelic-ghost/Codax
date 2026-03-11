@@ -14,7 +14,7 @@ What is already real:
 - a JSON-RPC `Connection` layer
 - a full generated connection-owned schema boundary
 - initial compatibility gating for Codex CLI `0.111.x` and `0.112.x`
-- an early `NavigationSplitView` shell with environment-owned orchestration state
+- an early `NavigationSplitView` shell with environment-owned view-model state
 - layer reports grounded in the current `v0.112.0` schema baseline
 
 What is still early or incomplete:
@@ -53,7 +53,7 @@ The highest-value contribution areas right now are:
 
 - schema and report alignment
 - broader notification and app-behavior coverage
-- orchestration refinement
+- runtime and view-model refinement
 - SwiftUI shell and pane-state cleanup
 - accessibility-first UI groundwork
 - documentation cleanup and consistency fixes
@@ -73,13 +73,15 @@ Keep the workflow lightweight:
 2. Keep the change focused.
 3. Align the change with the current roadmap and architecture slices.
 4. Update docs when behavior, architecture boundaries, or repo layout change.
+5. Regenerate the connection schema surface when changing `codex-schemas` or the schema generator.
 
 A few practical expectations:
 
 - prefer small PRs over broad mixed changes
-- keep naming and terminology aligned with the existing `Transport`, `Connection`, `Runtime`, and `Orchestration` vocabulary
+- keep naming and terminology aligned with the existing `Transport`, `Connection`, `Runtime`, and `ViewModel` vocabulary
 - if your change crosses layer boundaries, explain why that boundary shift is necessary
 - keep docs aligned with current roadmap milestones, layer boundaries, and schema-version framing
+- if you change `codex-schemas` or either generator script, regenerate the checked-in connection surface before build/test
 - treat accessibility regressions, protocol drift, and untested behavior changes as high-risk
 
 ## Checks Before Opening a PR
@@ -87,11 +89,15 @@ A few practical expectations:
 Run the checks that are real today:
 
 ```bash
+node Tools/generate_connection_schema.js
+node Tools/update_connection_schema_progress.js --verify
 xcodebuild -project Codax.xcodeproj -scheme Codax -sdk macosx build
 xcodebuild -project Codax.xcodeproj -scheme Codax -destination 'platform=macOS' test
 ```
 
 The default `Codax` scheme test workflow uses the repo's `Codax.xctestplan`, with target-level parallelization disabled for the `CodaxTests` target.
+
+Current baseline verification is `82` passing tests in `9` suites.
 
 This repo does not currently have documented CI workflows, issue templates, or PR templates. Please do not assume hidden automation is going to catch missing verification for you.
 

@@ -132,7 +132,7 @@ public actor CodexConnection {
 		finish(continuations: continuations)
 	}
 
-	public func request<Params: Encodable, Result: Decodable>(
+	internal func _request<Params: Encodable, Result: Decodable>(
 		method: String,
 		params: Params,
 		as resultType: Result.Type
@@ -167,7 +167,7 @@ public actor CodexConnection {
 		}
 	}
 
-	public func notify<Params: Encodable>(
+	internal func _notify<Params: Encodable>(
 		method: String,
 		params: Params
 	) async throws {
@@ -176,7 +176,7 @@ public actor CodexConnection {
 		try await trans.send(payload)
 	}
 
-	public func notify(method: String) async throws {
+	internal func _notify(method: String) async throws {
 		await start()
 		let payload = try encoder.encode(JSONRPCClientNotificationMessage(method: method))
 		try await trans.send(payload)

@@ -277,6 +277,8 @@ final class CodaxOrchestrator {
 		}
 	}
 
+	// MARK: Server Request Handling
+
 	func handle(_ request: ServerRequestEnvelope) {
 		switch request {
 		case .chatgptAuthRefresh,
@@ -291,6 +293,8 @@ final class CodaxOrchestrator {
 			return
 		}
 	}
+
+		// MARK: Compatibility
 
 	func refreshCompatibility() async {
 		compatibility = .checking

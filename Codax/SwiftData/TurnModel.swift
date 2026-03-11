@@ -12,7 +12,7 @@ import SwiftData
 final class TurnModel {
 	var id: UUID
 	var codexId: String
-	var statusRawValue: String
+	var statusData: Data
 	var errorMessage: String?
 	var errorAdditionalDetails: String?
 	var itemsData: Data
@@ -23,7 +23,7 @@ final class TurnModel {
 	init(
 		id: UUID = UUID(),
 		codexId: String,
-		statusRawValue: String,
+		statusData: Data,
 		errorMessage: String? = nil,
 		errorAdditionalDetails: String? = nil,
 		itemsData: Data,
@@ -32,7 +32,7 @@ final class TurnModel {
 	) {
 		self.id = id
 		self.codexId = codexId
-		self.statusRawValue = statusRawValue
+		self.statusData = statusData
 		self.errorMessage = errorMessage
 		self.errorAdditionalDetails = errorAdditionalDetails
 		self.itemsData = itemsData
@@ -44,7 +44,7 @@ final class TurnModel {
 		self.init(
 			id: turn.id,
 			codexId: turn.codexId,
-			statusRawValue: Self.encodeRawValue(turn.status),
+			statusData: Self.encode(turn.status) ?? Data(),
 			errorMessage: turn.error?.message,
 			errorAdditionalDetails: turn.error?.additionalDetails,
 			itemsData: Self.encode(turn.items) ?? Data("[]".utf8),
@@ -56,7 +56,7 @@ final class TurnModel {
 	func apply(turn: Turn) {
 		id = turn.id
 		codexId = turn.codexId
-		statusRawValue = Self.encodeRawValue(turn.status)
+		statusData = Self.encode(turn.status) ?? Data()
 		errorMessage = turn.error?.message
 		errorAdditionalDetails = turn.error?.additionalDetails
 		itemsData = Self.encode(turn.items) ?? Data("[]".utf8)
@@ -64,14 +64,14 @@ final class TurnModel {
 	}
 
 	var status: TurnStatus? {
-		Self.decodeRawValue(statusRawValue, as: TurnStatus.self)
+		Self.decode(TurnStatus.self, from: statusData)
 	}
 
 	var error: TurnError? {
 		guard errorMessage != nil || errorAdditionalDetails != nil || codexErrorInfoData != nil else { return nil }
 		return TurnError(
 			message: errorMessage ?? "",
-			codexErrorInfo: Self.decodeOptional(CodexErrorInfo.self, from: codexErrorInfoData),
+			codexErrorInfo: Self.decode(CodexErrorInfo.self, from: codexErrorInfoData),
 			additionalDetails: errorAdditionalDetails
 		)
 	}
@@ -90,25 +90,7 @@ final class TurnModel {
 	}
 
 	private static func decode<T: Decodable>(_ type: T.Type, from data: Data?) -> T? {
-		guard let data else { return nil }
-		return try? JSONDecoder().decode(T.self, from: data)
-	}
-
-	private static func decodeOptional<T: Decodable>(_ type: T.Type, from data: Data?) -> T? {
-		decode(T.self, from: data)
-	}
-
-	private static func encodeRawValue<T: Encodable>(_ value: T) -> String {
-		guard let data = try? JSONEncoder().encode(value),
-			let string = String(data: data, encoding: .utf8)
-		else {
-			return ""
-		}
-		return string
-	}
-
-	private static func decodeRawValue<T: Decodable>(_ value: String, as type: T.Type) -> T? {
-		guard let data = value.data(using: .utf8) else { return nil }
+		guard let data, !data.isEmpty else { return nil }
 		return try? JSONDecoder().decode(T.self, from: data)
 	}
 }

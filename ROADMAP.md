@@ -7,6 +7,7 @@
 - SwiftData is the durable read model for thread history and hydrated thread detail
 - the separate client layer has been removed
 - the connection schema generator and verifier currently report `497/497` exported schema types represented
+- until `codex` reaches `v1.x.x`, the schema target is the latest released upstream `codex app-server` contract
 
 ## What Is Done
 

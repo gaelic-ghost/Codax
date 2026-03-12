@@ -21,6 +21,12 @@ What is already real:
 - app-shell toolbar actions for project import, thread creation, and inspector visibility
 - layer reports grounded in the current `v0.114.0` schema baseline
 
+Version-support policy while `codex` is still pre-`v1`:
+
+- Codax aims to support the latest released `codex app-server` schema version, not a wide matrix of `0.x` releases
+- when the CLI is still pre-`v1`, treat the newest upstream schema release as the intended target for generator, docs, and protocol audit work
+- the in-repo compatibility gate may remain pinned to the currently verified CLI build while that latest-version work is being landed
+
 What is still early or incomplete:
 
 - the current `NavigationSplitView` shell still needs broader pane behavior, polish, and accessibility work
@@ -103,7 +109,7 @@ xcodebuild -project Codax.xcodeproj -scheme Codax -destination 'platform=macOS' 
 
 The default `Codax` scheme test workflow uses the repo's `Codax.xctestplan`, with target-level parallelization disabled for the `CodaxTests` target.
 
-Current baseline verification is `90` passing tests in `10` suites.
+Current baseline verification is `92` passing tests in `10` suites.
 
 This repo does not currently have documented CI workflows, issue templates, or PR templates. Please do not assume hidden automation is going to catch missing verification for you.
 

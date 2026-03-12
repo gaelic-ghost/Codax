@@ -36,6 +36,8 @@ Verified by [connection-schema-progress.md](/Users/galew/Workspace/Codax/Docs/co
 - `47/47` server notifications represented
 - `9/9` server requests represented
 
+Until `codex` reaches `v1.x.x`, Codax treats the latest released `codex app-server` schema as the target contract. The checked-in compatibility gate may lag briefly while a new CLI release is being audited, but generator, report, and boundary work should be driven toward the newest upstream pre-`v1` schema rather than a long-lived `0.x` support matrix.
+
 ## File Ownership
 
 - [`CodexConnection.swift`](/Users/galew/Workspace/Codax/Codax/Controllers/Connection/CodexConnection.swift)
@@ -52,4 +54,4 @@ The connection boundary and its current callers verify cleanly with:
 - `node Tools/update_connection_schema_progress.js --verify`
 - `xcodebuild -project /Users/galew/Workspace/Codax/Codax.xcodeproj -scheme Codax -sdk macosx test`
 
-Current project verification baseline is `90` passing tests in `10` suites.
+Current project verification baseline is `92` passing tests in `10` suites.

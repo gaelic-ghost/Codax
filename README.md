@@ -84,10 +84,15 @@ Current verified result:
 - `47/47` server notifications represented through `ServerNotificationEnvelope`
 - `9/9` server requests represented through `ServerRequestEnvelope`
 
+Version support policy:
+
+- until `codex` reaches `v1.x.x`, Codax aims to track the latest released `codex app-server` schema version rather than maintain a broad pre-`v1` compatibility matrix
+- compatibility gating may still pin the current verified CLI release in code and tests, but docs and upgrade work should treat "latest pre-`v1`" as the target
+
 Project verification:
 
 - `xcodebuild -project /Users/galew/Workspace/Codax/Codax.xcodeproj -scheme Codax -sdk macosx test`
-- `90` tests passed in `10` suites
+- `92` tests passed in `10` suites
 
 ## Requirements
 

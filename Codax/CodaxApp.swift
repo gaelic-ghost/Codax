@@ -34,7 +34,7 @@ struct CodaxApp: App {
 		// MARK: App Scenes
 
 	var body: some Scene {
-		Window("FUCK OFF", id: "FUCK YOU") {
+		Window("...", id: "...") {
 			NavigationSplitView(
 				columnVisibility: $columnVisibility,
 				preferredCompactColumn: $preferredColumn) {

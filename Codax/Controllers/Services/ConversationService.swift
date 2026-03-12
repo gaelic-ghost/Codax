@@ -1,5 +1,4 @@
 import Foundation
-import Observation
 
 /*
  `ConversationService` includes the conversation-summary request/response surface for the Codex app-server. Semantically, this section represents a read-only summary boundary: it asks the server for a typed summary of conversation state and stores the most recent answer verbatim, without synthesizing additional presentation state.
@@ -76,15 +75,15 @@ import Observation
  - `turnInterrupt(using:params:)`: Sends the generated `turn/interrupt` request with `TurnInterruptParams`, awaits the typed `TurnInterruptResponse`, and stores it in `turnInterruptResponse`. Semantically, this requests early termination of the active turn so it can finish in an interrupted state.
  */
 
-@Observable
 final class ConversationService {
 	// MARK: - Conversation Summary
 
 	var getConversationSummaryResponse: GetConversationSummaryResponse?
 
-	func getConversationSummary(using connection: CodexConnection, params: GetConversationSummaryParams) async throws {
+	func getConversationSummary(using connection: CodexConnection, params: GetConversationSummaryParams) async throws -> GetConversationSummaryResponse {
 		let response = try await connection.getConversationSummary(params)
 		getConversationSummaryResponse = response
+		return response
 	}
 
 	// MARK: - Threads
@@ -104,74 +103,88 @@ final class ConversationService {
 	var threadReadResponse: ThreadReadResponse?
 	var feedbackUploadResponse: FeedbackUploadResponse?
 
-	func threadStart(using connection: CodexConnection, params: ThreadStartParams) async throws {
+	func threadStart(using connection: CodexConnection, params: ThreadStartParams) async throws -> ThreadStartResponse {
 		let response = try await connection.threadStart(params)
 		threadStartResponse = response
+		return response
 	}
 
-	func threadResume(using connection: CodexConnection, params: ThreadResumeParams) async throws {
+	func threadResume(using connection: CodexConnection, params: ThreadResumeParams) async throws -> ThreadResumeResponse {
 		let response = try await connection.threadResume(params)
 		threadResumeResponse = response
+		return response
 	}
 
-	func threadFork(using connection: CodexConnection, params: ThreadForkParams) async throws {
+	func threadFork(using connection: CodexConnection, params: ThreadForkParams) async throws -> ThreadForkResponse {
 		let response = try await connection.threadFork(params)
 		threadForkResponse = response
+		return response
 	}
 
-	func threadArchive(using connection: CodexConnection, params: ThreadArchiveParams) async throws {
+	func threadArchive(using connection: CodexConnection, params: ThreadArchiveParams) async throws -> ThreadArchiveResponse {
 		let response = try await connection.threadArchive(params)
 		threadArchiveResponse = response
+		return response
 	}
 
-	func threadUnsubscribe(using connection: CodexConnection, params: ThreadUnsubscribeParams) async throws {
+	func threadUnsubscribe(using connection: CodexConnection, params: ThreadUnsubscribeParams) async throws -> ThreadUnsubscribeResponse {
 		let response = try await connection.threadUnsubscribe(params)
 		threadUnsubscribeResponse = response
+		return response
 	}
 
-	func threadNameSet(using connection: CodexConnection, params: ThreadSetNameParams) async throws {
+	func threadNameSet(using connection: CodexConnection, params: ThreadSetNameParams) async throws -> ThreadSetNameResponse {
 		let response = try await connection.threadNameSet(params)
 		threadSetNameResponse = response
+		return response
 	}
 
-	func threadMetadataUpdate(using connection: CodexConnection, params: ThreadMetadataUpdateParams) async throws {
+	func threadMetadataUpdate(using connection: CodexConnection, params: ThreadMetadataUpdateParams) async throws -> ThreadMetadataUpdateResponse {
 		let response = try await connection.threadMetadataUpdate(params)
 		threadMetadataUpdateResponse = response
+		return response
 	}
 
-	func threadUnarchive(using connection: CodexConnection, params: ThreadUnarchiveParams) async throws {
+	func threadUnarchive(using connection: CodexConnection, params: ThreadUnarchiveParams) async throws -> ThreadUnarchiveResponse {
 		let response = try await connection.threadUnarchive(params)
 		threadUnarchiveResponse = response
+		return response
 	}
 
-	func threadCompactStart(using connection: CodexConnection, params: ThreadCompactStartParams) async throws {
+	func threadCompactStart(using connection: CodexConnection, params: ThreadCompactStartParams) async throws -> ThreadCompactStartResponse {
 		let response = try await connection.threadCompactStart(params)
 		threadCompactStartResponse = response
+		return response
 	}
 
-	func threadRollback(using connection: CodexConnection, params: ThreadRollbackParams) async throws {
+	func threadRollback(using connection: CodexConnection, params: ThreadRollbackParams) async throws -> ThreadRollbackResponse {
 		let response = try await connection.threadRollback(params)
 		threadRollbackResponse = response
+		return response
 	}
 
-	func threadList(using connection: CodexConnection, params: ThreadListParams) async throws {
+	func threadList(using connection: CodexConnection, params: ThreadListParams) async throws -> ThreadListResponse {
 		let response = try await connection.threadList(params)
 		threadListResponse = response
+		return response
 	}
 
-	func threadLoadedList(using connection: CodexConnection, params: ThreadLoadedListParams) async throws {
+	func threadLoadedList(using connection: CodexConnection, params: ThreadLoadedListParams) async throws -> ThreadLoadedListResponse {
 		let response = try await connection.threadLoadedList(params)
 		threadLoadedListResponse = response
+		return response
 	}
 
-	func threadRead(using connection: CodexConnection, params: ThreadReadParams) async throws {
+	func threadRead(using connection: CodexConnection, params: ThreadReadParams) async throws -> ThreadReadResponse {
 		let response = try await connection.threadRead(params)
 		threadReadResponse = response
+		return response
 	}
 
-	func feedbackUpload(using connection: CodexConnection, params: FeedbackUploadParams) async throws {
+	func feedbackUpload(using connection: CodexConnection, params: FeedbackUploadParams) async throws -> FeedbackUploadResponse {
 		let response = try await connection.feedbackUpload(params)
 		feedbackUploadResponse = response
+		return response
 	}
 
 	// MARK: - Turns
@@ -180,18 +193,21 @@ final class ConversationService {
 	var turnSteerResponse: TurnSteerResponse?
 	var turnInterruptResponse: TurnInterruptResponse?
 
-	func turnStart(using connection: CodexConnection, params: TurnStartParams) async throws {
+	func turnStart(using connection: CodexConnection, params: TurnStartParams) async throws -> TurnStartResponse {
 		let response = try await connection.turnStart(params)
 		turnStartResponse = response
+		return response
 	}
 
-	func turnSteer(using connection: CodexConnection, params: TurnSteerParams) async throws {
+	func turnSteer(using connection: CodexConnection, params: TurnSteerParams) async throws -> TurnSteerResponse {
 		let response = try await connection.turnSteer(params)
 		turnSteerResponse = response
+		return response
 	}
 
-	func turnInterrupt(using connection: CodexConnection, params: TurnInterruptParams) async throws {
+	func turnInterrupt(using connection: CodexConnection, params: TurnInterruptParams) async throws -> TurnInterruptResponse {
 		let response = try await connection.turnInterrupt(params)
 		turnInterruptResponse = response
+		return response
 	}
 }

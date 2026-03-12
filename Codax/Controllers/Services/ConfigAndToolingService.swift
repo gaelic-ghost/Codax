@@ -1,5 +1,4 @@
 import Foundation
-import Observation
 
 /*
  `ConfigAndToolingService` includes the app-listing request/response surface for the Codex app-server. Per the Codex app-server documentation, `app/list` enumerates available apps or connectors, including install metadata, accessibility, and enabled state. Semantically, this section exists to cache the last typed app-list response and nothing more; it does not reinterpret app-server semantics or add orchestration logic.
@@ -178,15 +177,15 @@ import Observation
  - `skillsConfigWrite(using:params:)`: Sends the generated `skills/config/write` request with `SkillsConfigWriteParams`, awaits the typed `SkillsConfigWriteResponse`, and stores it in `skillsConfigWriteResponse`. Semantically, this enables or disables a local skill path in user config.
  */
 
-@Observable
 final class ConfigAndToolingService {
 	// MARK: - Apps
 
 	var appsListResponse: AppsListResponse?
 
-	func appList(using connection: CodexConnection, params: AppsListParams) async throws {
+	func appList(using connection: CodexConnection, params: AppsListParams) async throws -> AppsListResponse {
 		let response = try await connection.appList(params)
 		appsListResponse = response
+		return response
 	}
 
 	// MARK: - Commands
@@ -196,24 +195,28 @@ final class ConfigAndToolingService {
 	var commandExecTerminateResponse: CommandExecTerminateResponse?
 	var commandExecResizeResponse: CommandExecResizeResponse?
 
-	func commandExec(using connection: CodexConnection, params: CommandExecParams) async throws {
+	func commandExec(using connection: CodexConnection, params: CommandExecParams) async throws -> CommandExecResponse {
 		let response = try await connection.commandExec(params)
 		commandExecResponse = response
+		return response
 	}
 
-	func commandExecWrite(using connection: CodexConnection, params: CommandExecWriteParams) async throws {
+	func commandExecWrite(using connection: CodexConnection, params: CommandExecWriteParams) async throws -> CommandExecWriteResponse {
 		let response = try await connection.commandExecWrite(params)
 		commandExecWriteResponse = response
+		return response
 	}
 
-	func commandExecTerminate(using connection: CodexConnection, params: CommandExecTerminateParams) async throws {
+	func commandExecTerminate(using connection: CodexConnection, params: CommandExecTerminateParams) async throws -> CommandExecTerminateResponse {
 		let response = try await connection.commandExecTerminate(params)
 		commandExecTerminateResponse = response
+		return response
 	}
 
-	func commandExecResize(using connection: CodexConnection, params: CommandExecResizeParams) async throws {
+	func commandExecResize(using connection: CodexConnection, params: CommandExecResizeParams) async throws -> CommandExecResizeResponse {
 		let response = try await connection.commandExecResize(params)
 		commandExecResizeResponse = response
+		return response
 	}
 
 	// MARK: - Config
@@ -222,24 +225,28 @@ final class ConfigAndToolingService {
 	var configRequirementsReadResponse: ConfigRequirementsReadResponse?
 	var configWriteResponse: ConfigWriteResponse?
 
-	func configRead(using connection: CodexConnection, params: ConfigReadParams) async throws {
+	func configRead(using connection: CodexConnection, params: ConfigReadParams) async throws -> ConfigReadResponse {
 		let response = try await connection.configRead(params)
 		configReadResponse = response
+		return response
 	}
 
-	func configRequirementsRead(using connection: CodexConnection) async throws {
+	func configRequirementsRead(using connection: CodexConnection) async throws -> ConfigRequirementsReadResponse {
 		let response = try await connection.configRequirementsRead()
 		configRequirementsReadResponse = response
+		return response
 	}
 
-	func configValueWrite(using connection: CodexConnection, params: ConfigValueWriteParams) async throws {
+	func configValueWrite(using connection: CodexConnection, params: ConfigValueWriteParams) async throws -> ConfigWriteResponse {
 		let response = try await connection.configValueWrite(params)
 		configWriteResponse = response
+		return response
 	}
 
-	func configBatchWrite(using connection: CodexConnection, params: ConfigBatchWriteParams) async throws {
+	func configBatchWrite(using connection: CodexConnection, params: ConfigBatchWriteParams) async throws -> ConfigWriteResponse {
 		let response = try await connection.configBatchWrite(params)
 		configWriteResponse = response
+		return response
 	}
 
 	// MARK: - External Agent Config
@@ -247,32 +254,36 @@ final class ConfigAndToolingService {
 	var externalAgentConfigDetectResponse: ExternalAgentConfigDetectResponse?
 	var externalAgentConfigImportResponse: ExternalAgentConfigImportResponse?
 
-	func externalAgentConfigDetect(using connection: CodexConnection, params: ExternalAgentConfigDetectParams) async throws {
+	func externalAgentConfigDetect(using connection: CodexConnection, params: ExternalAgentConfigDetectParams) async throws -> ExternalAgentConfigDetectResponse {
 		let response = try await connection.externalAgentConfigDetect(params)
 		externalAgentConfigDetectResponse = response
+		return response
 	}
 
-	func externalAgentConfigImport(using connection: CodexConnection, params: ExternalAgentConfigImportParams) async throws {
+	func externalAgentConfigImport(using connection: CodexConnection, params: ExternalAgentConfigImportParams) async throws -> ExternalAgentConfigImportResponse {
 		let response = try await connection.externalAgentConfigImport(params)
 		externalAgentConfigImportResponse = response
+		return response
 	}
 
 	// MARK: - Fuzzy File Search
 
 	var fuzzyFileSearchResponse: FuzzyFileSearchResponse?
 
-	func fuzzyFileSearch(using connection: CodexConnection, params: FuzzyFileSearchParams) async throws {
+	func fuzzyFileSearch(using connection: CodexConnection, params: FuzzyFileSearchParams) async throws -> FuzzyFileSearchResponse {
 		let response = try await connection.fuzzyFileSearch(params)
 		fuzzyFileSearchResponse = response
+		return response
 	}
 
 	// MARK: - Git Diff To Remote
 
 	var gitDiffToRemoteResponse: GitDiffToRemoteResponse?
 
-	func gitDiffToRemote(using connection: CodexConnection, params: GitDiffToRemoteParams) async throws {
+	func gitDiffToRemote(using connection: CodexConnection, params: GitDiffToRemoteParams) async throws -> GitDiffToRemoteResponse {
 		let response = try await connection.gitDiffToRemote(params)
 		gitDiffToRemoteResponse = response
+		return response
 	}
 
 	// MARK: - MCP Servers
@@ -281,19 +292,22 @@ final class ConfigAndToolingService {
 	var mcpServerOauthLoginResponse: McpServerOauthLoginResponse?
 	var listMcpServerStatusResponse: ListMcpServerStatusResponse?
 
-	func mcpServerOauthLogin(using connection: CodexConnection, params: McpServerOauthLoginParams) async throws {
+	func mcpServerOauthLogin(using connection: CodexConnection, params: McpServerOauthLoginParams) async throws -> McpServerOauthLoginResponse {
 		let response = try await connection.mcpServerOauthLogin(params)
 		mcpServerOauthLoginResponse = response
+		return response
 	}
 
-	func configMcpServerReload(using connection: CodexConnection) async throws {
+	func configMcpServerReload(using connection: CodexConnection) async throws -> McpServerRefreshResponse {
 		let response = try await connection.configMcpServerReload()
 		mcpServerRefreshResponse = response
+		return response
 	}
 
-	func mcpServerStatusList(using connection: CodexConnection, params: ListMcpServerStatusParams) async throws {
+	func mcpServerStatusList(using connection: CodexConnection, params: ListMcpServerStatusParams) async throws -> ListMcpServerStatusResponse {
 		let response = try await connection.mcpServerStatusList(params)
 		listMcpServerStatusResponse = response
+		return response
 	}
 
 	// MARK: - Plugins
@@ -302,28 +316,32 @@ final class ConfigAndToolingService {
 	var pluginInstallResponse: PluginInstallResponse?
 	var pluginUninstallResponse: PluginUninstallResponse?
 
-	func pluginList(using connection: CodexConnection, params: PluginListParams) async throws {
+	func pluginList(using connection: CodexConnection, params: PluginListParams) async throws -> PluginListResponse {
 		let response = try await connection.pluginList(params)
 		pluginListResponse = response
+		return response
 	}
 
-	func pluginInstall(using connection: CodexConnection, params: PluginInstallParams) async throws {
+	func pluginInstall(using connection: CodexConnection, params: PluginInstallParams) async throws -> PluginInstallResponse {
 		let response = try await connection.pluginInstall(params)
 		pluginInstallResponse = response
+		return response
 	}
 
-	func pluginUninstall(using connection: CodexConnection, params: PluginUninstallParams) async throws {
+	func pluginUninstall(using connection: CodexConnection, params: PluginUninstallParams) async throws -> PluginUninstallResponse {
 		let response = try await connection.pluginUninstall(params)
 		pluginUninstallResponse = response
+		return response
 	}
 
 	// MARK: - Review
 
 	var reviewStartResponse: ReviewStartResponse?
 
-	func reviewStart(using connection: CodexConnection, params: ReviewStartParams) async throws {
+	func reviewStart(using connection: CodexConnection, params: ReviewStartParams) async throws -> ReviewStartResponse {
 		let response = try await connection.reviewStart(params)
 		reviewStartResponse = response
+		return response
 	}
 
 	// MARK: - Skills
@@ -333,23 +351,27 @@ final class ConfigAndToolingService {
 	var skillsRemoteWriteResponse: SkillsRemoteWriteResponse?
 	var skillsConfigWriteResponse: SkillsConfigWriteResponse?
 
-	func skillsList(using connection: CodexConnection, params: SkillsListParams) async throws {
+	func skillsList(using connection: CodexConnection, params: SkillsListParams) async throws -> SkillsListResponse {
 		let response = try await connection.skillsList(params)
 		skillsListResponse = response
+		return response
 	}
 
-	func skillsRemoteList(using connection: CodexConnection, params: SkillsRemoteReadParams) async throws {
+	func skillsRemoteList(using connection: CodexConnection, params: SkillsRemoteReadParams) async throws -> SkillsRemoteReadResponse {
 		let response = try await connection.skillsRemoteList(params)
 		skillsRemoteReadResponse = response
+		return response
 	}
 
-	func skillsRemoteExport(using connection: CodexConnection, params: SkillsRemoteWriteParams) async throws {
+	func skillsRemoteExport(using connection: CodexConnection, params: SkillsRemoteWriteParams) async throws -> SkillsRemoteWriteResponse {
 		let response = try await connection.skillsRemoteExport(params)
 		skillsRemoteWriteResponse = response
+		return response
 	}
 
-	func skillsConfigWrite(using connection: CodexConnection, params: SkillsConfigWriteParams) async throws {
+	func skillsConfigWrite(using connection: CodexConnection, params: SkillsConfigWriteParams) async throws -> SkillsConfigWriteResponse {
 		let response = try await connection.skillsConfigWrite(params)
 		skillsConfigWriteResponse = response
+		return response
 	}
 }

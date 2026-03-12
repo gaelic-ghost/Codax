@@ -46,3 +46,30 @@ struct CodaxPendingLogin: Equatable {
 	let loginId: String
 	let authURL: String
 }
+
+struct CodaxProjectState: Identifiable, Equatable, Sendable {
+	let id: UUID
+	var name: String
+	var rootPath: String
+	var isActive: Bool
+	var threadCodexIDs: [String]
+	var updatedAt: Date
+}
+
+struct CodaxThreadSessionState: Equatable, Sendable {
+	let threadCodexId: String
+	var model: String
+	var modelProvider: String
+	var serviceTier: ServiceTier?
+	var cwd: String
+	var approvalPolicy: AskForApproval
+	var sandboxPolicy: SandboxPolicy
+	var reasoningEffort: ReasoningEffort?
+}
+
+struct CodaxThreadGitDiffState: Equatable, Sendable {
+	let threadCodexId: String
+	var response: GitDiffToRemoteResponse?
+	var errorMessage: String?
+	var updatedAt: Date
+}

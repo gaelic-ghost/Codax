@@ -7,7 +7,6 @@
 
 import Foundation
 import Observation
-import SwiftData
 
 // MARK: - App State Projection
 
@@ -29,9 +28,23 @@ final class CodaxViewModel {
 	var compatibility: CodaxCompatibilityState = .unknown
 	var compatibilityDebugInfo: CodaxCompatibilityDebugInfo?
 	var errorState: CodaxViewModelError?
+
 	var selectedProjectID: UUID?
 	var selectedThreadID: UUID?
 	var selectedThreadCodexId: String?
+
+	var projects: [CodaxProjectState] = []
+	var threads: [Thread] = []
+	var pendingServerRequests: [ServerRequestEnvelope] = []
+
+	var threadSessionsByCodexID: [String: CodaxThreadSessionState] = [:]
+	var threadTokenUsageByCodexID: [String: ThreadTokenUsage] = [:]
+	var threadArchivedStateByCodexID: [String: Bool] = [:]
+	var threadClosedStateByCodexID: [String: Bool] = [:]
+	var threadGitDiffByCodexID: [String: CodaxThreadGitDiffState] = [:]
+	var turnPlansByTurnID: [String: TurnPlanUpdatedNotification] = [:]
+	var turnDiffsByTurnID: [String: TurnDiffUpdatedNotification] = [:]
+
 	var hydratingThreadCodexIDs: Set<String> = []
 	var isLoadingThreads = false
 	var isRefreshingSelectedGitDiff = false
@@ -40,7 +53,6 @@ final class CodaxViewModel {
 
 	private let runtimeFactory: RuntimeFactory
 	private let initializeParamsFactory: InitializeParamsFactory
-	private let modelContext: ModelContext
 
 	// MARK: - Internal State
 
@@ -49,32 +61,33 @@ final class CodaxViewModel {
 	private var serverRequestTask: Task<Void, Never>?
 	private var hydrationTask: Task<Void, Never>?
 
+	private var threadsByCodexID: [String: Thread] = [:]
+	private var threadIDsByCodexID: [String: UUID] = [:]
+	private var projectIDsByRootPath: [String: UUID] = [:]
+	private var detailedThreadCodexIDs: Set<String> = []
+	private var lastHydratedAtByThreadCodexID: [String: Date] = [:]
+
 	// MARK: - Initialization
 
-	init(modelContainer: ModelContainer) {
+	init() {
 		self.runtimeFactory = { try await CodaxViewModel.makeRuntime() }
 		self.initializeParamsFactory = { CodaxViewModel.makeInitializeParams() }
-		self.modelContext = modelContainer.mainContext
 	}
 
 	internal init(
 		runtimeFactory: @escaping RuntimeFactory,
-		initializeParamsFactory: @escaping InitializeParamsFactory,
-		modelContainer: ModelContainer
+		initializeParamsFactory: @escaping InitializeParamsFactory
 	) {
 		self.runtimeFactory = runtimeFactory
 		self.initializeParamsFactory = initializeParamsFactory
-		self.modelContext = modelContainer.mainContext
 	}
 
 	internal convenience init(
-		runtimeFactory: @escaping RuntimeFactory,
-		modelContainer: ModelContainer
+		runtimeFactory: @escaping RuntimeFactory
 	) {
 		self.init(
 			runtimeFactory: runtimeFactory,
-			initializeParamsFactory: { CodaxViewModel.makeInitializeParams() },
-			modelContainer: modelContainer
+			initializeParamsFactory: { CodaxViewModel.makeInitializeParams() }
 		)
 	}
 
@@ -112,21 +125,23 @@ final class CodaxViewModel {
 					viewModel.handle(notification)
 				},
 				onFinish: { viewModel in
-					if viewModel.connectionState == ConnectionState.connected {
+					if viewModel.connectionState == .connected {
 						viewModel.connectionState = .disconnected
 					}
 				}
 			)
-				bindRuntimeStream(
-					storingIn: \CodaxViewModel.serverRequestTask,
-					stream: { await runtimeCoordinator.serverRequests() },
+
+			bindRuntimeStream(
+				storingIn: \CodaxViewModel.serverRequestTask,
+				stream: { await runtimeCoordinator.serverRequests() },
 				onElement: { viewModel, request in
 					viewModel.handle(request)
 				}
-				)
-				connectionState = .connected
-				await loadThreads()
-			} catch {
+			)
+
+			connectionState = .connected
+			await loadThreads()
+		} catch {
 			apply(connectError: error)
 			connectionState = .disconnected
 			await teardownRuntime()
@@ -176,27 +191,28 @@ final class CodaxViewModel {
 					searchTerm: nil
 				)
 			)
-			try persistThreadList(response.data)
+			replaceThreads(response.data)
 
-			let selectedThreadCodexId =
+			let nextSelectedThreadCodexId =
 				currentSelection.flatMap { threadID in
-					response.data.contains(where: { $0.id == threadID }) ? threadID : nil
-				} ?? response.data.first?.id
+					threadsByCodexID[threadID] != nil ? threadID : nil
+				} ?? threads.first?.id
 
-			guard let selectedThreadCodexId else {
-				self.selectedThreadCodexId = nil
+			guard let nextSelectedThreadCodexId else {
+				selectedThreadCodexId = nil
+				selectedThreadID = nil
 				return
 			}
 
-			self.selectedThreadCodexId = selectedThreadCodexId
+			selectThreadState(codexId: nextSelectedThreadCodexId)
 			try await hydrateThreadDetail(
-				threadCodexId: selectedThreadCodexId,
+				threadCodexId: nextSelectedThreadCodexId,
 				using: runtimeCoordinator,
 				force: true
 			)
 			await refreshSelectedGitSummary(using: runtimeCoordinator)
 			startRecentHydration(
-				primaryThreadCodexId: selectedThreadCodexId,
+				primaryThreadCodexId: nextSelectedThreadCodexId,
 				using: runtimeCoordinator
 			)
 		} catch {
@@ -214,7 +230,7 @@ final class CodaxViewModel {
 					model: nil,
 					modelProvider: nil,
 					serviceTier: nil,
-						cwd: cwd,
+					cwd: cwd,
 					approvalPolicy: nil,
 					sandbox: nil,
 					config: nil,
@@ -227,9 +243,20 @@ final class CodaxViewModel {
 					persistExtendedHistory: false
 				)
 			)
-			try persistThreadDetail(response.thread)
-			try persistThreadSession(ThreadSessionRecord(response: response))
-			selectedThreadCodexId = response.thread.id
+			storeThread(response.thread, markHydrated: true)
+			storeThreadSession(
+				CodaxThreadSessionState(
+					threadCodexId: response.thread.id,
+					model: response.model,
+					modelProvider: response.modelProvider,
+					serviceTier: response.serviceTier,
+					cwd: response.cwd,
+					approvalPolicy: response.approvalPolicy,
+					sandboxPolicy: response.sandbox,
+					reasoningEffort: response.reasoningEffort
+				)
+			)
+			selectThreadState(codexId: response.thread.id)
 			await refreshGitSummary(for: response.thread, using: runtimeCoordinator)
 		} catch {
 			record(error)
@@ -260,16 +287,16 @@ final class CodaxViewModel {
 					personality: nil,
 					outputSchema: nil,
 					collaborationMode: nil
-					)
 				)
-			try persistTurn(response.turn, threadCodexId: threadCodexId)
+			)
+			storeTurn(response.turn, on: threadCodexId)
 		} catch {
 			record(error)
 		}
 	}
 
 	func selectThread(codexId: String) async {
-		selectedThreadCodexId = codexId
+		selectThreadState(codexId: codexId)
 		guard connectionState == .connected, let runtimeCoordinator else { return }
 		do {
 			try await hydrateThreadDetail(
@@ -293,11 +320,8 @@ final class CodaxViewModel {
 	}
 
 	func handle(_ request: ServerRequestEnvelope) {
-		do {
-			try persistPendingServerRequest(PendingServerRequestRecord(envelope: request))
-		} catch {
-			record(error)
-		}
+		removePendingServerRequest(id: request.id)
+		pendingServerRequests.append(request)
 	}
 }
 
@@ -399,12 +423,9 @@ private extension CodaxViewModel {
 
 		runtimeCoordinator = nil
 		pendingLogin = nil
-		do {
-			try clearPendingServerRequests()
-		} catch {
-			record(error)
-		}
+		pendingServerRequests.removeAll()
 		selectedThreadCodexId = nil
+		selectedThreadID = nil
 		isRefreshingSelectedGitDiff = false
 	}
 
@@ -415,7 +436,7 @@ private extension CodaxViewModel {
 		using runtimeCoordinator: CodexRuntimeCoordinator,
 		force: Bool
 	) async throws {
-		if !force, !(try shouldHydrateThreadDetail(codexId: threadCodexId, maxAge: 300)) {
+		if !force, !shouldHydrateThreadDetail(codexId: threadCodexId, maxAge: 300) {
 			return
 		}
 
@@ -425,7 +446,7 @@ private extension CodaxViewModel {
 		let detail = try await runtimeCoordinator.threadRead(
 			ThreadReadParams(threadId: threadCodexId, includeTurns: true)
 		)
-		try persistThreadDetail(detail.thread)
+		storeThread(detail.thread, markHydrated: true)
 	}
 
 	func startRecentHydration(
@@ -436,17 +457,17 @@ private extension CodaxViewModel {
 		hydrationTask = Task { [weak self] in
 			guard let self else { return }
 			do {
-				let recentThreadCodexIDs = try self.recentThreadCodexIDs(
+				let recentThreadCodexIDs = recentThreadCodexIDs(
 					limit: 5,
 					excluding: primaryThreadCodexId
 				)
 				for threadCodexId in recentThreadCodexIDs {
 					guard !Task.isCancelled else { break }
-					if try self.shouldHydrateThreadDetail(
+					if shouldHydrateThreadDetail(
 						codexId: threadCodexId,
 						maxAge: 600
 					) {
-						try await self.hydrateThreadDetail(
+						try await hydrateThreadDetail(
 							threadCodexId: threadCodexId,
 							using: runtimeCoordinator,
 							force: false
@@ -464,50 +485,8 @@ private extension CodaxViewModel {
 	// MARK: Git Summary
 
 	func refreshSelectedGitSummary(using runtimeCoordinator: CodexRuntimeCoordinator) async {
-		guard
-			let threadCodexId = selectedThreadCodexId,
-			let thread = try? fetchThread(codexId: threadCodexId)
-		else {
-			return
-		}
+		guard let thread = selectedThread else { return }
 		await refreshGitSummary(for: thread, using: runtimeCoordinator)
-	}
-
-	func refreshGitSummary(for thread: ThreadModel, using runtimeCoordinator: CodexRuntimeCoordinator) async {
-		if selectedThreadCodexId == thread.codexId {
-			isRefreshingSelectedGitDiff = true
-		}
-
-		do {
-			let response = try await runtimeCoordinator.gitDiffToRemote(
-				GitDiffToRemoteParams(cwd: thread.cwd)
-			)
-			try persistGitDiff(
-				ThreadGitDiffRecord(
-					threadCodexId: thread.codexId,
-					response: response,
-					errorMessage: nil
-				)
-			)
-			if selectedThreadCodexId == thread.codexId {
-				isRefreshingSelectedGitDiff = false
-			}
-		} catch {
-			do {
-				try persistGitDiff(
-					ThreadGitDiffRecord(
-						threadCodexId: thread.codexId,
-						response: nil,
-						errorMessage: error.localizedDescription
-					)
-				)
-			} catch {
-				record(error)
-			}
-			if selectedThreadCodexId == thread.codexId {
-				isRefreshingSelectedGitDiff = false
-			}
-		}
 	}
 
 	func refreshGitSummary(for thread: Thread, using runtimeCoordinator: CodexRuntimeCoordinator) async {
@@ -519,31 +498,23 @@ private extension CodaxViewModel {
 			let response = try await runtimeCoordinator.gitDiffToRemote(
 				GitDiffToRemoteParams(cwd: thread.cwd)
 			)
-			try persistGitDiff(
-				ThreadGitDiffRecord(
-					threadCodexId: thread.id,
-					response: response,
-					errorMessage: nil
-				)
+			threadGitDiffByCodexID[thread.id] = CodaxThreadGitDiffState(
+				threadCodexId: thread.id,
+				response: response,
+				errorMessage: nil,
+				updatedAt: .now
 			)
-			if selectedThreadCodexId == thread.id {
-				isRefreshingSelectedGitDiff = false
-			}
 		} catch {
-			do {
-				try persistGitDiff(
-					ThreadGitDiffRecord(
-						threadCodexId: thread.id,
-						response: nil,
-						errorMessage: error.localizedDescription
-					)
-				)
-			} catch {
-				record(error)
-			}
-			if selectedThreadCodexId == thread.id {
-				isRefreshingSelectedGitDiff = false
-			}
+			threadGitDiffByCodexID[thread.id] = CodaxThreadGitDiffState(
+				threadCodexId: thread.id,
+				response: nil,
+				errorMessage: error.localizedDescription,
+				updatedAt: .now
+			)
+		}
+
+		if selectedThreadCodexId == thread.id {
+			isRefreshingSelectedGitDiff = false
 		}
 	}
 
@@ -597,54 +568,29 @@ private extension CodaxViewModel {
 	func handleThreadNotification(_ notification: ServerNotificationEnvelope) -> Bool {
 		switch notification {
 			case let .threadStarted(notification):
-				selectedThreadCodexId = notification.thread.id
-				do {
-					try persistThreadDetail(notification.thread)
-				} catch {
-					record(error)
-				}
+				storeThread(notification.thread, markHydrated: true)
+				selectThreadState(codexId: notification.thread.id)
 				return true
 			case let .threadStatusChanged(notification):
-				do {
-					try persistThreadStatus(notification.status, for: notification.threadId)
-				} catch {
-					record(error)
-				}
+				updateThread(notification.threadId) { $0.status = notification.status }
 				return true
 			case let .threadArchived(notification):
-				do {
-					try persistThreadArchived(true, for: notification.threadId)
-				} catch {
-					record(error)
-				}
+				threadArchivedStateByCodexID[notification.threadId] = true
+				rebuildProjects()
 				return true
 			case let .threadUnarchived(notification):
-				do {
-					try persistThreadArchived(false, for: notification.threadId)
-				} catch {
-					record(error)
-				}
+				threadArchivedStateByCodexID[notification.threadId] = false
+				rebuildProjects()
 				return true
 			case let .threadClosed(notification):
-				do {
-					try persistThreadClosed(for: notification.threadId)
-				} catch {
-					record(error)
-				}
+				threadClosedStateByCodexID[notification.threadId] = true
+				rebuildProjects()
 				return true
 			case let .threadNameUpdated(notification):
-				do {
-					try persistThreadName(notification.threadName, for: notification.threadId)
-				} catch {
-					record(error)
-				}
+				updateThread(notification.threadId) { $0.name = notification.threadName }
 				return true
 			case let .threadTokenUsageUpdated(notification):
-				do {
-					try persistThreadTokenUsage(notification.tokenUsage, for: notification.threadId)
-				} catch {
-					record(error)
-				}
+				threadTokenUsageByCodexID[notification.threadId] = notification.tokenUsage
 				return true
 			default:
 				return false
@@ -657,32 +603,16 @@ private extension CodaxViewModel {
 				errorState = CodaxViewModelError(message: error.error.message)
 				return true
 			case let .turnStarted(notification):
-				do {
-					try persistTurn(notification.turn, threadCodexId: notification.threadId)
-				} catch {
-					record(error)
-				}
+				storeTurn(notification.turn, on: notification.threadId)
 				return true
 			case let .turnCompleted(notification):
-				do {
-					try persistTurn(notification.turn, threadCodexId: notification.threadId)
-				} catch {
-					record(error)
-				}
+				storeTurn(notification.turn, on: notification.threadId)
 				return true
 			case let .turnPlanUpdated(notification):
-				do {
-					try persistTurnPlan(TurnPlanRecord(notification: notification))
-				} catch {
-					record(error)
-				}
+				turnPlansByTurnID[notification.turnId] = notification
 				return true
 			case let .turnDiffUpdated(notification):
-				do {
-					try persistTurnDiff(TurnDiffRecord(notification: notification))
-				} catch {
-					record(error)
-				}
+				turnDiffsByTurnID[notification.turnId] = notification
 				return true
 			default:
 				return false
@@ -692,14 +622,168 @@ private extension CodaxViewModel {
 	func handleAuxiliaryNotification(_ notification: ServerNotificationEnvelope) {
 		switch notification {
 			case let .serverRequestResolved(notification):
-				do {
-					try resolvePendingServerRequest(id: notification.requestId)
-				} catch {
-					record(error)
-				}
+				removePendingServerRequest(id: notification.requestId)
 			default:
 				return
 		}
+	}
+
+	// MARK: Thread State
+
+	var selectedThread: Thread? {
+		guard let selectedThreadCodexId else { return nil }
+		return threadsByCodexID[selectedThreadCodexId]
+	}
+
+	func replaceThreads(_ incomingThreads: [Thread]) {
+		var nextThreadsByCodexID = threadsByCodexID
+		for thread in incomingThreads {
+			nextThreadsByCodexID[thread.id] = mergeThread(existing: nextThreadsByCodexID[thread.id], incoming: thread)
+			threadIDsByCodexID[thread.id, default: UUID()] = threadIDsByCodexID[thread.id] ?? UUID()
+		}
+		threadsByCodexID = nextThreadsByCodexID
+		syncThreadsProjection()
+		rebuildProjects()
+	}
+
+	func storeThread(_ thread: Thread, markHydrated: Bool) {
+		threadIDsByCodexID[thread.id, default: UUID()] = threadIDsByCodexID[thread.id] ?? UUID()
+		threadsByCodexID[thread.id] = mergeThread(existing: threadsByCodexID[thread.id], incoming: thread)
+		if markHydrated {
+			detailedThreadCodexIDs.insert(thread.id)
+			lastHydratedAtByThreadCodexID[thread.id] = .now
+		}
+		syncThreadsProjection()
+		rebuildProjects()
+		if selectedThreadCodexId == thread.id {
+			selectedThreadID = threadIDsByCodexID[thread.id]
+			selectProject(forRootPath: thread.cwd)
+		}
+	}
+
+	func storeThreadSession(_ session: CodaxThreadSessionState) {
+		threadSessionsByCodexID[session.threadCodexId] = session
+	}
+
+	func storeTurn(_ turn: Turn, on threadCodexId: String) {
+		updateThread(threadCodexId) { thread in
+			var turns = thread.turns
+			if let index = turns.firstIndex(where: { $0.id == turn.id }) {
+				turns[index] = turn
+			} else {
+				turns.append(turn)
+			}
+			thread.turns = turns
+		}
+		detailedThreadCodexIDs.insert(threadCodexId)
+		lastHydratedAtByThreadCodexID[threadCodexId] = .now
+	}
+
+	func updateThread(_ threadCodexId: String, mutate: (inout Thread) -> Void) {
+		guard var thread = threadsByCodexID[threadCodexId] else { return }
+		mutate(&thread)
+		threadsByCodexID[threadCodexId] = thread
+		syncThreadsProjection()
+		rebuildProjects()
+	}
+
+	func mergeThread(existing: Thread?, incoming: Thread) -> Thread {
+		guard let existing else { return incoming }
+		var merged = incoming
+		if incoming.turns.isEmpty, !existing.turns.isEmpty {
+			merged.turns = existing.turns
+		}
+		return merged
+	}
+
+	func syncThreadsProjection() {
+		threads = threadsByCodexID.values.sorted { lhs, rhs in
+			if lhs.updatedAt == rhs.updatedAt {
+				return lhs.createdAt > rhs.createdAt
+			}
+			return lhs.updatedAt > rhs.updatedAt
+		}
+	}
+
+	func shouldHydrateThreadDetail(codexId: String, maxAge: TimeInterval) -> Bool {
+		guard threadsByCodexID[codexId] != nil else { return true }
+		guard detailedThreadCodexIDs.contains(codexId) else { return true }
+		guard let lastHydratedAt = lastHydratedAtByThreadCodexID[codexId] else { return true }
+		return Date().timeIntervalSince(lastHydratedAt) > maxAge
+	}
+
+	func recentThreadCodexIDs(limit: Int, excluding excludedCodexId: String?) -> [String] {
+		threads
+			.filter { thread in
+				thread.id != excludedCodexId &&
+					threadArchivedStateByCodexID[thread.id] != true &&
+					threadClosedStateByCodexID[thread.id] != true
+			}
+			.prefix(limit)
+			.map(\.id)
+	}
+
+	// MARK: Project State
+
+	func rebuildProjects() {
+		let groupedThreads = Dictionary(grouping: threads) { $0.cwd }
+		projects = groupedThreads
+			.map { rootPath, threads in
+				let projectID = projectIDsByRootPath[rootPath] ?? UUID()
+				projectIDsByRootPath[rootPath] = projectID
+				let name = URL(fileURLWithPath: rootPath).lastPathComponent
+				let updatedAt = threads.map(\.updatedAt).max() ?? 0
+				return CodaxProjectState(
+					id: projectID,
+					name: name.isEmpty ? rootPath : name,
+					rootPath: rootPath,
+					isActive: selectedProjectID == projectID,
+					threadCodexIDs: threads.map(\.id),
+					updatedAt: Date(timeIntervalSince1970: TimeInterval(updatedAt))
+				)
+			}
+			.sorted { lhs, rhs in
+				if lhs.updatedAt == rhs.updatedAt {
+					return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+				}
+				return lhs.updatedAt > rhs.updatedAt
+			}
+
+		if let selectedProjectID, !projects.contains(where: { $0.id == selectedProjectID }) {
+			self.selectedProjectID = projects.first?.id
+		}
+	}
+
+	func selectThreadState(codexId: String) {
+		selectedThreadCodexId = codexId
+		selectedThreadID = threadID(for: codexId)
+		if let thread = threadsByCodexID[codexId] {
+			selectProject(forRootPath: thread.cwd)
+		}
+	}
+
+	func selectProject(forRootPath rootPath: String) {
+		let projectID = projectIDsByRootPath[rootPath] ?? UUID()
+		projectIDsByRootPath[rootPath] = projectID
+		selectedProjectID = projectID
+		for index in projects.indices {
+			projects[index].isActive = projects[index].id == projectID
+		}
+	}
+
+	func threadID(for codexId: String) -> UUID {
+		if let id = threadIDsByCodexID[codexId] {
+			return id
+		}
+		let id = UUID()
+		threadIDsByCodexID[codexId] = id
+		return id
+	}
+
+	// MARK: Server Request State
+
+	func removePendingServerRequest(id: JSONRPCID) {
+		pendingServerRequests.removeAll { $0.id == id }
 	}
 }
 
@@ -713,312 +797,5 @@ private extension Account {
 			case .chatgpt:
 				return .chatgpt
 		}
-	}
-}
-
-// MARK: - SwiftData Persistence
-
-private extension CodaxViewModel {
-	// MARK: Fetching
-
-	func fetchThread(codexId: String) throws -> ThreadModel? {
-		let descriptor = FetchDescriptor<ThreadModel>(
-			predicate: #Predicate<ThreadModel> { $0.codexId == codexId }
-		)
-		return try modelContext.fetch(descriptor).first
-	}
-
-	// MARK: Project Persistence
-
-	func fetchTurn(codexId: String, on thread: ThreadModel) -> TurnModel? {
-		thread.turns.first(where: { $0.codexId == codexId })
-	}
-
-	func fetchPendingServerRequest(id: JSONRPCID) throws -> PendingServerRequestModel? {
-		let requests = try modelContext.fetch(FetchDescriptor<PendingServerRequestModel>())
-		return requests.first(where: { $0.requestId == id })
-	}
-
-	// MARK: Thread Persistence
-
-	func persistThreadList(_ threads: [Thread]) throws {
-		for thread in threads {
-			let project = ensureProject(rootPath: thread.cwd)
-			let record = ThreadRecord(thread: thread, hydrationState: .summary)
-			let model = try fetchThread(codexId: thread.id) ?? ThreadModel(
-				record: record,
-				project: project
-			)
-			model.project = project
-			if model.modelContext == nil {
-				modelContext.insert(model)
-			}
-			if model.lastHydratedAt != nil {
-				var preserved = record
-				preserved.id = model.id
-				preserved.lastHydratedAt = model.lastHydratedAt
-				preserved.hydrationState = model.hydrationState
-				preserved.isArchived = model.isArchived
-				preserved.isClosed = model.isClosed
-				preserved.tokenUsage = model.tokenUsage
-				model.apply(preserved)
-			} else {
-				model.apply(record)
-			}
-		}
-		try saveIfNeeded()
-	}
-
-	func persistThreadDetail(_ thread: Thread) throws {
-		let project = ensureProject(rootPath: thread.cwd)
-		let record = ThreadRecord(thread: thread, hydrationState: .detail)
-		let model = try fetchThread(codexId: thread.id) ?? ThreadModel(
-			record: record,
-			project: project
-		)
-		model.project = project
-		if model.modelContext == nil {
-			modelContext.insert(model)
-		}
-		model.apply(record)
-		reconcileTurns(thread.turns, on: model)
-		touchProject(for: model)
-		try saveIfNeeded()
-	}
-
-	func persistThreadSession(_ record: ThreadSessionRecord) throws {
-		guard let thread = try fetchThread(codexId: record.threadCodexId) else { return }
-		if let session = thread.session {
-			session.apply(record)
-		} else {
-			let session = ThreadSessionModel(record: record, thread: thread)
-			thread.session = session
-			modelContext.insert(session)
-		}
-		touchProject(for: thread)
-		try saveIfNeeded()
-	}
-
-	func persistGitDiff(_ record: ThreadGitDiffRecord) throws {
-		guard let thread = try fetchThread(codexId: record.threadCodexId) else { return }
-		if let gitDiff = thread.gitDiff {
-			gitDiff.apply(record)
-		} else {
-			let gitDiff = ThreadGitDiffModel(record: record, thread: thread)
-			thread.gitDiff = gitDiff
-			modelContext.insert(gitDiff)
-		}
-		touchProject(for: thread)
-		try saveIfNeeded()
-	}
-
-	func persistTurn(_ turn: Turn, threadCodexId: String) throws {
-		guard let thread = try fetchThread(codexId: threadCodexId) else { return }
-		let sequenceIndex = fetchTurn(codexId: turn.id, on: thread)?.sequenceIndex ?? thread.turns.count
-		let record = TurnRecord(turn: turn, sequenceIndex: sequenceIndex)
-		let model = fetchTurn(codexId: turn.id, on: thread) ?? TurnModel(
-			record: record,
-			thread: thread
-		)
-		if model.modelContext == nil {
-			thread.turns.append(model)
-			modelContext.insert(model)
-		}
-		model.apply(record)
-		reconcileItems(turn.items, on: model)
-		thread.lastHydratedAt = .now
-		thread.hydrationState = .detail
-		touchProject(for: thread)
-		try saveIfNeeded()
-	}
-
-	func persistTurnPlan(_ record: TurnPlanRecord) throws {
-		guard let turn = try fetchTurn(codexId: record.turnCodexId) else { return }
-		if let plan = turn.plan {
-			plan.apply(record)
-		} else {
-			let plan = TurnPlanModel(record: record, turn: turn)
-			turn.plan = plan
-			modelContext.insert(plan)
-		}
-		if let thread = turn.thread {
-			touchProject(for: thread)
-		}
-		try saveIfNeeded()
-	}
-
-	func persistTurnDiff(_ record: TurnDiffRecord) throws {
-		guard let turn = try fetchTurn(codexId: record.turnCodexId) else { return }
-		if let diff = turn.diff {
-			diff.apply(record)
-		} else {
-			let diff = TurnDiffModel(record: record, turn: turn)
-			turn.diff = diff
-			modelContext.insert(diff)
-		}
-		if let thread = turn.thread {
-			touchProject(for: thread)
-		}
-		try saveIfNeeded()
-	}
-
-	func persistPendingServerRequest(_ record: PendingServerRequestRecord) throws {
-		if let request = try fetchPendingServerRequest(id: record.requestId) {
-			request.apply(record)
-		} else {
-			modelContext.insert(PendingServerRequestModel(record: record))
-		}
-		try saveIfNeeded()
-	}
-
-	func resolvePendingServerRequest(id: JSONRPCID) throws {
-		guard let request = try fetchPendingServerRequest(id: id) else { return }
-		modelContext.delete(request)
-		try saveIfNeeded()
-	}
-
-	func clearPendingServerRequests() throws {
-		let requests = try modelContext.fetch(FetchDescriptor<PendingServerRequestModel>())
-		for request in requests {
-			modelContext.delete(request)
-		}
-		try saveIfNeeded()
-	}
-
-	func persistThreadStatus(_ status: ThreadStatus, for threadCodexId: String) throws {
-		guard let thread = try fetchThread(codexId: threadCodexId) else { return }
-		thread.setStatus(status)
-		touchProject(for: thread)
-		try saveIfNeeded()
-	}
-
-	// MARK: Thread Metadata Persistence
-
-	func persistThreadName(_ name: String?, for threadCodexId: String) throws {
-		guard let thread = try fetchThread(codexId: threadCodexId) else { return }
-		thread.name = name
-		touchProject(for: thread)
-		try saveIfNeeded()
-	}
-
-	func persistThreadTokenUsage(_ tokenUsage: ThreadTokenUsage?, for threadCodexId: String) throws {
-		guard let thread = try fetchThread(codexId: threadCodexId) else { return }
-		thread.setTokenUsage(tokenUsage)
-		touchProject(for: thread)
-		try saveIfNeeded()
-	}
-
-	func persistThreadArchived(_ isArchived: Bool, for threadCodexId: String) throws {
-		guard let thread = try fetchThread(codexId: threadCodexId) else { return }
-		thread.setArchived(isArchived)
-		touchProject(for: thread)
-		try saveIfNeeded()
-	}
-
-	func persistThreadClosed(for threadCodexId: String) throws {
-		guard let thread = try fetchThread(codexId: threadCodexId) else { return }
-		thread.setClosed(true)
-		touchProject(for: thread)
-		try saveIfNeeded()
-	}
-
-	// MARK: Hydration Queries
-
-	func shouldHydrateThreadDetail(codexId: String, maxAge: TimeInterval) throws -> Bool {
-		guard let thread = try fetchThread(codexId: codexId) else { return true }
-		guard thread.hydrationState == .detail else { return true }
-		guard let lastHydratedAt = thread.lastHydratedAt else { return true }
-		return Date().timeIntervalSince(lastHydratedAt) > maxAge
-	}
-
-	func recentThreadCodexIDs(limit: Int, excluding excludedCodexId: String?) throws -> [String] {
-		var descriptor = FetchDescriptor<ThreadModel>(
-			sortBy: [SortDescriptor(\ThreadModel.updatedAt, order: .reverse)]
-		)
-		descriptor.fetchLimit = max(limit + (excludedCodexId == nil ? 0 : 1), limit)
-		return try modelContext.fetch(descriptor)
-			.filter { thread in
-				!thread.isArchived && !thread.isClosed && thread.codexId != excludedCodexId
-			}
-			.prefix(limit)
-			.map(\.codexId)
-	}
-
-	// MARK: Persistence Helpers
-
-	func fetchTurn(codexId: String) throws -> TurnModel? {
-		let turns = try modelContext.fetch(FetchDescriptor<TurnModel>())
-		return turns.first(where: { $0.codexId == codexId })
-	}
-
-	func ensureProject(rootPath: String) -> Project {
-		let descriptor = FetchDescriptor<Project>(
-			predicate: #Predicate<Project> { $0.rootPath == rootPath }
-		)
-		if let project = try? modelContext.fetch(descriptor).first {
-			project.activate()
-			return project
-		}
-
-		let name = URL(fileURLWithPath: rootPath).lastPathComponent
-		let project = Project(
-			record: ProjectRecord(
-				name: name.isEmpty ? rootPath : name,
-				rootPath: rootPath,
-				isActive: true
-			)
-		)
-		modelContext.insert(project)
-		return project
-	}
-
-	func reconcileTurns(_ turns: [Turn], on thread: ThreadModel) {
-		let incomingTurnIDs = Set(turns.map(\.id))
-		for (index, turn) in turns.enumerated() {
-			let record = TurnRecord(turn: turn, sequenceIndex: index)
-			let model = fetchTurn(codexId: turn.id, on: thread) ?? TurnModel(
-				record: record,
-				thread: thread
-			)
-			if model.modelContext == nil {
-				thread.turns.append(model)
-				modelContext.insert(model)
-			}
-			model.apply(record)
-			reconcileItems(turn.items, on: model)
-		}
-
-		for storedTurn in thread.turns where !incomingTurnIDs.contains(storedTurn.codexId) {
-			modelContext.delete(storedTurn)
-		}
-	}
-
-	func reconcileItems(_ items: [ThreadItem], on turn: TurnModel) {
-		let existingByPosition = Dictionary(uniqueKeysWithValues: turn.items.map { ($0.position, $0) })
-		let validPositions = Set(items.indices)
-
-		for (position, item) in items.enumerated() {
-			let record = ItemRecord(position: position, item: item)
-			if let existing = existingByPosition[position] {
-				existing.apply(record)
-			} else {
-				let model = ItemModel(record: record, turn: turn)
-				turn.items.append(model)
-				modelContext.insert(model)
-			}
-		}
-
-		for storedItem in turn.items where !validPositions.contains(storedItem.position) {
-			modelContext.delete(storedItem)
-		}
-	}
-
-	func touchProject(for thread: ThreadModel) {
-		thread.project?.activate()
-	}
-
-	func saveIfNeeded() throws {
-		guard modelContext.hasChanges else { return }
-		try modelContext.save()
 	}
 }

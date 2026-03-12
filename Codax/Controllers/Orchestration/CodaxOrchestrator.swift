@@ -11,6 +11,8 @@ import Observation
 @Observable
 final class CodaxOrchestrator {
 
+	typealias CodexId = String
+
 	let runtime = CodexRuntimeCoordinator()
 
 		// MARK: - OBSERVABLE STATE FOR UI GOES HERE
@@ -20,6 +22,7 @@ final class CodaxOrchestrator {
 	var selectedProject: CodaxProject?
 	var selectedProjectThreadListings: [CodaxProjectThreadListing] = []
 	var selectedProjectThread: CodaxProjectThread?
+	var selectedProjectThreadChunks: [CodexId: [Int: CodaxProjectThreadChunk]]
 
 		// MARK: - RAW TYPES
 
@@ -135,70 +138,7 @@ final class CodaxOrchestrator {
 
 }
 
-// MARK: - Supporting Types for UI State
-
-extension CodaxOrchestrator {
-
-	// MARK: Account
-
-	// MARK: Application
-
-	// MARK: Project and Threads
-
-	struct CodaxProject {
-		let listing: CodaxProjectListing
-		var threads: [CodaxProjectThread]
-
-	}
-
-		/// Subset of Project info relevant for listing in the sidebar
-	struct CodaxProjectListing {
-		let id: UUID
-		let path: URL
-		var name: String
-
-	}
-
-		/// A Thread belonging to a Project
-	struct CodaxProjectThread {
-		let listing: CodaxProjectThreadListing
-		var chunks: [CodaxProjectThreadChunk]
-
-	}
-
-		/// Subset of Thread info relevant for listing in the sidebar
-	struct CodaxProjectThreadListing {
-		let codexId: String
-		var cwd: URL
-		var name: String
-
-	}
-
-		/// A paginated chunk of Turns in a Thread suitable for loading in and out as a ThreadView is scrolled
-	struct CodaxProjectThreadChunk {
-		var turns: [CodaxProjectThreadTurn]
-
-	}
-
-	// MARK: Turns
-
-	struct CodaxProjectThreadTurn {
-
-	}
-
-	// MARK: Items
-
-	struct CodaxUserItem {
-
-	}
-
-	struct CodaxAgentItem {
-
-	}
-
-}
-
-// MARK: STARTUP & CODEX INITIALIZATION
+	// MARK: STARTUP & CODEX INITIALIZATION
 
 extension CodaxOrchestrator {
 
@@ -222,5 +162,123 @@ extension CodaxOrchestrator {
 			)
 		)
 	}
+
+}
+
+	// MARK: - SUPPORTING ServerNotification, ServerRequest TYPES FOR UI STATE
+
+extension CodaxOrchestrator {
+
+}
+
+	// MARK: ACTIONABLE SERVER NOTIFICATIONS
+
+extension CodaxOrchestrator {
+
+}
+
+	// MARK: ACTIONABLE SERVER REQUESTS
+
+extension CodaxOrchestrator {
+
+}
+
+	// MARK: - SUPPORTING Project, Thread, Turn, Item TYPES FOR UI STATE
+
+extension CodaxOrchestrator {
+
+		// MARK: Account
+
+	struct UserAccount {
+
+	}
+
+		// MARK: Application
+
+	struct CodaxAppStatus {
+
+	}
+
+		// MARK: Project and Threads
+
+	struct CodaxProject {
+		let listing: CodaxProjectListing
+		var threads: [CodaxProjectThread]
+
+	}
+
+		/// Subset of Project info relevant for listing in the sidebar
+	struct CodaxProjectListing {
+		let id: UUID
+		let path: URL
+		var name: String
+
+	}
+
+		/// A Thread belonging to a Project
+	struct CodaxProjectThread {
+		let listing: CodaxProjectThreadListing
+		var loadedChunks: [CodaxProjectThreadChunk]
+
+		var draftContent: String?
+
+		var hasDraft: Bool = false
+
+	}
+
+		/// Subset of Thread info relevant for listing in the sidebar
+	struct CodaxProjectThreadListing {
+		let codexId: String
+		var cwd: URL
+		var name: String
+		var preview: String
+		var summary: String
+
+		var lastActive: Date?
+
+		var isUnread: Bool = false
+		var isPending: Bool = false
+
+	}
+
+		/// A paginated chunk of Turns in a Thread suitable for loading in and out as a ThreadView is scrolled
+	struct CodaxProjectThreadChunk {
+		var turns: [CodaxProjectThreadTurn]
+
+	}
+
+		// MARK: Turns
+
+	struct CodaxProjectThreadTurn {
+
+	}
+
+		// MARK: Items
+
+	struct CodaxUserItem {
+
+	}
+
+	struct CodaxAgentItem {
+
+	}
+
+}
+
+	// MARK: - HYDRATE: PROJECTS, THREADS, CHUNKS
+
+extension CodaxOrchestrator {
+
+	// MARK: Project Hydration
+
+	// MARK: Thread Hydration
+
+	// MARK: Chunk Hydration
+
+}
+
+	// MARK: - ACTIONS: PROJECTS, THREADS, CHUNKS
+
+extension CodaxOrchestrator {
 
 }

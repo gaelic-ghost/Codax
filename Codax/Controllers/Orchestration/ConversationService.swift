@@ -1,5 +1,23 @@
+import Foundation
+import Observation
+
 /*
- `ThreadViewModel` is the request/response state holder for the Codex app-server thread-management surface plus the colocated feedback upload request. Per the app-server protocol and README, a thread is the top-level conversation primitive that contains turns and items; this surface creates threads, resumes or forks them, reads stored history, lists persisted or loaded threads, mutates archive and metadata state, compacts or rolls back history, and unsubscribes the current connection from thread events. Semantically, each property in this file stores the latest typed result for a single thread-related request so the UI can react to exact protocol outputs without inventing a second domain model.
+ `ConversationService` includes the conversation-summary request/response surface for the Codex app-server. Semantically, this section represents a read-only summary boundary: it asks the server for a typed summary of conversation state and stores the most recent answer verbatim, without synthesizing additional presentation state.
+
+ References:
+ - OpenAI Codex app-server docs: https://developers.openai.com/codex/app-server/#api-overview
+ - OpenAI Codex CLI config reference: https://developers.openai.com/codex/config-reference/
+ - Codex app-server README: https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md
+
+ Properties:
+ - `getConversationSummaryResponse`: Holds the most recent `GetConversationSummaryResponse` returned by `getConversationSummary`. Semantically, this is the latest typed server summary of the requested conversation context.
+
+ Functions:
+ - `getConversationSummary(using:params:)`: Sends the generated `getConversationSummary` request with `GetConversationSummaryParams`, awaits the typed `GetConversationSummaryResponse`, and stores it in `getConversationSummaryResponse`. Semantically, this fetches a server-produced summary projection instead of the full underlying conversation payload.
+ */
+
+/*
+ `ConversationService` includes the thread-management request/response surface for the Codex app-server plus the colocated feedback upload request. Per the app-server protocol and README, a thread is the top-level conversation primitive that contains turns and items; this surface creates threads, resumes or forks them, reads stored history, lists persisted or loaded threads, mutates archive and metadata state, compacts or rolls back history, and unsubscribes the current connection from thread events. Semantically, each property in this section stores the latest typed result for a single thread-related request so the UI can react to exact protocol outputs without inventing a second domain model.
 
  References:
  - OpenAI Codex app-server docs: https://developers.openai.com/codex/app-server/#api-overview
@@ -39,11 +57,38 @@
  - `feedbackUpload(using:params:)`: Sends the generated `feedback/upload` request with `FeedbackUploadParams`, awaits the typed `FeedbackUploadResponse`, and stores it in `feedbackUploadResponse`. Semantically, this submits a feedback report about Codex behavior and preserves the tracking response.
  */
 
-import Foundation
-import Observation
+/*
+ `ConversationService` includes the turn-control request/response surface for the Codex app-server. Per the app-server protocol and README, a turn is one conversational unit inside a thread: it begins with user input, streams item-level execution and model output, and finishes with a final turn status. This section only caches the initial typed responses for turn control requests; the richer live execution details continue to arrive over notifications outside this class.
+
+ References:
+ - OpenAI Codex app-server docs: https://developers.openai.com/codex/app-server/#api-overview
+ - OpenAI Codex CLI config reference: https://developers.openai.com/codex/config-reference/
+ - Codex app-server README: https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md
+
+ Properties:
+ - `turnStartResponse`: Holds the most recent `TurnStartResponse` returned by `turn/start`. Semantically, this is the initial accepted turn payload for a new user message inside a thread.
+ - `turnSteerResponse`: Holds the most recent `TurnSteerResponse` returned by `turn/steer`. Semantically, this is the acknowledgement that additional user input was attached to an already active in-flight turn.
+ - `turnInterruptResponse`: Holds the most recent `TurnInterruptResponse` returned by `turn/interrupt`. Semantically, this is the acknowledgement that cancellation was requested for a running turn.
+
+ Functions:
+ - `turnStart(using:params:)`: Sends the generated `turn/start` request with `TurnStartParams`, awaits the typed `TurnStartResponse`, and stores it in `turnStartResponse`. Semantically, this begins a new turn inside an existing thread and triggers the streamed turn/item lifecycle.
+ - `turnSteer(using:params:)`: Sends the generated `turn/steer` request with `TurnSteerParams`, awaits the typed `TurnSteerResponse`, and stores it in `turnSteerResponse`. Semantically, this injects additional guidance into the currently active turn instead of starting a separate turn.
+ - `turnInterrupt(using:params:)`: Sends the generated `turn/interrupt` request with `TurnInterruptParams`, awaits the typed `TurnInterruptResponse`, and stores it in `turnInterruptResponse`. Semantically, this requests early termination of the active turn so it can finish in an interrupted state.
+ */
 
 @Observable
-final class ThreadViewModel {
+final class ConversationService {
+	// MARK: - Conversation Summary
+
+	var getConversationSummaryResponse: GetConversationSummaryResponse?
+
+	func getConversationSummary(using connection: CodexConnection, params: GetConversationSummaryParams) async throws {
+		let response = try await connection.getConversationSummary(params)
+		getConversationSummaryResponse = response
+	}
+
+	// MARK: - Threads
+
 	var threadStartResponse: ThreadStartResponse?
 	var threadResumeResponse: ThreadResumeResponse?
 	var threadForkResponse: ThreadForkResponse?
@@ -57,7 +102,6 @@ final class ThreadViewModel {
 	var threadListResponse: ThreadListResponse?
 	var threadLoadedListResponse: ThreadLoadedListResponse?
 	var threadReadResponse: ThreadReadResponse?
-
 	var feedbackUploadResponse: FeedbackUploadResponse?
 
 	func threadStart(using connection: CodexConnection, params: ThreadStartParams) async throws {
@@ -128,5 +172,26 @@ final class ThreadViewModel {
 	func feedbackUpload(using connection: CodexConnection, params: FeedbackUploadParams) async throws {
 		let response = try await connection.feedbackUpload(params)
 		feedbackUploadResponse = response
+	}
+
+	// MARK: - Turns
+
+	var turnStartResponse: TurnStartResponse?
+	var turnSteerResponse: TurnSteerResponse?
+	var turnInterruptResponse: TurnInterruptResponse?
+
+	func turnStart(using connection: CodexConnection, params: TurnStartParams) async throws {
+		let response = try await connection.turnStart(params)
+		turnStartResponse = response
+	}
+
+	func turnSteer(using connection: CodexConnection, params: TurnSteerParams) async throws {
+		let response = try await connection.turnSteer(params)
+		turnSteerResponse = response
+	}
+
+	func turnInterrupt(using connection: CodexConnection, params: TurnInterruptParams) async throws {
+		let response = try await connection.turnInterrupt(params)
+		turnInterruptResponse = response
 	}
 }

@@ -1,5 +1,5 @@
 //
-//  ContentView.swift
+//  SidebarProjectsView.swift
 //  Codax
 //
 //  Created by Gale Williams on 3/12/26.
@@ -7,8 +7,8 @@
 
 import SwiftUI
 
-struct ContentView: View {
-
+struct SidebarProjectsView: View {
+	
 		// MARK: Environment
 
 	@Environment(CodaxViewModel.self) private var viewModel
@@ -21,5 +21,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+	SidebarProjectsView()
 }

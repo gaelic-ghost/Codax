@@ -38,7 +38,7 @@ struct CodaxApp: App {
 			NavigationSplitView(
 				columnVisibility: $columnVisibility,
 				preferredCompactColumn: $preferredColumn) {
-					SidebarView()
+					SidebarProjectsView()
 				} content: {
 					ContentView()
 				} detail: {

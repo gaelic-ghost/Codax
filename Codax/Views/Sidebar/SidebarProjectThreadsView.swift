@@ -1,5 +1,5 @@
 //
-//  ContentView.swift
+//  SidebarProjectThreadsView.swift
 //  Codax
 //
 //  Created by Gale Williams on 3/12/26.
@@ -7,10 +7,10 @@
 
 import SwiftUI
 
-struct ContentView: View {
+struct SidebarProjectThreadsView: View {
 
 		// MARK: Environment
-
+	
 	@Environment(CodaxViewModel.self) private var viewModel
 
 		// MARK: View Owned State
@@ -21,5 +21,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    SidebarProjectThreadsView()
 }

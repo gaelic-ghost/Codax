@@ -11,7 +11,12 @@ import SwiftUI
 // MARK: - Detail View (Badge Strip/NavigationStack)
 
 struct DetailView: View {
+
+		// MARK: Environment
+
 	@Environment(CodaxViewModel.self) private var viewModel
+
+		// MARK: View Owned State
 
 
 	var body: some View {

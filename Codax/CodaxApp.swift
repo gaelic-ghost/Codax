@@ -21,14 +21,14 @@ struct CodaxApp: App {
 
 		// MARK: App Level Owned State
 
-	@State private var viewModel: CodaxViewModel
+	@State private var viewModel: CodaxOrchestrator
 	@State private var columnVisibility = NavigationSplitViewVisibility.automatic
 	@State private var preferredColumn = NavigationSplitViewColumn.content
 
 		// MARK: App Initializer
 
 	init() {
-		_viewModel = State(wrappedValue: CodaxViewModel())
+		_viewModel = State(wrappedValue: CodaxOrchestrator())
 	}
 
 		// MARK: App Scenes

@@ -178,9 +178,66 @@ import Foundation
  */
 
 final class ConfigAndToolingService {
-	// MARK: - Apps
+		// MARK: - Apps
 
 	var appsListResponse: AppsListResponse?
+
+		// MARK: - Commands
+
+	var commandExecResponse: CommandExecResponse?
+	var commandExecWriteResponse: CommandExecWriteResponse?
+	var commandExecTerminateResponse: CommandExecTerminateResponse?
+	var commandExecResizeResponse: CommandExecResizeResponse?
+
+		// MARK: - Config
+
+	var configReadResponse: ConfigReadResponse?
+	var configRequirementsReadResponse: ConfigRequirementsReadResponse?
+	var configWriteResponse: ConfigWriteResponse?
+
+	// MARK: - External Agent Config
+
+	var externalAgentConfigDetectResponse: ExternalAgentConfigDetectResponse?
+	var externalAgentConfigImportResponse: ExternalAgentConfigImportResponse?
+
+	// MARK: - Fuzzy File Search
+
+	var fuzzyFileSearchResponse: FuzzyFileSearchResponse?
+
+	// MARK: - Git Diff To Remote
+
+	var gitDiffToRemoteResponse: GitDiffToRemoteResponse?
+
+	// MARK: - MCP Servers
+
+	var mcpServerRefreshResponse: McpServerRefreshResponse?
+	var mcpServerOauthLoginResponse: McpServerOauthLoginResponse?
+	var listMcpServerStatusResponse: ListMcpServerStatusResponse?
+
+	// MARK: - Plugins
+
+	var pluginListResponse: PluginListResponse?
+	var pluginInstallResponse: PluginInstallResponse?
+	var pluginUninstallResponse: PluginUninstallResponse?
+
+		// MARK: - Review
+
+	var reviewStartResponse: ReviewStartResponse?
+
+		// MARK: - Skills
+
+	var skillsListResponse: SkillsListResponse?
+	var skillsRemoteReadResponse: SkillsRemoteReadResponse?
+	var skillsRemoteWriteResponse: SkillsRemoteWriteResponse?
+	var skillsConfigWriteResponse: SkillsConfigWriteResponse?
+
+}
+
+	// MARK: INTERNAL METHODS
+
+extension ConfigAndToolingService {
+
+		// MARK: - Apps
 
 	func appList(using connection: CodexConnection, params: AppsListParams) async throws -> AppsListResponse {
 		let response = try await connection.appList(params)
@@ -188,12 +245,7 @@ final class ConfigAndToolingService {
 		return response
 	}
 
-	// MARK: - Commands
-
-	var commandExecResponse: CommandExecResponse?
-	var commandExecWriteResponse: CommandExecWriteResponse?
-	var commandExecTerminateResponse: CommandExecTerminateResponse?
-	var commandExecResizeResponse: CommandExecResizeResponse?
+		// MARK: - Commands
 
 	func commandExec(using connection: CodexConnection, params: CommandExecParams) async throws -> CommandExecResponse {
 		let response = try await connection.commandExec(params)
@@ -219,11 +271,7 @@ final class ConfigAndToolingService {
 		return response
 	}
 
-	// MARK: - Config
-
-	var configReadResponse: ConfigReadResponse?
-	var configRequirementsReadResponse: ConfigRequirementsReadResponse?
-	var configWriteResponse: ConfigWriteResponse?
+		// MARK: - Config
 
 	func configRead(using connection: CodexConnection, params: ConfigReadParams) async throws -> ConfigReadResponse {
 		let response = try await connection.configRead(params)
@@ -249,10 +297,7 @@ final class ConfigAndToolingService {
 		return response
 	}
 
-	// MARK: - External Agent Config
-
-	var externalAgentConfigDetectResponse: ExternalAgentConfigDetectResponse?
-	var externalAgentConfigImportResponse: ExternalAgentConfigImportResponse?
+		// MARK: - External Agent Config
 
 	func externalAgentConfigDetect(using connection: CodexConnection, params: ExternalAgentConfigDetectParams) async throws -> ExternalAgentConfigDetectResponse {
 		let response = try await connection.externalAgentConfigDetect(params)
@@ -266,9 +311,7 @@ final class ConfigAndToolingService {
 		return response
 	}
 
-	// MARK: - Fuzzy File Search
-
-	var fuzzyFileSearchResponse: FuzzyFileSearchResponse?
+		// MARK: - Fuzzy File Search
 
 	func fuzzyFileSearch(using connection: CodexConnection, params: FuzzyFileSearchParams) async throws -> FuzzyFileSearchResponse {
 		let response = try await connection.fuzzyFileSearch(params)
@@ -276,9 +319,7 @@ final class ConfigAndToolingService {
 		return response
 	}
 
-	// MARK: - Git Diff To Remote
-
-	var gitDiffToRemoteResponse: GitDiffToRemoteResponse?
+		// MARK: - Git Diff To Remote
 
 	func gitDiffToRemote(using connection: CodexConnection, params: GitDiffToRemoteParams) async throws -> GitDiffToRemoteResponse {
 		let response = try await connection.gitDiffToRemote(params)
@@ -286,11 +327,7 @@ final class ConfigAndToolingService {
 		return response
 	}
 
-	// MARK: - MCP Servers
-
-	var mcpServerRefreshResponse: McpServerRefreshResponse?
-	var mcpServerOauthLoginResponse: McpServerOauthLoginResponse?
-	var listMcpServerStatusResponse: ListMcpServerStatusResponse?
+		// MARK: - MCP Servers
 
 	func mcpServerOauthLogin(using connection: CodexConnection, params: McpServerOauthLoginParams) async throws -> McpServerOauthLoginResponse {
 		let response = try await connection.mcpServerOauthLogin(params)
@@ -310,11 +347,7 @@ final class ConfigAndToolingService {
 		return response
 	}
 
-	// MARK: - Plugins
-
-	var pluginListResponse: PluginListResponse?
-	var pluginInstallResponse: PluginInstallResponse?
-	var pluginUninstallResponse: PluginUninstallResponse?
+		// MARK: - Plugins
 
 	func pluginList(using connection: CodexConnection, params: PluginListParams) async throws -> PluginListResponse {
 		let response = try await connection.pluginList(params)
@@ -334,9 +367,7 @@ final class ConfigAndToolingService {
 		return response
 	}
 
-	// MARK: - Review
-
-	var reviewStartResponse: ReviewStartResponse?
+		// MARK: - Review
 
 	func reviewStart(using connection: CodexConnection, params: ReviewStartParams) async throws -> ReviewStartResponse {
 		let response = try await connection.reviewStart(params)
@@ -344,12 +375,7 @@ final class ConfigAndToolingService {
 		return response
 	}
 
-	// MARK: - Skills
-
-	var skillsListResponse: SkillsListResponse?
-	var skillsRemoteReadResponse: SkillsRemoteReadResponse?
-	var skillsRemoteWriteResponse: SkillsRemoteWriteResponse?
-	var skillsConfigWriteResponse: SkillsConfigWriteResponse?
+		// MARK: - Skills
 
 	func skillsList(using connection: CodexConnection, params: SkillsListParams) async throws -> SkillsListResponse {
 		let response = try await connection.skillsList(params)
@@ -374,4 +400,6 @@ final class ConfigAndToolingService {
 		skillsConfigWriteResponse = response
 		return response
 	}
+
 }
+

@@ -92,6 +92,30 @@ final class ApplicationService {
 	var getAccountRateLimitsResponse: GetAccountRateLimitsResponse?
 	var getAccountResponse: GetAccountResponse?
 
+		// MARK: - Auth Status
+
+	var getAuthStatusResponse: GetAuthStatusResponse?
+
+		// MARK: - Initialization
+
+	var initializeResponse: InitializeResponse?
+
+		// MARK: - Models
+
+	var modelListResponse: ModelListResponse?
+
+		// MARK: - Experimental Features
+
+	var experimentalFeatureListResponse: ExperimentalFeatureListResponse?
+
+}
+
+	// MARK: INTERNAL METHODS
+
+extension ApplicationService {
+
+		// MARK: - Account
+
 	func accountLoginStart(using connection: CodexConnection, params: LoginAccountParams) async throws -> LoginAccountResponse {
 		let response = try await connection.accountLoginStart(params)
 		loginAccountResponse = response
@@ -122,9 +146,7 @@ final class ApplicationService {
 		return response
 	}
 
-	// MARK: - Auth Status
-
-	var getAuthStatusResponse: GetAuthStatusResponse?
+		// MARK: - Auth Status
 
 	func getAuthStatus(using connection: CodexConnection, params: GetAuthStatusParams) async throws -> GetAuthStatusResponse {
 		let response = try await connection.getAuthStatus(params)
@@ -132,9 +154,7 @@ final class ApplicationService {
 		return response
 	}
 
-	// MARK: - Initialization
-
-	var initializeResponse: InitializeResponse?
+		// MARK: - Initialization
 
 	func initialize(using connection: CodexConnection, params: InitializeParams) async throws -> InitializeResponse {
 		let response = try await connection.initialize(params)
@@ -142,9 +162,7 @@ final class ApplicationService {
 		return response
 	}
 
-	// MARK: - Models
-
-	var modelListResponse: ModelListResponse?
+		// MARK: - Models
 
 	func modelList(using connection: CodexConnection, params: ModelListParams) async throws -> ModelListResponse {
 		let response = try await connection.modelList(params)
@@ -152,13 +170,12 @@ final class ApplicationService {
 		return response
 	}
 
-	// MARK: - Experimental Features
-
-	var experimentalFeatureListResponse: ExperimentalFeatureListResponse?
+		// MARK: - Experimental Features
 
 	func experimentalFeatureList(using connection: CodexConnection, params: ExperimentalFeatureListParams) async throws -> ExperimentalFeatureListResponse {
 		let response = try await connection.experimentalFeatureList(params)
 		experimentalFeatureListResponse = response
 		return response
 	}
+
 }

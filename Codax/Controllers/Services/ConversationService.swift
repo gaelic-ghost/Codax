@@ -76,15 +76,11 @@ import Foundation
  */
 
 final class ConversationService {
+	
 	// MARK: - Conversation Summary
 
 	var getConversationSummaryResponse: GetConversationSummaryResponse?
 
-	func getConversationSummary(using connection: CodexConnection, params: GetConversationSummaryParams) async throws -> GetConversationSummaryResponse {
-		let response = try await connection.getConversationSummary(params)
-		getConversationSummaryResponse = response
-		return response
-	}
 
 	// MARK: - Threads
 
@@ -102,6 +98,29 @@ final class ConversationService {
 	var threadLoadedListResponse: ThreadLoadedListResponse?
 	var threadReadResponse: ThreadReadResponse?
 	var feedbackUploadResponse: FeedbackUploadResponse?
+
+		// MARK: - Turns
+
+	var turnStartResponse: TurnStartResponse?
+	var turnSteerResponse: TurnSteerResponse?
+	var turnInterruptResponse: TurnInterruptResponse?
+
+
+}
+
+	// MARK: INTERNAL METHODS
+
+extension ConversationService {
+
+		// MARK: - Conversation Summary
+
+	func getConversationSummary(using connection: CodexConnection, params: GetConversationSummaryParams) async throws -> GetConversationSummaryResponse {
+		let response = try await connection.getConversationSummary(params)
+		getConversationSummaryResponse = response
+		return response
+	}
+
+		// MARK: - Threads
 
 	func threadStart(using connection: CodexConnection, params: ThreadStartParams) async throws -> ThreadStartResponse {
 		let response = try await connection.threadStart(params)
@@ -187,11 +206,7 @@ final class ConversationService {
 		return response
 	}
 
-	// MARK: - Turns
-
-	var turnStartResponse: TurnStartResponse?
-	var turnSteerResponse: TurnSteerResponse?
-	var turnInterruptResponse: TurnInterruptResponse?
+		// MARK: - Turns
 
 	func turnStart(using connection: CodexConnection, params: TurnStartParams) async throws -> TurnStartResponse {
 		let response = try await connection.turnStart(params)
@@ -210,4 +225,6 @@ final class ConversationService {
 		turnInterruptResponse = response
 		return response
 	}
+
 }
+

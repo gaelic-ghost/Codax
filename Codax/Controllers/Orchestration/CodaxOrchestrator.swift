@@ -10,4 +10,15 @@ import Observation
 @Observable
 final class CodaxOrchestrator {
 
+	let appService = ApplicationService()
+	let configAndTools = ConfigAndToolingService()
+	let convoService = ConversationService()
+	let serverNotifs = ServerNotificationService()
+	let serverReqs = ServerRequestService()
+	let runtime = CodexRuntimeCoordinator()
+
+	init() {
+
+	}
+
 }

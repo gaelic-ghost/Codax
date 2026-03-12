@@ -1,9 +1,13 @@
 import Foundation
 @testable import Codax
 
+// MARK: - Test Errors
+
 struct TestFailure: Error, Sendable, Equatable {
 	let message: String
 }
+
+// MARK: - Async Helpers
 
 func waitForCondition(
 	timeoutNanoseconds: UInt64 = 1_000_000_000,
@@ -19,6 +23,8 @@ func waitForCondition(
 	}
 	throw TestFailure(message: "Timed out waiting for condition.")
 }
+
+// MARK: - Probe Helpers
 
 func makeProbe(
 	versionOutput: CodexCLIProbe.CommandOutput,

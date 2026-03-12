@@ -93,7 +93,7 @@ A few practical expectations:
 - if your change crosses layer boundaries, explain why that boundary shift is necessary
 - keep docs aligned with current roadmap milestones, layer boundaries, and schema-version framing
 - if you change `codex-schemas` or either generator script, regenerate the checked-in connection surface before build/test
-- if you change the durable projection mapping, keep the `@Query` views, `CodaxPersistenceBridge`, and SwiftData models aligned in the same pass
+- if you change the durable projection mapping, keep the `@Query` views, `CodaxViewModel`, and SwiftData models aligned in the same pass
 - treat accessibility regressions, protocol drift, and untested behavior changes as high-risk
 
 ## Checks Before Opening a PR

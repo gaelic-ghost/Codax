@@ -19,7 +19,7 @@
 - [x] generated connection-owned Swift representation for every exported schema in `codex-schemas/v0.114.0`
 - [x] connection schema verification gate via `node Tools/update_connection_schema_progress.js --verify`
 - [x] generated schema output ignored in `.gitignore`
-- [x] dedicated `CodaxPersistenceBridge` as the only app-side SwiftData writer
+- [x] SwiftData-backed durable thread and project persistence wired directly into the app-state layer
 - [x] `@Query`-backed thread list and selected-thread reads in SwiftUI
 - [x] selected-plus-recent thread hydration policy with durable summary/detail reconciliation
 - [x] project-rooted sidebar navigation with a sidebar-local `NavigationStack` and project-scoped thread lists

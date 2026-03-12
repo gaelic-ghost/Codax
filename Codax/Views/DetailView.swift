@@ -57,14 +57,66 @@ struct DetailView: View {
 	@Binding var inspectorPath: [DetailInspectorRoute]
 
 	var body: some View {
-		SelectedThreadStoreView(selectedThreadCodexId: viewModel.selectedThreadCodexId) { thread in
-				NavigationStack(path: $inspectorPath) {
-					DetailInspectorRail(thread: thread)
-						.navigationTitle("Inspector")
-						.navigationDestination(for: DetailInspectorRoute.self) { route in
-							DetailInspectorPanel(route: route, thread: thread)
-						}
-			}
+		SelectedThreadInspector(
+			selectedThreadCodexId: viewModel.selectedThreadCodexId,
+			inspectorPath: $inspectorPath
+		)
+	}
+}
+
+// MARK: - Selected Thread Inspector
+
+private struct SelectedThreadInspector: View {
+	@Binding var inspectorPath: [DetailInspectorRoute]
+	@Query private var threads: [ThreadModel]
+	@Query(sort: [SortDescriptor(\PendingServerRequestModel.updatedAt, order: .reverse)]) private var pendingRequests: [PendingServerRequestModel]
+
+	init(
+		selectedThreadCodexId: String?,
+		inspectorPath: Binding<[DetailInspectorRoute]>
+	) {
+		_inspectorPath = inspectorPath
+		if let selectedThreadCodexId {
+			_threads = Query(
+				filter: #Predicate<ThreadModel> { thread in
+					thread.codexId == selectedThreadCodexId
+				}
+			)
+		} else {
+			_threads = Query(
+				filter: #Predicate<ThreadModel> { _ in
+					false
+				}
+			)
+		}
+	}
+
+	var body: some View {
+		let thread = threads.first
+		let visiblePendingRequests = pendingRequests.filter { request in
+			guard let thread else { return request.threadCodexId == nil }
+			return request.threadCodexId == nil || request.threadCodexId == thread.codexId
+		}
+
+		NavigationStack(path: $inspectorPath) {
+			DetailInspectorRail(thread: thread, pendingRequests: visiblePendingRequests)
+				.navigationTitle("Inspector")
+				.navigationDestination(for: DetailInspectorRoute.self) { route in
+					DetailInspectorPanel(route: route, thread: thread, pendingRequests: visiblePendingRequests)
+				}
+		}
+	}
+}
+
+// MARK: - Detail View Helpers
+
+private func gitDiffLineCounts(_ diff: String) -> (added: Int, removed: Int) {
+	diff.split(whereSeparator: \.isNewline).reduce(into: (added: 0, removed: 0)) { counts, line in
+		guard let first = line.first else { return }
+		if first == "+", !line.hasPrefix("+++") {
+			counts.added += 1
+		} else if first == "-", !line.hasPrefix("---") {
+			counts.removed += 1
 		}
 	}
 }
@@ -75,6 +127,7 @@ private struct DetailInspectorRail: View {
 	@Environment(CodaxViewModel.self) private var viewModel
 
 	let thread: ThreadModel?
+	let pendingRequests: [PendingServerRequestModel]
 
 	var body: some View {
 		List {
@@ -102,19 +155,23 @@ private struct DetailInspectorRail: View {
 	private func badgeText(for route: DetailInspectorRoute) -> String? {
 		switch route {
 		case .tokenUsage:
-			let totalTokens = viewModel.activeThreadTokenUsage?.total.totalTokens ?? thread?.tokenUsage?.total.totalTokens
+			let totalTokens = thread?.tokenUsage?.total.totalTokens
 			return totalTokens.map { "\($0)" }
 		case .reasoningEffort:
-			return viewModel.activeThreadSessionConfiguration?.reasoningEffort.map(reasoningLabel)
+			return thread?.session?.reasoningEffort.map(reasoningLabel)
 		case .gitSummary:
-			if let summary = viewModel.activeGitSummary {
-				return summary.isRefreshing ? "…" : "\(summary.addedLineCount + summary.removedLineCount)"
+			if viewModel.isRefreshingSelectedGitDiff {
+				return "…"
+			}
+			if let response = thread?.gitDiff?.response {
+				let lineCounts = gitDiffLineCounts(response.diff)
+				return "\(lineCounts.added + lineCounts.removed)"
 			}
 			return thread?.gitInfo?.branch
 		case .permissions:
-			return viewModel.activeThreadSessionConfiguration?.approvalPolicy.map(approvalLabel) ?? "?"
+			return thread?.session.map { approvalLabel($0.approvalPolicy) } ?? "?"
 		case .pendingRequests:
-			return viewModel.pendingUserRequests.isEmpty ? nil : "\(viewModel.pendingUserRequests.count)"
+			return pendingRequests.isEmpty ? nil : "\(pendingRequests.count)"
 		}
 	}
 
@@ -158,6 +215,7 @@ private struct DetailInspectorPanel: View {
 
 	let route: DetailInspectorRoute
 	let thread: ThreadModel?
+	let pendingRequests: [PendingServerRequestModel]
 
 	var body: some View {
 		List {
@@ -179,7 +237,7 @@ private struct DetailInspectorPanel: View {
 
 	@ViewBuilder
 	private var tokenUsagePanel: some View {
-		let usage = viewModel.activeThreadTokenUsage ?? thread?.tokenUsage
+		let usage = thread?.tokenUsage
 		if let usage {
 			Section("Overall") {
 				VStack(alignment: .leading, spacing: 12) {
@@ -205,9 +263,9 @@ private struct DetailInspectorPanel: View {
 
 	@ViewBuilder
 	private var reasoningPanel: some View {
-		if let configuration = viewModel.activeThreadSessionConfiguration {
+		if let reasoningEffort = thread?.session?.reasoningEffort {
 			Section("Session") {
-				LabeledContent("Reasoning", value: configuration.reasoningEffort?.rawValue ?? "Unknown")
+				LabeledContent("Reasoning", value: reasoningEffort.rawValue)
 			}
 		} else {
 			unavailableSection("Reasoning effort is not available for this thread session.")
@@ -216,31 +274,40 @@ private struct DetailInspectorPanel: View {
 
 	@ViewBuilder
 	private var gitPanel: some View {
-		if let gitInfo = thread?.gitInfo ?? viewModel.activeGitSummary.map({ GitInfo(sha: $0.sha, branch: $0.branch, originUrl: $0.originURL) }) {
+		if let gitInfo = thread?.gitInfo {
 			Section("Repository") {
 				LabeledContent("Branch", value: gitInfo.branch ?? "Unknown")
-				LabeledContent("HEAD", value: gitInfo.sha ?? "Unknown")
+				LabeledContent("HEAD", value: thread?.gitDiff?.response?.sha ?? gitInfo.sha ?? "Unknown")
 				LabeledContent("Remote", value: gitInfo.originUrl ?? "Unknown")
 			}
 		}
 
-		if let summary = viewModel.activeGitSummary {
+		if let response = thread?.gitDiff?.response {
+			let lineCounts = gitDiffLineCounts(response.diff)
 			Section("Diff") {
-				LabeledContent("Added", value: "+\(summary.addedLineCount)")
-				LabeledContent("Removed", value: "-\(summary.removedLineCount)")
-				if summary.isRefreshing {
+				LabeledContent("Added", value: "+\(lineCounts.added)")
+				LabeledContent("Removed", value: "-\(lineCounts.removed)")
+				if viewModel.isRefreshingSelectedGitDiff {
 					Text("Refreshing git summary…")
 						.foregroundStyle(.secondary)
 				}
-				if let errorMessage = summary.errorMessage {
+				if let errorMessage = thread?.gitDiff?.errorMessage {
 					Text(errorMessage)
 						.foregroundStyle(.secondary)
 				}
 			}
-		} else if thread?.gitInfo != nil {
+		} else if viewModel.isRefreshingSelectedGitDiff || thread?.gitDiff?.errorMessage != nil || thread?.gitInfo != nil {
 			Section("Diff") {
-				Text("Git diff summary is not available yet.")
-					.foregroundStyle(.secondary)
+				if viewModel.isRefreshingSelectedGitDiff {
+					Text("Refreshing git summary…")
+						.foregroundStyle(.secondary)
+				} else if let errorMessage = thread?.gitDiff?.errorMessage {
+					Text(errorMessage)
+						.foregroundStyle(.secondary)
+				} else {
+					Text("Git diff summary is not available yet.")
+						.foregroundStyle(.secondary)
+				}
 			}
 		} else {
 			unavailableSection("No git metadata is available for the selected thread.")
@@ -249,19 +316,17 @@ private struct DetailInspectorPanel: View {
 
 	@ViewBuilder
 	private var permissionsPanel: some View {
-		if let configuration = viewModel.activeThreadSessionConfiguration {
+		if let session = thread?.session {
 			Section("Approval") {
-				LabeledContent("Mode", value: approvalTitle(configuration.approvalPolicy))
+				LabeledContent("Mode", value: approvalTitle(session.approvalPolicy))
 			}
 
 			Section("Sandbox") {
-				Label(sandboxTitle(configuration.sandboxPolicy), systemImage: sandboxIcon(configuration.sandboxPolicy))
-					.foregroundStyle(sandboxColor(configuration.sandboxPolicy))
-				if let sandboxPolicy = configuration.sandboxPolicy {
-					Text(sandboxSummary(sandboxPolicy))
-						.font(.caption)
-						.foregroundStyle(.secondary)
-				}
+				Label(sandboxTitle(session.sandboxPolicy), systemImage: sandboxIcon(session.sandboxPolicy))
+					.foregroundStyle(sandboxColor(session.sandboxPolicy))
+				Text(sandboxSummary(session.sandboxPolicy))
+					.font(.caption)
+					.foregroundStyle(.secondary)
 			}
 		} else {
 			unavailableSection("Permission details are not available for this thread session.")
@@ -270,14 +335,14 @@ private struct DetailInspectorPanel: View {
 
 	@ViewBuilder
 	private var pendingRequestsPanel: some View {
-		if viewModel.pendingUserRequests.isEmpty {
+		if pendingRequests.isEmpty {
 			unavailableSection("No pending approval or input requests are active right now.")
 		} else {
 			Section("Requests") {
-				ForEach(viewModel.pendingUserRequests) { request in
+				ForEach(pendingRequests) { request in
 					VStack(alignment: .leading, spacing: 4) {
-						Text(request.title)
-						Text(request.summary)
+						Text(requestTitle(request))
+						Text(requestSummary(request))
 							.font(.caption)
 							.foregroundStyle(.secondary)
 					}
@@ -294,8 +359,7 @@ private struct DetailInspectorPanel: View {
 		}
 	}
 
-	private func approvalTitle(_ approvalPolicy: AskForApproval?) -> String {
-		guard let approvalPolicy else { return "Unknown" }
+	private func approvalTitle(_ approvalPolicy: AskForApproval) -> String {
 		switch approvalPolicy {
 		case .untrusted:
 			return "Untrusted"
@@ -310,8 +374,7 @@ private struct DetailInspectorPanel: View {
 		}
 	}
 
-	private func sandboxTitle(_ sandboxPolicy: SandboxPolicy?) -> String {
-		guard let sandboxPolicy else { return "Unknown" }
+	private func sandboxTitle(_ sandboxPolicy: SandboxPolicy) -> String {
 		switch sandboxPolicy {
 		case .dangerFullAccess:
 			return "Full Access"
@@ -337,7 +400,7 @@ private struct DetailInspectorPanel: View {
 		}
 	}
 
-	private func sandboxIcon(_ sandboxPolicy: SandboxPolicy?) -> String {
+	private func sandboxIcon(_ sandboxPolicy: SandboxPolicy) -> String {
 		switch sandboxPolicy {
 		case .dangerFullAccess:
 			return "exclamationmark.triangle.fill"
@@ -347,12 +410,10 @@ private struct DetailInspectorPanel: View {
 			return "shippingbox"
 		case .workspaceWrite:
 			return "folder.badge.gearshape"
-		case nil:
-			return "questionmark.circle"
 		}
 	}
 
-	private func sandboxColor(_ sandboxPolicy: SandboxPolicy?) -> Color {
+	private func sandboxColor(_ sandboxPolicy: SandboxPolicy) -> Color {
 		switch sandboxPolicy {
 		case .dangerFullAccess:
 			return .red
@@ -362,16 +423,22 @@ private struct DetailInspectorPanel: View {
 			return .orange
 		case .workspaceWrite:
 			return .green
-		case nil:
-			return .secondary
 		}
+	}
+
+	private func requestTitle(_ request: PendingServerRequestModel) -> String {
+		request.title
+	}
+
+	private func requestSummary(_ request: PendingServerRequestModel) -> String {
+		request.summary
 	}
 }
 
 // MARK: - Preview
 
 #Preview {
-	let container = try! CodaxPersistenceBridge.makeModelContainer(inMemory: true)
+	let container = try! makeCodaxModelContainer(inMemory: true)
 	DetailView(inspectorPath: .constant([]))
 		.environment(CodaxViewModel(modelContainer: container))
 		.modelContainer(container)

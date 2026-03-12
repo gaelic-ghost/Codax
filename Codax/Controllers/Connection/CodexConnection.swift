@@ -8,9 +8,11 @@
 import AsyncAlgorithms
 import Foundation
 
-	// MARK: - Connection Layer Actor
+// MARK: - Connection Layer Actor
 
 public actor CodexConnection {
+	// MARK: Nested Types
+
 	private final class OneShotReply: Sendable {
 		private let channel = AsyncThrowingChannel<Data, Error>()
 
@@ -59,6 +61,8 @@ public actor CodexConnection {
 	typealias Sleep = @Sendable (UInt64) async throws -> Void
 	typealias Random = @Sendable () -> Double
 
+	// MARK: Dependencies
+
 	let trans: CodexTransport
 	let reqResponder: CodexServerRequestResponder?
 	private let encoder = JSONEncoder()
@@ -67,11 +71,15 @@ public actor CodexConnection {
 	private let sleep: Sleep
 	private let random: Random
 
+	// MARK: State
+
 	private var nextNumericRequestID: Int64 = 0
 	private var pendingRequests: [JSONRPCID: OneShotReply] = [:]
 	private var receiveLoopTask: Task<Void, Never>?
 	private var notificationContinuations: [UUID: AsyncStream<ServerNotificationEnvelope>.Continuation] = [:]
 	private var status: ConnectionStatus = .idle
+
+	// MARK: Initialization
 
 	public init(
 		transport tr: any CodexTransport,
@@ -106,6 +114,8 @@ public actor CodexConnection {
 		self.random = random
 	}
 
+	// MARK: Lifecycle
+
 	public func start() async {
 		guard status == .idle else { return }
 		status = .running
@@ -131,6 +141,8 @@ public actor CodexConnection {
 		fail(pending: pending, with: CodexConnectionError.disconnected)
 		finish(continuations: continuations)
 	}
+
+	// MARK: Outbound Messaging
 
 	internal func _request<Params: Encodable, Result: Decodable>(
 		method: String,
@@ -182,6 +194,8 @@ public actor CodexConnection {
 		try await trans.send(payload)
 	}
 
+	// MARK: Notification Stream
+
 	public func notifications() -> AsyncStream<ServerNotificationEnvelope> {
 		AsyncStream { continuation in
 			let id = UUID()
@@ -202,6 +216,8 @@ public actor CodexConnection {
 // MARK: - Internal Helpers
 
 private extension CodexConnection {
+	// MARK: Notification Continuations
+
 	private func addNotificationContinuation(
 		_ continuation: AsyncStream<ServerNotificationEnvelope>.Continuation,
 		id: UUID
@@ -210,6 +226,8 @@ private extension CodexConnection {
 		notificationContinuations[id] = continuation
 		return false
 	}
+
+	// MARK: Request Sending
 
 	private func requestOnce<Params: Encodable, Result: Decodable>(
 		method: String,
@@ -242,6 +260,8 @@ private extension CodexConnection {
 		return .int(nextNumericRequestID)
 	}
 
+	// MARK: Retry Policy
+
 	private func retryDelayNanos(forAttempt attempt: Int) -> UInt64 {
 		let exponent = min(attempt, 16)
 		let multiplier = UInt64(1 << exponent)
@@ -256,6 +276,8 @@ private extension CodexConnection {
 		let jittered = Double(rawDelay) * jitterMultiplier
 		return min(UInt64(jittered.rounded()), retryConfiguration.maxDelayNanos)
 	}
+
+	// MARK: Receive Loop
 
 	private func runReceiveLoop() async {
 		do {
@@ -286,6 +308,8 @@ private extension CodexConnection {
 		fail(pending: pending, with: error)
 		finish(continuations: continuations)
 	}
+
+	// MARK: Inbound Message Handling
 
 	private func handleInboundMessage(_ message: Data) async throws {
 		guard
@@ -346,6 +370,8 @@ private extension CodexConnection {
 		}
 	}
 
+	// MARK: Server Request Responses
+
 	private func handleServerRequest(_ request: ServerRequestEnvelope) async throws {
 		guard let reqResponder else {
 			try await sendErrorResponse(
@@ -379,8 +405,10 @@ private extension CodexConnection {
 				id: request.id,
 				error: JSONRPCErrorObject(code: -32601, message: "Unhandled server request.")
 			)
-		}
+			}
 	}
+
+	// MARK: Transport Encoding
 
 	private func sendResponse<Result: Encodable>(id: JSONRPCID, result: Result) async throws {
 		let payload = try encoder.encode(JSONRPCResponseEnvelope(id: id, result: result))
@@ -395,6 +423,8 @@ private extension CodexConnection {
 	private func rawData(from value: Any) throws -> Data {
 		try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed])
 	}
+
+	// MARK: Pending Requests
 
 	private func completePendingRequest(id: JSONRPCID, with data: Data) async {
 		guard let waiter = pendingRequests.removeValue(forKey: id) else { return }
@@ -412,6 +442,8 @@ private extension CodexConnection {
 		}
 	}
 
+	// MARK: Notification Fan-Out
+
 	private func yield(notification: ServerNotificationEnvelope) {
 		for continuation in notificationContinuations.values {
 			continuation.yield(notification)
@@ -423,6 +455,8 @@ private extension CodexConnection {
 			continuation.finish()
 		}
 	}
+
+	// MARK: Cleanup
 
 	private func removeNotificationContinuation(id: UUID) {
 		notificationContinuations.removeValue(forKey: id)

@@ -12,10 +12,8 @@ It is a runtime-only consumer. It does not own protocol models or call `CodexCon
   - complete typed schema boundary
 - `CodexRuntimeCoordinator`
   - sole app-facing session boundary
-- `CodaxPersistenceBridge`
-  - sole app-side SwiftData writer and durable projection mapper
 - `CodaxViewModel`
-  - app-facing live state projection and pending user-request state
+  - app-facing live state projection, pending user-request state, and the remaining app-side SwiftData writes
 - SwiftUI views
   - presentation plus durable `@Query` reads
 
@@ -26,7 +24,7 @@ What is true now:
 - the connection layer has complete schema coverage
 - runtime constructs `LocalCodexTransport`, injects `CodexConnection`, exposes typed request forwarding, and forwards typed streams
 - the view model consumes runtime only and no longer reaches directly into `CodexConnection`
-- the persistence bridge is the only app-side `ModelContext` owner and writer
+- the view model owns the app-side SwiftData writes that remain for thread and project persistence
 - the view model owns UI projection state, pending login state, pending user-request state, thread selection, transient turn state, alerts, and hydration progress
 - SwiftUI views fetch durable project lists, project-scoped thread lists, and selected-thread detail from SwiftData with `@Query`
 - `loadThreads()` uses `thread/list` to persist thread summaries and `thread/read` to hydrate the selected thread into SwiftData

@@ -9,29 +9,41 @@ import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
-// MARK: - App Shell
+	// MARK: - App Shell
 
 @main
 struct CodaxApp: App {
+
+		// MARK: Delegate & Environment
+
 	@NSApplicationDelegateAdaptor private var appDelegate: CodaxAppDelegate
 	@Environment(\.scenePhase) private var aggScenePhase
-
 	private let modelContainer: ModelContainer
+
+		// MARK: App Level Owned State
+
 	@State private var viewModel: CodaxViewModel
 	@State private var columnVisibility = NavigationSplitViewVisibility.automatic
 	@State private var preferredColumn = NavigationSplitViewColumn.content
-	@State private var sidebarPath: [ProjectSidebarRoute] = []
+	@State private var selectedProjectRootPath: String?
 	@State private var detailInspectorPath: [DetailInspectorRoute] = []
 	@State private var isInspectorVisible = true
 	@State private var isProjectImporterPresented = false
 
+		// MARK: App Initializer
+
 	init() {
-		let modelContainer = try! CodaxPersistenceBridge.makeModelContainer()
+		let modelContainer = try! makeCodaxModelContainer()
 		self.modelContainer = modelContainer
 		_viewModel = State(initialValue: CodaxViewModel(modelContainer: modelContainer))
 	}
 
+		// MARK: - App Scenes
+
 	var body: some Scene {
+
+			// MARK: Primary Window Scene
+
 		Window("Codax", id: "main-window") {
 			NavigationSplitView(
 				columnVisibility: $columnVisibility,
@@ -50,7 +62,7 @@ struct CodaxApp: App {
 							}
 						}
 					),
-					navigationPath: $sidebarPath
+					selectedProjectRootPath: $selectedProjectRootPath
 				)
 				.navigationSplitViewColumnWidth(min: 240, ideal: 280, max: 360)
 			} content: {
@@ -65,6 +77,9 @@ struct CodaxApp: App {
 					)
 			}
 			.navigationSplitViewStyle(.balanced)
+
+			// MARK: Toolbar
+
 			.toolbar {
 				ToolbarItem(placement: .navigation) {
 					Button {
@@ -86,26 +101,27 @@ struct CodaxApp: App {
 					.disabled(viewModel.connectionState != .connected)
 					.keyboardShortcut("N", modifiers: [.command])
 				}
-
-				ToolbarItem(placement: .automatic) {
-					Button {
-						toggleInspector()
-					} label: {
-						Label(
-							isInspectorVisible ? "Hide Inspector" : "Show Inspector",
-							systemImage: "sidebar.right"
-						)
-					}
-				}
 			}
+
+			// MARK: File Importer
+
 			.fileImporter(
 				isPresented: $isProjectImporterPresented,
 				allowedContentTypes: [.folder]
 			) { result in
 				handleProjectImport(result)
 			}
+
+			// MARK: Env & Container Injection
+
 			.environment(viewModel)
 			.modelContainer(modelContainer)
+		}
+
+			// MARK: Settings Scene
+
+		SwiftUI.Settings {
+			SettingsView()
 		}
 	}
 }
@@ -114,7 +130,7 @@ struct CodaxApp: App {
 
 private extension CodaxApp {
 	var currentProjectRootPath: String? {
-		sidebarPath.last?.rootPath
+		selectedProjectRootPath
 	}
 
 	var detailColumn: some View {
@@ -145,12 +161,27 @@ private extension CodaxApp {
 	func handleProjectImport(_ result: Result<URL, Error>) {
 		guard case let .success(url) = result else { return }
 		let rootPath = url.path()
-		viewModel.importProject(rootPath: rootPath)
-		sidebarPath = [
-			ProjectSidebarRoute(
-				rootPath: rootPath,
-				displayName: url.lastPathComponent
+		let context = modelContainer.mainContext
+		let descriptor = FetchDescriptor<Project>(
+			predicate: #Predicate<Project> { $0.rootPath == rootPath }
+		)
+		if let project = try? context.fetch(descriptor).first {
+			project.activate()
+		} else {
+			let name = url.lastPathComponent
+			context.insert(
+				Project(
+					record: ProjectRecord(
+						name: name.isEmpty ? rootPath : name,
+						rootPath: rootPath,
+						isActive: true
+					)
+				)
 			)
-		]
+		}
+		if context.hasChanges {
+			try? context.save()
+		}
+		selectedProjectRootPath = rootPath
 	}
 }

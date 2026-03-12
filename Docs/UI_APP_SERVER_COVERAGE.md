@@ -9,7 +9,7 @@ This tracker covers the user-facing app-server surface in two lanes:
 
 Ownership rules for the current app:
 
-- durable user-facing read models live in SwiftData and are written only through `CodaxPersistenceBridge`
+- durable user-facing read models live in SwiftData; runtime-driven durable changes are persisted in the app-state layer and read in SwiftUI through `@Query`
 - live session state, approvals, pending login, alerts, hydration progress, plan, and diff state stay in `CodaxViewModel`
 - views read durable project and thread state through `@Query` and send user actions upward into the view model
 

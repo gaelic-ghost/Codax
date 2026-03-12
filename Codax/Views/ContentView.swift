@@ -10,72 +10,105 @@ import SwiftData
 
 struct ContentView: View {
 	@Environment(CodaxViewModel.self) private var viewModel
-	@State private var vm = ContentViewModel()
+	@State private var turnInput = ""
 
 	var body: some View {
-		@Bindable var bindableVM = vm
+		SelectedThreadContent(
+			selectedThreadCodexId: viewModel.selectedThreadCodexId,
+			turnInput: $turnInput
+		)
+		.navigationTitle("Session")
+	}
+}
 
-		SelectedThreadStoreView(selectedThreadCodexId: viewModel.selectedThreadCodexId) { thread in
-			VStack(alignment: .leading, spacing: 16) {
-				Text(connectionLabel)
-					.font(.headline)
+// MARK: - Selected Thread Content
 
-				Text(compatibilityDescription)
-					.font(.subheadline)
-					.foregroundStyle(.secondary)
+private struct SelectedThreadContent: View {
+	@Environment(CodaxViewModel.self) private var viewModel
+	@Binding var turnInput: String
+	@Query private var threads: [ThreadModel]
 
-				if let compatibilityDebugInfo = viewModel.compatibilityDebugInfo, !compatibilityDebugInfo.formattedDescription.isEmpty {
-					Text(compatibilityDebugInfo.formattedDescription)
-						.font(.caption.monospaced())
-						.foregroundStyle(.secondary)
-						.textSelection(.enabled)
+	init(
+		selectedThreadCodexId: String?,
+		turnInput: Binding<String>
+	) {
+		_turnInput = turnInput
+		if let selectedThreadCodexId {
+			_threads = Query(
+				filter: #Predicate<ThreadModel> { thread in
+					thread.codexId == selectedThreadCodexId
 				}
-
-					HStack {
-						Button("Connect") {
-							Task {
-								await viewModel.connect()
-							}
-						}
-						.disabled(viewModel.connectionState != .disconnected)
-					}
-
-				Divider()
-
-				Text(activeThreadTitle(thread: thread))
-					.font(.title3)
-
-				if !(thread?.turns.isEmpty ?? true) {
-					Text("Turn history available in the active thread.")
-						.foregroundStyle(.secondary)
-				} else {
-					Text("No turns started yet.")
-						.foregroundStyle(.secondary)
+			)
+		} else {
+			_threads = Query(
+				filter: #Predicate<ThreadModel> { _ in
+					false
 				}
-
-				TextField("Start a turn", text: $bindableVM.turnInput, axis: .vertical)
-					.textFieldStyle(.roundedBorder)
-
-				Button("Send Turn") {
-					Task {
-						let input = bindableVM.turnInput
-						await viewModel.startTurn(inputText: input)
-						guard viewModel.errorState == nil else { return }
-						bindableVM.turnInput = ""
-					}
-				}
-				.disabled(thread == nil || bindableVM.turnInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-
-				if let error = viewModel.errorState {
-					Text(error.message)
-						.foregroundStyle(.red)
-				}
-
-				Spacer()
-			}
-			.padding()
-			.navigationTitle("Session")
+			)
 		}
+	}
+
+	var body: some View {
+		let thread = threads.first
+
+		VStack(alignment: .leading, spacing: 16) {
+			Text(connectionLabel)
+				.font(.headline)
+
+			Text(compatibilityDescription)
+				.font(.subheadline)
+				.foregroundStyle(.secondary)
+
+			if let compatibilityDebugInfo = viewModel.compatibilityDebugInfo, !compatibilityDebugInfo.formattedDescription.isEmpty {
+				Text(compatibilityDebugInfo.formattedDescription)
+					.font(.caption.monospaced())
+					.foregroundStyle(.secondary)
+					.textSelection(.enabled)
+			}
+
+			HStack {
+				Button("Connect") {
+					Task {
+						await viewModel.connect()
+					}
+				}
+				.disabled(viewModel.connectionState != .disconnected)
+			}
+
+			Divider()
+
+			Text(activeThreadTitle(thread: thread))
+				.font(.title3)
+
+			if !(thread?.turns.isEmpty ?? true) {
+				Text("Turn history available in the active thread.")
+					.foregroundStyle(.secondary)
+			} else {
+				Text("No turns started yet.")
+					.foregroundStyle(.secondary)
+			}
+
+			TextField("Start a turn", text: $turnInput, axis: .vertical)
+				.textFieldStyle(.roundedBorder)
+
+			Button("Send Turn") {
+				Task {
+					let input = turnInput
+					await viewModel.startTurn(inputText: input)
+					guard viewModel.errorState == nil else { return }
+					turnInput = ""
+				}
+			}
+			.disabled(thread == nil || turnInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+			if let error = viewModel.errorState {
+				Text(error.message)
+					.foregroundStyle(.red)
+			}
+
+			Spacer()
+		}
+		.padding()
 	}
 
 	private var connectionLabel: String {
@@ -117,7 +150,7 @@ struct ContentView: View {
 }
 
 #Preview {
-	let container = try! CodaxPersistenceBridge.makeModelContainer(inMemory: true)
+	let container = try! makeCodaxModelContainer(inMemory: true)
 	ContentView()
 		.environment(CodaxViewModel(modelContainer: container))
 		.modelContainer(container)

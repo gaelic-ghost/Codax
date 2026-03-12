@@ -44,8 +44,7 @@ The remaining unfinished work is above the connection layer:
 ### Runtime And Above
 
 - `CodexRuntimeCoordinator` is the app-facing session boundary: it starts transport, owns `CodexConnection`, forwards typed streams, and exposes the typed request surface used by the app
-- `CodaxPersistenceBridge` is the only app-side SwiftData writer: it maps runtime types into `Project`, `ThreadModel`, and `TurnModel`, owns hydration policy, and reconciles summary/detail updates
-- `CodaxViewModel` consumes runtime plus the persistence bridge, keeps only live session state, and owns UI-facing pending login, pending approval, elicitation, alerts, and hydration progress
+- `CodaxViewModel` consumes runtime, owns the remaining app-side SwiftData persistence for thread and project state, keeps only live session state, and owns UI-facing pending login, pending approval, elicitation, alerts, and hydration progress
 - SwiftUI views sit above the view model, fetch durable project and thread data from SwiftData with `@Query`, use the view model only for transient state and actions, and route inspector state through the detail-column navigation stack
 
 ## Repository Layout
@@ -57,7 +56,7 @@ The remaining unfinished work is above the connection layer:
 - `Codax/Controllers/Runtime`
   - runtime ownership and stream forwarding
 - `Codax/Controllers/Orchestration`
-  - the `CodaxPersistenceBridge` and `CodaxViewModel` app-state layer
+  - `CodaxViewModel` plus SwiftData container setup
 - `Codax/Views`
   - the current SwiftUI shell, now backed by SwiftData queries for durable thread state
 - `CodaxTests`

@@ -2,6 +2,8 @@ import Foundation
 import Testing
 @testable import Codax
 
+// MARK: - CLI Probe Tests
+
 struct CodexCLIProbeTests {
 	@Test func parsesSupportedVersionsFromPlainOutput() async throws {
 		#expect(

@@ -2,6 +2,8 @@ import Foundation
 import Testing
 @testable import Codax
 
+// MARK: - Connection Server Request Schema Tests
+
 struct ConnectionServerRequestSchemaTests {
 	@Test func fileChangeApprovalParamsDecodeWithTypedIdentifiers() throws {
 		let params = try decode(

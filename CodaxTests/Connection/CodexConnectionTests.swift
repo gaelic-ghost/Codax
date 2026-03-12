@@ -2,6 +2,8 @@ import Foundation
 import Testing
 @testable import Codax
 
+// MARK: - Connection Tests
+
 struct CodexConnectionTests {
 	@Test func generatedSchemaBoundaryDoesNotEmitUndefinedResponseTypes() throws {
 		let generatedFileURL = URL(fileURLWithPath: #filePath)
@@ -71,8 +73,15 @@ struct CodexConnectionTests {
 			try await connection._request(method: "test/second", params: EmptyParams(), as: EchoResult.self)
 		}
 
-		let firstSent = try await waitForSentMessage(at: 0, transport: transport)
-		let secondSent = try await waitForSentMessage(at: 1, transport: transport)
+		let firstObserved = try await waitForSentMessage(at: 0, transport: transport)
+		let secondObserved = try await waitForSentMessage(at: 1, transport: transport)
+		let observedMessages = [firstObserved, secondObserved]
+		let firstSent = try #require(observedMessages.first(where: { message in
+			(try? jsonObject(from: message)["method"] as? String) == "test/first"
+		}))
+		let secondSent = try #require(observedMessages.first(where: { message in
+			(try? jsonObject(from: message)["method"] as? String) == "test/second"
+		}))
 
 		try await transport.enqueueReceive(data: encodedJSONObject([
 			"id": try rawID(from: secondSent),
@@ -415,6 +424,8 @@ struct CodexConnectionTests {
 	}
 }
 
+// MARK: - Test Payloads
+
 private struct EchoParams: Sendable, Codable {
 	let value: String
 }
@@ -425,6 +436,8 @@ private struct EchoResult: Sendable, Codable, Equatable {
 
 private struct EmptyParams: Sendable, Codable {}
 
+// MARK: - Test Responders
+
 private struct TestRequestResponder: CodexServerRequestResponder {
 	let handler: @Sendable (ServerRequestEnvelope) async -> ServerRequestResponse
 
@@ -432,6 +445,8 @@ private struct TestRequestResponder: CodexServerRequestResponder {
 		await handler(request)
 	}
 }
+
+// MARK: - Test Doubles
 
 private actor TestSleeper {
 	private let blockOnSleep: Bool
@@ -515,6 +530,8 @@ private actor TestTransport: CodexTransport {
 		}
 	}
 }
+
+// MARK: - Test Helpers
 
 private func waitForSentMessage(at index: Int, transport: TestTransport) async throws -> Data {
 	try await waitForCondition {

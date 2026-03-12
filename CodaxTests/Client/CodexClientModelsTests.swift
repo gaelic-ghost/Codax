@@ -2,6 +2,8 @@ import Foundation
 import Testing
 @testable import Codax
 
+// MARK: - Connection Schema Model Tests
+
 struct ConnectionSchemaModelTests {
 	@Test func jsonValueRoundTripsArbitraryPayload() throws {
 		let value = try decode(

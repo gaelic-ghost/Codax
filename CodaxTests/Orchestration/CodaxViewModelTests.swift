@@ -3,6 +3,8 @@ import SwiftData
 import Testing
 @testable import Codax
 
+// MARK: - View Model Tests
+
 @MainActor
 struct CodaxViewModelTests {
 	@Test func connectSurfacesUnsupportedStartupCompatibility() async throws {
@@ -31,7 +33,7 @@ struct CodaxViewModelTests {
 				)
 				},
 				initializeParamsFactory: { makeInitializeParams() },
-				persistenceBridge: CodaxPersistenceBridge(modelContainer: modelContainer)
+				modelContainer: modelContainer
 			)
 
 		await viewModel.connect()
@@ -89,12 +91,19 @@ struct CodaxViewModelTests {
 		await viewModel.connect()
 		await viewModel.startThread()
 
-		#expect(viewModel.activeThreadSessionConfiguration?.approvalPolicy == .onRequest)
-		#expect(viewModel.activeThreadSessionConfiguration?.reasoningEffort == .medium)
-		#expect(viewModel.activeGitSummary?.branch == "main")
-		#expect(viewModel.activeGitSummary?.sha == "abc123")
-		#expect(viewModel.activeGitSummary?.addedLineCount == 2)
-		#expect(viewModel.activeGitSummary?.removedLineCount == 1)
+		let fetchedThread = try fetchThread(codexId: "thread-1", from: modelContainer)
+		let persistedThread = try #require(fetchedThread)
+		#expect(persistedThread.session?.approvalPolicy == .onRequest)
+		#expect(persistedThread.session?.reasoningEffort == .medium)
+		#expect(persistedThread.gitDiff?.response?.sha == "abc123")
+		#expect(persistedThread.gitDiff?.response?.diff == """
+			diff --git a/README.md b/README.md
+			--- a/README.md
+			+++ b/README.md
+			+First
+			+Second
+			-Third
+			""")
 		#expect(await transport.sentMethods() == ["initialize", "initialized", "account/read", "thread/list", "thread/start", "gitDiffToRemote"])
 	}
 
@@ -151,6 +160,7 @@ struct CodaxViewModelTests {
 
 		await viewModel.connect()
 		await viewModel.startThread()
+		await viewModel.startTurn(inputText: "Plan test")
 
 		viewModel.handle(
 			.accountUpdated(
@@ -188,11 +198,12 @@ struct CodaxViewModelTests {
 			)
 		)
 
-			#expect(viewModel.authMode == .chatgpt)
-			#expect(viewModel.activeTurnPlan.count == 1)
-			#expect(viewModel.activeTurnDiff == "M ContentView.swift")
-			let persistedThread = try fetchThread(codexId: "thread-1", from: modelContainer)
-			#expect(persistedThread?.status == .active(activeFlags: [.waitingOnApproval]))
+		#expect(viewModel.authMode == .chatgpt)
+		let fetchedThread = try fetchThread(codexId: "thread-1", from: modelContainer)
+		let persistedThread = try #require(fetchedThread)
+		#expect(persistedThread.status == .active(activeFlags: [.waitingOnApproval]))
+		#expect(persistedThread.turns.first?.plan?.steps.count == 1)
+		#expect(persistedThread.turns.first?.diff?.diff == "M ContentView.swift")
 		}
 
 		@Test func serverRequestsBecomePendingUiStateAndResolveByNotification() async throws {
@@ -217,8 +228,10 @@ struct CodaxViewModelTests {
 			)
 		)
 
-		#expect(viewModel.pendingUserRequests.count == 1)
-		#expect(viewModel.pendingUserRequests.first?.title == "Exec command approval")
+		let fetchedRequest = try fetchPendingServerRequest(id: .int(17), from: modelContainer)
+		let pendingRequest = try #require(fetchedRequest)
+		#expect(pendingRequest.payload?.summary == "Need approval")
+		#expect(pendingRequest.requestId == .int(17))
 
 		viewModel.handle(
 			.serverRequestResolved(
@@ -226,7 +239,8 @@ struct CodaxViewModelTests {
 			)
 		)
 
-		#expect(viewModel.pendingUserRequests.isEmpty)
+		let resolvedRequest = try fetchPendingServerRequest(id: .int(17), from: modelContainer)
+		#expect(resolvedRequest == nil)
 	}
 
 	@Test func permissionsApprovalRequestsBecomePendingUiState() async throws {
@@ -258,11 +272,14 @@ struct CodaxViewModelTests {
 			)
 		)
 
-		#expect(viewModel.pendingUserRequests.count == 1)
-		#expect(viewModel.pendingUserRequests.first?.title == "Permissions approval")
-		#expect(viewModel.pendingUserRequests.first?.summary == "Need temporary automation access")
+		let fetchedRequest = try fetchPendingServerRequest(id: .string("request-1"), from: modelContainer)
+		let pendingRequest = try #require(fetchedRequest)
+		#expect(pendingRequest.payload?.summary == "Need temporary automation access")
+		#expect(pendingRequest.requestId == .string("request-1"))
 	}
 }
+
+// MARK: - Test Recorders
 
 private actor RuntimeFactoryRecorder {
 	private var starts = 0
@@ -275,6 +292,8 @@ private actor RuntimeFactoryRecorder {
 		starts
 	}
 }
+
+// MARK: - Test Transport
 
 private actor ViewModelTestTransport: CodexTransport {
 	private var sent: [Data] = []
@@ -468,6 +487,8 @@ private actor ViewModelTestTransport: CodexTransport {
 	}
 }
 
+// MARK: - View Model Factory Helpers
+
 @MainActor
 private func makeConnectedViewModel(
 	transport: ViewModelTestTransport,
@@ -480,7 +501,7 @@ private func makeConnectedViewModel(
 			return makeRuntimeCoordinator(transport: transport)
 		},
 		initializeParamsFactory: { makeInitializeParams() },
-		persistenceBridge: CodaxPersistenceBridge(modelContainer: modelContainer)
+		modelContainer: modelContainer
 	)
 }
 
@@ -511,9 +532,11 @@ private func makeFailingRuntimeCoordinator(error: Error) -> CodexRuntimeCoordina
 	)
 }
 
+// MARK: - Persistence Helpers
+
 @MainActor
 private func makeInMemoryModelContainer() throws -> ModelContainer {
-	try CodaxPersistenceBridge.makeModelContainer(inMemory: true)
+	try makeCodaxModelContainer(inMemory: true)
 }
 
 @MainActor
@@ -524,6 +547,13 @@ private func fetchThread(codexId: String, from modelContainer: ModelContainer) t
 		)
 	).first
 }
+
+@MainActor
+private func fetchPendingServerRequest(id: JSONRPCID, from modelContainer: ModelContainer) throws -> PendingServerRequestModel? {
+	try modelContainer.mainContext.fetch(FetchDescriptor<PendingServerRequestModel>()).first { $0.requestId == id }
+}
+
+// MARK: - Payload Helpers
 
 private func makeInitializeParams() -> InitializeParams {
 	InitializeParams(
@@ -538,6 +568,8 @@ private func makeInitializeParams() -> InitializeParams {
 		)
 	)
 }
+
+// MARK: - JSON Helpers
 
 private func encodedJSONObject(_ object: [String: Any]) throws -> Data {
 	try JSONSerialization.data(withJSONObject: object, options: [.fragmentsAllowed])

@@ -3,6 +3,8 @@ import SwiftData
 import Testing
 @testable import Codax
 
+// MARK: - SwiftData Model Tests
+
 struct CodaxSwiftDataModelTests {
 	@Test func projectInitializerPersistsDefaults() {
 		let project = Project(name: "Codax", rootPath: "/tmp/codax")
@@ -62,18 +64,18 @@ struct CodaxSwiftDataModelTests {
 
 	@Test func turnModelApplyUpdatesStatusItemsAndError() {
 		let original = makeTurn(codexId: "turn-1", text: "Before", status: .inProgress, error: nil)
-		let model = TurnModel(turn: original)
+		let model = TurnModel(turn: original, sequenceIndex: 0)
 		let updated = makeTurn(
 			codexId: "turn-1",
 			text: "After",
-			status: .failed,
+			status: TurnStatus.failed,
 			error: TurnError(message: "Boom", codexErrorInfo: .badRequest, additionalDetails: "details")
 		)
 
-		model.apply(turn: updated)
+		model.apply(turn: updated, sequenceIndex: 0)
 
-		#expect(model.status == .failed)
-		#expect(model.items == updated.items)
+		#expect(model.status == TurnStatus.failed)
+		#expect(model.threadItems == updated.items)
 		#expect(model.error == updated.error)
 	}
 
@@ -84,10 +86,10 @@ struct CodaxSwiftDataModelTests {
 			additionalDetails: "retry later"
 		)
 		let turn = makeTurn(codexId: "turn-1", text: "Hello", status: .completed, error: error)
-		let model = TurnModel(turn: turn)
+		let model = TurnModel(turn: turn, sequenceIndex: 0)
 
 		#expect(model.status == TurnStatus.completed)
-		#expect(model.items == turn.items)
+		#expect(model.threadItems == turn.items)
 		#expect(model.error == error)
 	}
 
@@ -107,8 +109,10 @@ struct CodaxSwiftDataModelTests {
 			)
 		let turn = TurnModel(
 			codexId: "turn-1",
+			sequenceIndex: 0,
 			statusData: Data("not-json".utf8),
-			itemsData: Data("[]".utf8)
+			thread: nil,
+			items: []
 		)
 
 		#expect(thread.status == nil)
@@ -130,6 +134,8 @@ struct CodaxSwiftDataModelTests {
 		#expect(model.isClosed)
 	}
 }
+
+// MARK: - Thread Fixtures
 
 private func makeThread(
 	codexId: String,
@@ -159,6 +165,8 @@ private func makeThread(
 	])
 }
 
+// MARK: - Token Usage Fixtures
+
 private func makeThreadTokenUsage() -> ThreadTokenUsage {
 	try! decode(ThreadTokenUsage.self, from: [
 		"total": [
@@ -178,6 +186,8 @@ private func makeThreadTokenUsage() -> ThreadTokenUsage {
 		"modelContextWindow": 128000,
 	])
 }
+
+// MARK: - Turn Fixtures
 
 private func makeTurn(
 	codexId: String,
@@ -199,6 +209,8 @@ private func makeTurn(
 		"error": try! codexJSONObject(from: error) as Any,
 	])
 }
+
+// MARK: - Encoding Helpers
 
 private func encode<T: Encodable>(_ value: T) -> Data {
 	try! JSONEncoder().encode(value)

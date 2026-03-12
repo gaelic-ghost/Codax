@@ -2,6 +2,8 @@ import Foundation
 import Testing
 @testable import Codax
 
+// MARK: - Runtime Coordinator Tests
+
 struct CodexRuntimeCoordinatorTests {
 	@Test func startReturnsStartupDebugSnapshot() async throws {
 		let transport = RuntimeCoordinatorTestTransport()
@@ -213,6 +215,8 @@ struct CodexRuntimeCoordinatorTests {
 	}
 }
 
+// MARK: - Factory Helpers
+
 private func makeRuntimeCoordinator(
 	transport: RuntimeCoordinatorTestTransport,
 	debugSnapshot: CodexCLIProbe.DebugSnapshot? = nil
@@ -226,6 +230,8 @@ private func makeRuntimeCoordinator(
 		}
 	)
 }
+
+// MARK: - Test Transport
 
 private actor RuntimeCoordinatorTestTransport: CodexTransport {
 	private var sent: [Data] = []
@@ -267,6 +273,8 @@ private actor RuntimeCoordinatorTestTransport: CodexTransport {
 	}
 }
 
+// MARK: - JSON Helpers
+
 private func waitForSentMessage(at index: Int, transport: RuntimeCoordinatorTestTransport) async throws -> Data {
 	for _ in 0..<100 {
 		let messages = await transport.sentMessages()
@@ -289,6 +297,8 @@ private func jsonObject(from data: Data) throws -> [String: Any] {
 	}
 	return object
 }
+
+// MARK: - Payload Fixtures
 
 private func makeThreadPayload(id: String) -> [String: Any] {
 	[

@@ -16,40 +16,46 @@ struct SidebarView: View {
 		sort: [SortDescriptor(\Project.updatedAt, order: .reverse)]
 	) private var projects: [Project]
 	@Binding var selection: String?
-	@Binding var navigationPath: [ProjectSidebarRoute]
+	@Binding var selectedProjectRootPath: String?
 
 	var body: some View {
-		NavigationStack(path: $navigationPath) {
-			List {
-				if let banner = compatibilityBannerText {
-					Section("Compatibility") {
-						Text(banner)
-							.font(.caption)
-					}
+		List {
+			if let banner = compatibilityBannerText {
+				Section("Compatibility") {
+					Text(banner)
+						.font(.caption)
 				}
+			}
 
-				Section("Projects") {
-					if projects.isEmpty {
-						Text("No projects yet")
-							.foregroundStyle(.secondary)
-					} else {
-						ForEach(projects) { project in
-							NavigationLink(value: ProjectSidebarRoute(project: project)) {
-								ProjectRow(project: project)
-							}
+			Section("Projects") {
+				if projects.isEmpty {
+					Text("No projects yet")
+						.foregroundStyle(.secondary)
+				} else {
+					ForEach(projects) { project in
+						Button {
+							selectedProjectRootPath = project.rootPath
+							selection = nil
+						} label: {
+							ProjectRow(
+								project: project,
+								isSelected: selectedProjectRootPath == project.rootPath
+							)
 						}
+						.buttonStyle(.plain)
 					}
 				}
 			}
-			.navigationTitle("Projects")
-			.navigationDestination(for: ProjectSidebarRoute.self) { route in
-					ProjectThreadListScreen(
-						route: route,
-						selection: $selection
-					)
-				}
+
+			if let selectedProjectRootPath {
+				ProjectThreadListScreen(
+					projectRootPath: selectedProjectRootPath,
+					selection: $selection
+				)
 			}
 		}
+		.navigationTitle("Projects")
+	}
 
 	// MARK: Private Helpers
 
@@ -62,27 +68,11 @@ struct SidebarView: View {
 	}
 }
 
-// MARK: - Project Sidebar Route
-
-struct ProjectSidebarRoute: Hashable {
-	let rootPath: String
-	let displayName: String
-
-	init(project: Project) {
-		rootPath = project.rootPath
-		displayName = project.name.isEmpty ? project.rootPath : project.name
-	}
-
-	init(rootPath: String, displayName: String) {
-		self.rootPath = rootPath
-		self.displayName = displayName
-	}
-}
-
 // MARK: - Project Row
 
 private struct ProjectRow: View {
 	let project: Project
+	let isSelected: Bool
 
 	var body: some View {
 		VStack(alignment: .leading, spacing: 2) {
@@ -92,27 +82,45 @@ private struct ProjectRow: View {
 				.foregroundStyle(.secondary)
 				.lineLimit(1)
 		}
+		.frame(maxWidth: .infinity, alignment: .leading)
+		.contentShape(Rectangle())
+		.padding(.vertical, 2)
+		.background(isSelected ? Color.accentColor.opacity(0.14) : Color.clear)
+		.clipShape(RoundedRectangle(cornerRadius: 8))
 	}
 }
 
 // MARK: - Project Thread Screen
 
 private struct ProjectThreadListScreen: View {
-	let route: ProjectSidebarRoute
+	@Query private var projects: [Project]
 	@Binding var selection: String?
 	@State private var sort = ProjectThreadSort.recentFirst
 	@State private var filter = ProjectThreadFilter.activeOnly
 
-	var body: some View {
-		ProjectThreadQueryList(
-			projectRootPath: route.rootPath,
-			selection: $selection,
-			sort: sort,
-			filter: filter
+	init(
+		projectRootPath: String,
+		selection: Binding<String?>
+	) {
+		_selection = selection
+		_projects = Query(
+			filter: #Predicate<Project> { project in
+				project.rootPath == projectRootPath
+			}
 		)
-		.navigationTitle(route.displayName)
-		.toolbar {
-			ToolbarItemGroup {
+	}
+
+	var body: some View {
+		if let project = projects.first {
+			Section(projectTitle(project)) {
+				ProjectThreadQueryList(
+					project: project,
+					selection: $selection,
+					sort: sort,
+					filter: filter
+				)
+			}
+			Section {
 				Menu("View") {
 					Picker("Sort", selection: $sort) {
 						ForEach(ProjectThreadSort.allCases) { sort in
@@ -129,21 +137,26 @@ private struct ProjectThreadListScreen: View {
 			}
 		}
 	}
+
+	private func projectTitle(_ project: Project) -> String {
+		project.name.isEmpty ? project.rootPath : project.name
+	}
 }
 
-// MARK: - Project Thread Query List
+// MARK: - Project Thread Rows
 
 private struct ProjectThreadQueryList: View {
 	@Query private var threads: [ThreadModel]
 	@Binding var selection: String?
 
 	init(
-		projectRootPath: String,
+		project: Project,
 		selection: Binding<String?>,
 		sort: ProjectThreadSort,
 		filter: ProjectThreadFilter
 	) {
 		_selection = selection
+		let projectRootPath = project.rootPath
 		let predicate: Predicate<ThreadModel>
 		if filter == .activeOnly {
 			predicate = #Predicate<ThreadModel> { thread in
@@ -164,15 +177,20 @@ private struct ProjectThreadQueryList: View {
 	}
 
 	var body: some View {
-		List(selection: $selection) {
-			if threads.isEmpty {
-				Text("No matching threads")
-					.foregroundStyle(.secondary)
-			} else {
-				ForEach(threads) { thread in
-					ProjectThreadRow(thread: thread)
-						.tag(thread.codexId)
+		if threads.isEmpty {
+			Text("No matching threads")
+				.foregroundStyle(.secondary)
+		} else {
+			ForEach(threads) { thread in
+				Button {
+					selection = thread.codexId
+				} label: {
+					ProjectThreadRow(
+						thread: thread,
+						isSelected: selection == thread.codexId
+					)
 				}
+				.buttonStyle(.plain)
 			}
 		}
 	}
@@ -182,6 +200,7 @@ private struct ProjectThreadQueryList: View {
 
 private struct ProjectThreadRow: View {
 	let thread: ThreadModel
+	let isSelected: Bool
 
 	var body: some View {
 		VStack(alignment: .leading, spacing: 2) {
@@ -191,6 +210,11 @@ private struct ProjectThreadRow: View {
 				.foregroundStyle(.secondary)
 				.lineLimit(1)
 		}
+		.frame(maxWidth: .infinity, alignment: .leading)
+		.contentShape(Rectangle())
+		.padding(.vertical, 2)
+		.background(isSelected ? Color.accentColor.opacity(0.12) : Color.clear)
+		.clipShape(RoundedRectangle(cornerRadius: 8))
 	}
 
 	private var threadStatusSummary: String {
@@ -244,8 +268,8 @@ private enum ProjectThreadFilter: String, CaseIterable, Identifiable {
 // MARK: - Preview
 
 #Preview {
-	let container = try! CodaxPersistenceBridge.makeModelContainer(inMemory: true)
-	SidebarView(selection: .constant(nil), navigationPath: .constant([]))
+	let container = try! makeCodaxModelContainer(inMemory: true)
+	SidebarView(selection: .constant(nil), selectedProjectRootPath: .constant(nil))
 		.environment(CodaxViewModel(modelContainer: container))
 		.modelContainer(container)
 }

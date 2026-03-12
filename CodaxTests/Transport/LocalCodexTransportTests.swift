@@ -2,6 +2,8 @@ import Foundation
 import Testing
 @testable import Codax
 
+// MARK: - Local Transport Tests
+
 @Suite(.serialized)
 struct LocalCodexTransportTests {
 	@Test func sendAppendsTrailingNewline() async throws {

@@ -44,6 +44,7 @@ struct CodaxApp: App {
 				} detail: {
 					DetailView()
 				}
+				.environment(viewModel)
 		}
 		SwiftUI.Settings {
 			SettingsView()

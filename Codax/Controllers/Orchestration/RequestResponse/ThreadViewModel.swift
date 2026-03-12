@@ -1,17 +1,49 @@
-//
-//  ThreadViewModel.swift
-//  Codax
-//
-//  Created by Gale Williams on 3/12/26.
-//
+/*
+ `ThreadViewModel` is the request/response state holder for the Codex app-server thread-management surface plus the colocated feedback upload request. Per the app-server protocol and README, a thread is the top-level conversation primitive that contains turns and items; this surface creates threads, resumes or forks them, reads stored history, lists persisted or loaded threads, mutates archive and metadata state, compacts or rolls back history, and unsubscribes the current connection from thread events. Semantically, each property in this file stores the latest typed result for a single thread-related request so the UI can react to exact protocol outputs without inventing a second domain model.
+
+ References:
+ - OpenAI Codex app-server docs: https://developers.openai.com/codex/app-server/#api-overview
+ - OpenAI Codex CLI config reference: https://developers.openai.com/codex/config-reference/
+ - Codex app-server README: https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md
+
+ Properties:
+ - `threadStartResponse`: Holds the most recent `ThreadStartResponse` returned by `thread/start`. Semantically, this is the acceptance payload for creating a fresh conversation thread, including the newly opened thread object.
+ - `threadResumeResponse`: Holds the most recent `ThreadResumeResponse` returned by `thread/resume`. Semantically, this is the acceptance payload for reopening an existing stored thread so later turns append to it.
+ - `threadForkResponse`: Holds the most recent `ThreadForkResponse` returned by `thread/fork`. Semantically, this is the result of branching an existing thread into a new thread identity with copied history.
+ - `threadArchiveResponse`: Holds the most recent `ThreadArchiveResponse` returned by `thread/archive`. Semantically, this is the acknowledgement that a thread's rollout was moved into the archived set.
+ - `threadUnsubscribeResponse`: Holds the most recent `ThreadUnsubscribeResponse` returned by `thread/unsubscribe`. Semantically, this captures whether the current connection was unsubscribed, already unsubscribed, or targeting a thread that was not loaded.
+ - `threadSetNameResponse`: Holds the most recent `ThreadSetNameResponse` returned by `thread/name/set`. Semantically, this is the acknowledgement that a user-facing thread name mutation was accepted.
+ - `threadMetadataUpdateResponse`: Holds the most recent `ThreadMetadataUpdateResponse` returned by `thread/metadata/update`. Semantically, this is the refreshed thread payload after persisted metadata such as git information was patched.
+ - `threadUnarchiveResponse`: Holds the most recent `ThreadUnarchiveResponse` returned by `thread/unarchive`. Semantically, this is the restored thread payload after moving an archived rollout back into the active sessions area.
+ - `threadCompactStartResponse`: Holds the most recent `ThreadCompactStartResponse` returned by `thread/compact/start`. Semantically, this is the immediate acknowledgement that conversation compaction work was accepted and will continue through streamed events.
+ - `threadRollbackResponse`: Holds the most recent `ThreadRollbackResponse` returned by `thread/rollback`. Semantically, this is the updated thread payload after pruning the most recent turns from the in-memory and persisted conversation history.
+ - `threadListResponse`: Holds the most recent `ThreadListResponse` returned by `thread/list`. Semantically, this is the latest paginated stored-thread catalog for the requested filters.
+ - `threadLoadedListResponse`: Holds the most recent `ThreadLoadedListResponse` returned by `thread/loaded/list`. Semantically, this is the current list of thread identifiers that are loaded in server memory.
+ - `threadReadResponse`: Holds the most recent `ThreadReadResponse` returned by `thread/read`. Semantically, this is the latest stored thread snapshot fetched without resuming the thread.
+ - `feedbackUploadResponse`: Holds the most recent `FeedbackUploadResponse` returned by `feedback/upload`. Semantically, this is the server acknowledgement and tracking payload for a feedback report submitted from the app.
+
+ Functions:
+ - `threadStart(using:params:)`: Sends the generated `thread/start` request with `ThreadStartParams`, awaits the typed `ThreadStartResponse`, and stores it in `threadStartResponse`. Semantically, this opens a brand-new thread and begins the lifecycle of a fresh Codex conversation.
+ - `threadResume(using:params:)`: Sends the generated `thread/resume` request with `ThreadResumeParams`, awaits the typed `ThreadResumeResponse`, and stores it in `threadResumeResponse`. Semantically, this reattaches the connection to an existing thread so subsequent turn requests continue that conversation.
+ - `threadFork(using:params:)`: Sends the generated `thread/fork` request with `ThreadForkParams`, awaits the typed `ThreadForkResponse`, and stores it in `threadForkResponse`. Semantically, this branches an existing conversation into a new one that starts from copied history.
+ - `threadArchive(using:params:)`: Sends the generated `thread/archive` request with `ThreadArchiveParams`, awaits the typed `ThreadArchiveResponse`, and stores it in `threadArchiveResponse`. Semantically, this archives a thread's persisted rollout.
+ - `threadUnsubscribe(using:params:)`: Sends the generated `thread/unsubscribe` request with `ThreadUnsubscribeParams`, awaits the typed `ThreadUnsubscribeResponse`, and stores it in `threadUnsubscribeResponse`. Semantically, this removes the current connection's live-event subscription for a loaded thread.
+ - `threadNameSet(using:params:)`: Sends the generated `thread/name/set` request with `ThreadSetNameParams`, awaits the typed `ThreadSetNameResponse`, and stores it in `threadSetNameResponse`. Semantically, this writes or updates the human-facing name associated with a thread.
+ - `threadMetadataUpdate(using:params:)`: Sends the generated `thread/metadata/update` request with `ThreadMetadataUpdateParams`, awaits the typed `ThreadMetadataUpdateResponse`, and stores it in `threadMetadataUpdateResponse`. Semantically, this patches persisted metadata fields for a thread without fully resuming it.
+ - `threadUnarchive(using:params:)`: Sends the generated `thread/unarchive` request with `ThreadUnarchiveParams`, awaits the typed `ThreadUnarchiveResponse`, and stores it in `threadUnarchiveResponse`. Semantically, this restores an archived conversation back into the active thread set.
+ - `threadCompactStart(using:params:)`: Sends the generated `thread/compact/start` request with `ThreadCompactStartParams`, awaits the typed `ThreadCompactStartResponse`, and stores it in `threadCompactStartResponse`. Semantically, this requests history compaction while expecting detailed progress to arrive later through streamed notifications.
+ - `threadRollback(using:params:)`: Sends the generated `thread/rollback` request with `ThreadRollbackParams`, awaits the typed `ThreadRollbackResponse`, and stores it in `threadRollbackResponse`. Semantically, this prunes a trailing portion of conversation history and returns the resulting updated thread state.
+ - `threadList(using:params:)`: Sends the generated `thread/list` request with `ThreadListParams`, awaits the typed `ThreadListResponse`, and stores it in `threadListResponse`. Semantically, this paginates through persisted thread history using filters and sort options.
+ - `threadLoadedList(using:params:)`: Sends the generated `thread/loaded/list` request with `ThreadLoadedListParams`, awaits the typed `ThreadLoadedListResponse`, and stores it in `threadLoadedListResponse`. Semantically, this reads the server's current in-memory loaded-thread set.
+ - `threadRead(using:params:)`: Sends the generated `thread/read` request with `ThreadReadParams`, awaits the typed `ThreadReadResponse`, and stores it in `threadReadResponse`. Semantically, this fetches a stored thread snapshot, optionally including full turns, without changing whether the thread is loaded.
+ - `feedbackUpload(using:params:)`: Sends the generated `feedback/upload` request with `FeedbackUploadParams`, awaits the typed `FeedbackUploadResponse`, and stores it in `feedbackUploadResponse`. Semantically, this submits a feedback report about Codex behavior and preserves the tracking response.
+ */
 
 import Foundation
 import Observation
 
 @Observable
 final class ThreadViewModel {
-	// MARK: - State
-
 	var threadStartResponse: ThreadStartResponse?
 	var threadResumeResponse: ThreadResumeResponse?
 	var threadForkResponse: ThreadForkResponse?
@@ -26,11 +58,7 @@ final class ThreadViewModel {
 	var threadLoadedListResponse: ThreadLoadedListResponse?
 	var threadReadResponse: ThreadReadResponse?
 
-	// MARK: Other Related
-
 	var feedbackUploadResponse: FeedbackUploadResponse?
-
-	// MARK: - Requests
 
 	func threadStart(using connection: CodexConnection, params: ThreadStartParams) async throws {
 		let response = try await connection.threadStart(params)

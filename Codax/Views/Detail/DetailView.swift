@@ -24,25 +24,3 @@ struct DetailView: View {
 		)
 	}
 }
-
-// MARK: - Badge Views
-
-struct GitBadgeView: View {
-
-}
-
-struct PermissionsBadgeView: View {
-
-}
-
-struct ReasoningBadgeView: View {
-
-}
-
-struct RequestsBadgeView: View {
-
-}
-
-struct TokensBadgeView: View {
-
-}

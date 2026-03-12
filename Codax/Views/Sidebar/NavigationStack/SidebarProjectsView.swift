@@ -10,7 +10,7 @@ import SwiftUI
 struct SidebarProjectsView: View {
 	// MARK: - Environment
 
-	@Environment(CodaxViewModel.self) private var viewModel
+	@Environment(CodaxOrchestrator.self) private var viewModel
 
 	// MARK: - View Owned State
 
@@ -20,33 +20,14 @@ struct SidebarProjectsView: View {
 
 	var body: some View {
 		NavigationStack {
-			List(viewModel.projects) { project in
-				Button {
-					viewModel.selectedProjectID = project.id
-					selectedProjectID = project.id
-				} label: {
-					VStack(alignment: .leading, spacing: 4) {
-						Text(project.name)
-							.font(.headline)
-						Text(project.rootPath)
-							.font(.caption)
-							.foregroundStyle(.secondary)
-							.lineLimit(1)
-						Text("\(project.threadCodexIDs.count) threads")
-							.font(.caption2)
-							.foregroundStyle(.tertiary)
-					}
-					.frame(maxWidth: .infinity, alignment: .leading)
-					.contentShape(Rectangle())
-				}
-				.buttonStyle(.plain)
+			List(viewModel.projectListings) { projListing in
+				SidebarThreadListing()
 			}
 			.navigationTitle("Projects")
 			.navigationDestination(item: $selectedProjectID) { projectID in
 				SidebarProjectThreadsView(projectID: projectID)
 			}
 			.onAppear {
-				selectedProjectID = viewModel.selectedProjectID
 			}
 		}
 	}

@@ -19,7 +19,7 @@ import Foundation
  - `getConversationSummaryResponse`: Holds the most recent `GetConversationSummaryResponse` returned by `getConversationSummary`. Semantically, this is the latest typed server summary of the requested conversation context.
 
  Functions:
- - `getConversationSummary(using:params:)`: Sends the generated `getConversationSummary` request with `GetConversationSummaryParams`, awaits the typed `GetConversationSummaryResponse`, and stores it in `getConversationSummaryResponse`. Semantically, this fetches a server-produced summary projection instead of the full underlying conversation payload.
+ - `getConversationSummary(params:)`: Sends the generated `getConversationSummary` request with `GetConversationSummaryParams` through the orchestrator-owned runtime, awaits the typed `GetConversationSummaryResponse`, and stores it in `getConversationSummaryResponse`. Semantically, this fetches a server-produced summary projection instead of the full underlying conversation payload.
  */
 
 /*
@@ -41,20 +41,20 @@ import Foundation
  - `feedbackUploadResponse`: Holds the most recent `FeedbackUploadResponse` returned by `feedback/upload`. Semantically, this is the server acknowledgement and tracking payload for a feedback report submitted from the app.
 
  Functions:
- - `threadStart(using:params:)`: Sends the generated `thread/start` request with `ThreadStartParams`, awaits the typed `ThreadStartResponse`, and stores it in `threadStartResponse`. Semantically, this opens a brand-new thread and begins the lifecycle of a fresh Codex conversation.
- - `threadResume(using:params:)`: Sends the generated `thread/resume` request with `ThreadResumeParams`, awaits the typed `ThreadResumeResponse`, and stores it in `threadResumeResponse`. Semantically, this reattaches the connection to an existing thread so subsequent turn requests continue that conversation.
- - `threadFork(using:params:)`: Sends the generated `thread/fork` request with `ThreadForkParams`, awaits the typed `ThreadForkResponse`, and stores it in `threadForkResponse`. Semantically, this branches an existing conversation into a new one that starts from copied history.
- - `threadArchive(using:params:)`: Sends the generated `thread/archive` request with `ThreadArchiveParams`, awaits the typed `ThreadArchiveResponse`, and stores it in `threadArchiveResponse`. Semantically, this archives a thread's persisted rollout.
- - `threadUnsubscribe(using:params:)`: Sends the generated `thread/unsubscribe` request with `ThreadUnsubscribeParams`, awaits the typed `ThreadUnsubscribeResponse`, and stores it in `threadUnsubscribeResponse`. Semantically, this removes the current connection's live-event subscription for a loaded thread.
- - `threadNameSet(using:params:)`: Sends the generated `thread/name/set` request with `ThreadSetNameParams`, awaits the typed `ThreadSetNameResponse`, and stores it in `threadSetNameResponse`. Semantically, this writes or updates the human-facing name associated with a thread.
- - `threadMetadataUpdate(using:params:)`: Sends the generated `thread/metadata/update` request with `ThreadMetadataUpdateParams`, awaits the typed `ThreadMetadataUpdateResponse`, and stores it in `threadMetadataUpdateResponse`. Semantically, this patches persisted metadata fields for a thread without fully resuming it.
- - `threadUnarchive(using:params:)`: Sends the generated `thread/unarchive` request with `ThreadUnarchiveParams`, awaits the typed `ThreadUnarchiveResponse`, and stores it in `threadUnarchiveResponse`. Semantically, this restores an archived conversation back into the active thread set.
- - `threadCompactStart(using:params:)`: Sends the generated `thread/compact/start` request with `ThreadCompactStartParams`, awaits the typed `ThreadCompactStartResponse`, and stores it in `threadCompactStartResponse`. Semantically, this requests history compaction while expecting detailed progress to arrive later through streamed notifications.
- - `threadRollback(using:params:)`: Sends the generated `thread/rollback` request with `ThreadRollbackParams`, awaits the typed `ThreadRollbackResponse`, and stores it in `threadRollbackResponse`. Semantically, this prunes a trailing portion of conversation history and returns the resulting updated thread state.
- - `threadList(using:params:)`: Sends the generated `thread/list` request with `ThreadListParams`, awaits the typed `ThreadListResponse`, and stores it in `threadListResponse`. Semantically, this paginates through persisted thread history using filters and sort options.
- - `threadLoadedList(using:params:)`: Sends the generated `thread/loaded/list` request with `ThreadLoadedListParams`, awaits the typed `ThreadLoadedListResponse`, and stores it in `threadLoadedListResponse`. Semantically, this reads the server's current in-memory loaded-thread set.
- - `threadRead(using:params:)`: Sends the generated `thread/read` request with `ThreadReadParams`, awaits the typed `ThreadReadResponse`, and stores it in `threadReadResponse`. Semantically, this fetches a stored thread snapshot, optionally including full turns, without changing whether the thread is loaded.
- - `feedbackUpload(using:params:)`: Sends the generated `feedback/upload` request with `FeedbackUploadParams`, awaits the typed `FeedbackUploadResponse`, and stores it in `feedbackUploadResponse`. Semantically, this submits a feedback report about Codex behavior and preserves the tracking response.
+ - `threadStart(params:)`: Sends the generated `thread/start` request with `ThreadStartParams` through the orchestrator-owned runtime, awaits the typed `ThreadStartResponse`, and stores it in `threadStartResponse`. Semantically, this opens a brand-new thread and begins the lifecycle of a fresh Codex conversation.
+ - `threadResume(params:)`: Sends the generated `thread/resume` request with `ThreadResumeParams` through the orchestrator-owned runtime, awaits the typed `ThreadResumeResponse`, and stores it in `threadResumeResponse`. Semantically, this reattaches to an existing thread so subsequent turn requests continue that conversation.
+ - `threadFork(params:)`: Sends the generated `thread/fork` request with `ThreadForkParams` through the orchestrator-owned runtime, awaits the typed `ThreadForkResponse`, and stores it in `threadForkResponse`. Semantically, this branches an existing conversation into a new one that starts from copied history.
+ - `threadArchive(params:)`: Sends the generated `thread/archive` request with `ThreadArchiveParams` through the orchestrator-owned runtime, awaits the typed `ThreadArchiveResponse`, and stores it in `threadArchiveResponse`. Semantically, this archives a thread's persisted rollout.
+ - `threadUnsubscribe(params:)`: Sends the generated `thread/unsubscribe` request with `ThreadUnsubscribeParams` through the orchestrator-owned runtime, awaits the typed `ThreadUnsubscribeResponse`, and stores it in `threadUnsubscribeResponse`. Semantically, this removes the active live-event subscription for a loaded thread.
+ - `threadNameSet(params:)`: Sends the generated `thread/name/set` request with `ThreadSetNameParams` through the orchestrator-owned runtime, awaits the typed `ThreadSetNameResponse`, and stores it in `threadSetNameResponse`. Semantically, this writes or updates the human-facing name associated with a thread.
+ - `threadMetadataUpdate(params:)`: Sends the generated `thread/metadata/update` request with `ThreadMetadataUpdateParams` through the orchestrator-owned runtime, awaits the typed `ThreadMetadataUpdateResponse`, and stores it in `threadMetadataUpdateResponse`. Semantically, this patches persisted metadata fields for a thread without fully resuming it.
+ - `threadUnarchive(params:)`: Sends the generated `thread/unarchive` request with `ThreadUnarchiveParams` through the orchestrator-owned runtime, awaits the typed `ThreadUnarchiveResponse`, and stores it in `threadUnarchiveResponse`. Semantically, this restores an archived conversation back into the active thread set.
+ - `threadCompactStart(params:)`: Sends the generated `thread/compact/start` request with `ThreadCompactStartParams` through the orchestrator-owned runtime, awaits the typed `ThreadCompactStartResponse`, and stores it in `threadCompactStartResponse`. Semantically, this requests history compaction while expecting detailed progress to arrive later through streamed notifications.
+ - `threadRollback(params:)`: Sends the generated `thread/rollback` request with `ThreadRollbackParams` through the orchestrator-owned runtime, awaits the typed `ThreadRollbackResponse`, and stores it in `threadRollbackResponse`. Semantically, this prunes a trailing portion of conversation history and returns the resulting updated thread state.
+ - `threadList(params:)`: Sends the generated `thread/list` request with `ThreadListParams` through the orchestrator-owned runtime, awaits the typed `ThreadListResponse`, and stores it in `threadListResponse`. Semantically, this paginates through persisted thread history using filters and sort options.
+ - `threadLoadedList(params:)`: Sends the generated `thread/loaded/list` request with `ThreadLoadedListParams` through the orchestrator-owned runtime, awaits the typed `ThreadLoadedListResponse`, and stores it in `threadLoadedListResponse`. Semantically, this reads the server's current in-memory loaded-thread set.
+ - `threadRead(params:)`: Sends the generated `thread/read` request with `ThreadReadParams` through the orchestrator-owned runtime, awaits the typed `ThreadReadResponse`, and stores it in `threadReadResponse`. Semantically, this fetches a stored thread snapshot, optionally including full turns, without changing whether the thread is loaded.
+ - `feedbackUpload(params:)`: Sends the generated `feedback/upload` request with `FeedbackUploadParams` through the orchestrator-owned runtime, awaits the typed `FeedbackUploadResponse`, and stores it in `feedbackUploadResponse`. Semantically, this submits a feedback report about Codex behavior and preserves the tracking response.
  */
 
 /*
@@ -65,123 +65,123 @@ import Foundation
  - `turnInterruptResponse`: Holds the most recent `TurnInterruptResponse` returned by `turn/interrupt`. Semantically, this is the acknowledgement that cancellation was requested for a running turn.
 
  Functions:
- - `turnStart(using:params:)`: Sends the generated `turn/start` request with `TurnStartParams`, awaits the typed `TurnStartResponse`, and stores it in `turnStartResponse`. Semantically, this begins a new turn inside an existing thread and triggers the streamed turn/item lifecycle.
- - `turnSteer(using:params:)`: Sends the generated `turn/steer` request with `TurnSteerParams`, awaits the typed `TurnSteerResponse`, and stores it in `turnSteerResponse`. Semantically, this injects additional guidance into the currently active turn instead of starting a separate turn.
- - `turnInterrupt(using:params:)`: Sends the generated `turn/interrupt` request with `TurnInterruptParams`, awaits the typed `TurnInterruptResponse`, and stores it in `turnInterruptResponse`. Semantically, this requests early termination of the active turn so it can finish in an interrupted state.
+ - `turnStart(params:)`: Sends the generated `turn/start` request with `TurnStartParams` through the orchestrator-owned runtime, awaits the typed `TurnStartResponse`, and stores it in `turnStartResponse`. Semantically, this begins a new turn inside an existing thread and triggers the streamed turn/item lifecycle.
+ - `turnSteer(params:)`: Sends the generated `turn/steer` request with `TurnSteerParams` through the orchestrator-owned runtime, awaits the typed `TurnSteerResponse`, and stores it in `turnSteerResponse`. Semantically, this injects additional guidance into the currently active turn instead of starting a separate turn.
+ - `turnInterrupt(params:)`: Sends the generated `turn/interrupt` request with `TurnInterruptParams` through the orchestrator-owned runtime, awaits the typed `TurnInterruptResponse`, and stores it in `turnInterruptResponse`. Semantically, this requests early termination of the active turn so it can finish in an interrupted state.
  */
 
 extension CodaxOrchestrator {
 
 		// MARK: - Conversation Summary
 
-	func getConversationSummary(using connection: CodexConnection, params: GetConversationSummaryParams) async throws -> GetConversationSummaryResponse {
-		let response = try await connection.getConversationSummary(params)
+	func getConversationSummary(params: GetConversationSummaryParams) async throws -> GetConversationSummaryResponse {
+		let response = try await runtime.getConversationSummary(params)
 		getConversationSummaryResponse = response
 		return response
 	}
 
 		// MARK: - Threads
 
-	func threadStart(using connection: CodexConnection, params: ThreadStartParams) async throws -> ThreadStartResponse {
-		let response = try await connection.threadStart(params)
+	func threadStart(params: ThreadStartParams) async throws -> ThreadStartResponse {
+		let response = try await runtime.threadStart(params)
 		threadStartResponse = response
 		return response
 	}
 
-	func threadResume(using connection: CodexConnection, params: ThreadResumeParams) async throws -> ThreadResumeResponse {
-		let response = try await connection.threadResume(params)
+	func threadResume(params: ThreadResumeParams) async throws -> ThreadResumeResponse {
+		let response = try await runtime.threadResume(params)
 		threadResumeResponse = response
 		return response
 	}
 
-	func threadFork(using connection: CodexConnection, params: ThreadForkParams) async throws -> ThreadForkResponse {
-		let response = try await connection.threadFork(params)
+	func threadFork(params: ThreadForkParams) async throws -> ThreadForkResponse {
+		let response = try await runtime.threadFork(params)
 		threadForkResponse = response
 		return response
 	}
 
-	func threadArchive(using connection: CodexConnection, params: ThreadArchiveParams) async throws -> ThreadArchiveResponse {
-		let response = try await connection.threadArchive(params)
+	func threadArchive(params: ThreadArchiveParams) async throws -> ThreadArchiveResponse {
+		let response = try await runtime.threadArchive(params)
 		threadArchiveResponse = response
 		return response
 	}
 
-	func threadUnsubscribe(using connection: CodexConnection, params: ThreadUnsubscribeParams) async throws -> ThreadUnsubscribeResponse {
-		let response = try await connection.threadUnsubscribe(params)
+	func threadUnsubscribe(params: ThreadUnsubscribeParams) async throws -> ThreadUnsubscribeResponse {
+		let response = try await runtime.threadUnsubscribe(params)
 		threadUnsubscribeResponse = response
 		return response
 	}
 
-	func threadNameSet(using connection: CodexConnection, params: ThreadSetNameParams) async throws -> ThreadSetNameResponse {
-		let response = try await connection.threadNameSet(params)
+	func threadNameSet(params: ThreadSetNameParams) async throws -> ThreadSetNameResponse {
+		let response = try await runtime.threadNameSet(params)
 		threadSetNameResponse = response
 		return response
 	}
 
-	func threadMetadataUpdate(using connection: CodexConnection, params: ThreadMetadataUpdateParams) async throws -> ThreadMetadataUpdateResponse {
-		let response = try await connection.threadMetadataUpdate(params)
+	func threadMetadataUpdate(params: ThreadMetadataUpdateParams) async throws -> ThreadMetadataUpdateResponse {
+		let response = try await runtime.threadMetadataUpdate(params)
 		threadMetadataUpdateResponse = response
 		return response
 	}
 
-	func threadUnarchive(using connection: CodexConnection, params: ThreadUnarchiveParams) async throws -> ThreadUnarchiveResponse {
-		let response = try await connection.threadUnarchive(params)
+	func threadUnarchive(params: ThreadUnarchiveParams) async throws -> ThreadUnarchiveResponse {
+		let response = try await runtime.threadUnarchive(params)
 		threadUnarchiveResponse = response
 		return response
 	}
 
-	func threadCompactStart(using connection: CodexConnection, params: ThreadCompactStartParams) async throws -> ThreadCompactStartResponse {
-		let response = try await connection.threadCompactStart(params)
+	func threadCompactStart(params: ThreadCompactStartParams) async throws -> ThreadCompactStartResponse {
+		let response = try await runtime.threadCompactStart(params)
 		threadCompactStartResponse = response
 		return response
 	}
 
-	func threadRollback(using connection: CodexConnection, params: ThreadRollbackParams) async throws -> ThreadRollbackResponse {
-		let response = try await connection.threadRollback(params)
+	func threadRollback(params: ThreadRollbackParams) async throws -> ThreadRollbackResponse {
+		let response = try await runtime.threadRollback(params)
 		threadRollbackResponse = response
 		return response
 	}
 
-	func threadList(using connection: CodexConnection, params: ThreadListParams) async throws -> ThreadListResponse {
-		let response = try await connection.threadList(params)
+	func threadList(params: ThreadListParams) async throws -> ThreadListResponse {
+		let response = try await runtime.threadList(params)
 		threadListResponse = response
 		return response
 	}
 
-	func threadLoadedList(using connection: CodexConnection, params: ThreadLoadedListParams) async throws -> ThreadLoadedListResponse {
-		let response = try await connection.threadLoadedList(params)
+	func threadLoadedList(params: ThreadLoadedListParams) async throws -> ThreadLoadedListResponse {
+		let response = try await runtime.threadLoadedList(params)
 		threadLoadedListResponse = response
 		return response
 	}
 
-	func threadRead(using connection: CodexConnection, params: ThreadReadParams) async throws -> ThreadReadResponse {
-		let response = try await connection.threadRead(params)
+	func threadRead(params: ThreadReadParams) async throws -> ThreadReadResponse {
+		let response = try await runtime.threadRead(params)
 		threadReadResponse = response
 		return response
 	}
 
-	func feedbackUpload(using connection: CodexConnection, params: FeedbackUploadParams) async throws -> FeedbackUploadResponse {
-		let response = try await connection.feedbackUpload(params)
+	func feedbackUpload(params: FeedbackUploadParams) async throws -> FeedbackUploadResponse {
+		let response = try await runtime.feedbackUpload(params)
 		feedbackUploadResponse = response
 		return response
 	}
 
 		// MARK: - Turns
 
-	func turnStart(using connection: CodexConnection, params: TurnStartParams) async throws -> TurnStartResponse {
-		let response = try await connection.turnStart(params)
+	func turnStart(params: TurnStartParams) async throws -> TurnStartResponse {
+		let response = try await runtime.turnStart(params)
 		turnStartResponse = response
 		return response
 	}
 
-	func turnSteer(using connection: CodexConnection, params: TurnSteerParams) async throws -> TurnSteerResponse {
-		let response = try await connection.turnSteer(params)
+	func turnSteer(params: TurnSteerParams) async throws -> TurnSteerResponse {
+		let response = try await runtime.turnSteer(params)
 		turnSteerResponse = response
 		return response
 	}
 
-	func turnInterrupt(using connection: CodexConnection, params: TurnInterruptParams) async throws -> TurnInterruptResponse {
-		let response = try await connection.turnInterrupt(params)
+	func turnInterrupt(params: TurnInterruptParams) async throws -> TurnInterruptResponse {
+		let response = try await runtime.turnInterrupt(params)
 		turnInterruptResponse = response
 		return response
 	}

@@ -7,9 +7,11 @@
 
 import Foundation
 
-// MARK: Runtime Coordinator
+// MARK: - Runtime Coordinator
 
 public actor CodexRuntimeCoordinator {
+	// MARK: Nested Types
+
 	public struct StartupContext: Sendable {
 		public let transport: any CodexTransport
 		public let debugSnapshot: CodexCLIProbe.DebugSnapshot?
@@ -33,13 +35,19 @@ public actor CodexRuntimeCoordinator {
 		}
 	}
 
+	// MARK: Dependencies
+
 	private let transportFactory: TransportFactory
+
+	// MARK: State
 
 	private var activeConnection: CodexConnection?
 	private var notificationTask: Task<Void, Never>?
 	private var notificationContinuations: [UUID: AsyncStream<ServerNotificationEnvelope>.Continuation] = [:]
 	private var serverRequestContinuations: [UUID: AsyncStream<ServerRequestEnvelope>.Continuation] = [:]
 	private var startupDebugSnapshot: CodexCLIProbe.DebugSnapshot?
+
+	// MARK: Initialization
 
 	public init() {
 		self.transportFactory = { arguments in
@@ -54,6 +62,8 @@ public actor CodexRuntimeCoordinator {
 	) {
 		self.transportFactory = transportFactory
 	}
+
+	// MARK: Lifecycle
 
 	public func start(arguments: [String] = []) async throws -> CodexCLIProbe.DebugSnapshot? {
 		guard activeConnection == nil else {
@@ -78,6 +88,8 @@ public actor CodexRuntimeCoordinator {
 	public func stop() async {
 		await shutdownRuntime()
 	}
+
+	// MARK: Event Streams
 
 	public func notifications() -> AsyncStream<ServerNotificationEnvelope> {
 		AsyncStream { continuation in
@@ -113,18 +125,24 @@ public actor CodexRuntimeCoordinator {
 		}
 	}
 
+	// MARK: Diagnostics
+
 	public func startupProbeDebugSnapshot() -> CodexCLIProbe.DebugSnapshot? {
 		startupDebugSnapshot
 	}
 }
 
 extension CodexRuntimeCoordinator {
+	// MARK: Connection Access
+
 	func requireConnection() throws -> CodexConnection {
 		guard let activeConnection else {
 			throw CodexConnectionError.disconnected
 		}
 		return activeConnection
 	}
+
+	// MARK: Notification Forwarding
 
 	func startNotificationForwarding(for connection: CodexConnection) {
 		notificationTask?.cancel()
@@ -144,6 +162,8 @@ extension CodexRuntimeCoordinator {
 	func handleNotificationForwardingEnded() async {
 		await shutdownRuntime()
 	}
+
+	// MARK: Shutdown
 
 	func shutdownRuntime() async {
 		let task = notificationTask
@@ -167,6 +187,8 @@ extension CodexRuntimeCoordinator {
 		finish(continuations: serverRequestContinuations)
 	}
 
+	// MARK: Continuation Fan-Out
+
 	func yield(notification: ServerNotificationEnvelope) {
 		for continuation in notificationContinuations.values {
 			continuation.yield(notification)
@@ -179,6 +201,8 @@ extension CodexRuntimeCoordinator {
 		}
 	}
 
+	// MARK: Continuation Cleanup
+
 	func removeNotificationContinuation(id: UUID) {
 		notificationContinuations.removeValue(forKey: id)
 	}
@@ -186,6 +210,8 @@ extension CodexRuntimeCoordinator {
 	func removeServerRequestContinuation(id: UUID) {
 		serverRequestContinuations.removeValue(forKey: id)
 	}
+
+	// MARK: Continuation Finalization
 
 	func finish<Element>(continuations: [AsyncStream<Element>.Continuation]) {
 		for continuation in continuations {

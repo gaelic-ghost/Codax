@@ -35,7 +35,11 @@ What is true now:
 - test fixtures and app-state projections have been updated to the schema-owned `id` and source shapes
 - generator-backed connection types come from `node Tools/generate_connection_schema.js`
 - the sidebar is now a sidebar-local `NavigationStack` rooted in SwiftData `Project` rows, with project navigation staying view-local and thread selection continuing to drive the content/detail columns
+- the detail column is now a compact inspector rail that expands into a detail-local `NavigationStack`
+- the app shell now owns toolbar actions for `New Project`, `New Thread`, and inspector visibility
+- the current first-pass inspector surfaces are token usage, reasoning effort, git summary, permissions, and pending requests
+- git summary is app-owned live state derived from durable thread git metadata plus `gitDiffToRemote` line-count parsing, not a dedicated protocol summary field
 
 ## Practical Conclusion
 
-This layer is no longer blocked on the removed client layer or on direct connection reach-through. Its remaining work is not protocol migration; it is richer approval, elicitation, auth-refresh UX, broader durable projections, and broader UI shaping.
+This layer is no longer blocked on the removed client layer or on direct connection reach-through. Its remaining work is not protocol migration; it is richer approval, elicitation, auth-refresh UX, broader durable projections, deferred exec-backed git actions, and broader UI shaping.

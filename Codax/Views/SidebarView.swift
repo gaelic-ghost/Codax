@@ -16,7 +16,7 @@ struct SidebarView: View {
 		sort: [SortDescriptor(\Project.updatedAt, order: .reverse)]
 	) private var projects: [Project]
 	@Binding var selection: String?
-	@State private var navigationPath: [ProjectSidebarRoute] = []
+	@Binding var navigationPath: [ProjectSidebarRoute]
 
 	var body: some View {
 		NavigationStack(path: $navigationPath) {
@@ -43,17 +43,13 @@ struct SidebarView: View {
 			}
 			.navigationTitle("Projects")
 			.navigationDestination(for: ProjectSidebarRoute.self) { route in
-				ProjectThreadListScreen(
-					route: route,
-					selection: $selection
-				) {
-					Task {
-						await viewModel.startThread()
-					}
+					ProjectThreadListScreen(
+						route: route,
+						selection: $selection
+					)
 				}
 			}
 		}
-	}
 
 	// MARK: Private Helpers
 
@@ -68,13 +64,18 @@ struct SidebarView: View {
 
 // MARK: - Project Sidebar Route
 
-private struct ProjectSidebarRoute: Hashable {
+struct ProjectSidebarRoute: Hashable {
 	let rootPath: String
 	let displayName: String
 
 	init(project: Project) {
 		rootPath = project.rootPath
 		displayName = project.name.isEmpty ? project.rootPath : project.name
+	}
+
+	init(rootPath: String, displayName: String) {
+		self.rootPath = rootPath
+		self.displayName = displayName
 	}
 }
 
@@ -99,7 +100,6 @@ private struct ProjectRow: View {
 private struct ProjectThreadListScreen: View {
 	let route: ProjectSidebarRoute
 	@Binding var selection: String?
-	let startThread: @Sendable () -> Void
 	@State private var sort = ProjectThreadSort.recentFirst
 	@State private var filter = ProjectThreadFilter.activeOnly
 
@@ -126,8 +126,6 @@ private struct ProjectThreadListScreen: View {
 						}
 					}
 				}
-
-				Button("New Thread", action: startThread)
 			}
 		}
 	}
@@ -247,7 +245,7 @@ private enum ProjectThreadFilter: String, CaseIterable, Identifiable {
 
 #Preview {
 	let container = try! CodaxPersistenceBridge.makeModelContainer(inMemory: true)
-	SidebarView(selection: .constant(nil))
+	SidebarView(selection: .constant(nil), navigationPath: .constant([]))
 		.environment(CodaxViewModel(modelContainer: container))
 		.modelContainer(container)
 }

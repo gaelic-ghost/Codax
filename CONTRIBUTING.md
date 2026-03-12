@@ -17,6 +17,8 @@ What is already real:
 - a dedicated persistence bridge between runtime types and SwiftData
 - initial compatibility gating for Codex CLI `0.111.x` and `0.112.x`
 - a `NavigationSplitView` shell whose sidebar is a project-rooted `NavigationStack` backed by SwiftData `@Query` reads
+- a compact detail inspector rail backed by a detail-local `NavigationStack`
+- app-shell toolbar actions for project import, thread creation, and inspector visibility
 - layer reports grounded in the current `v0.112.0` schema baseline
 
 What is still early or incomplete:
@@ -101,7 +103,7 @@ xcodebuild -project Codax.xcodeproj -scheme Codax -destination 'platform=macOS' 
 
 The default `Codax` scheme test workflow uses the repo's `Codax.xctestplan`, with target-level parallelization disabled for the `CodaxTests` target.
 
-Current baseline verification is `88` passing tests in `10` suites.
+Current baseline verification is `90` passing tests in `10` suites.
 
 This repo does not currently have documented CI workflows, issue templates, or PR templates. Please do not assume hidden automation is going to catch missing verification for you.
 

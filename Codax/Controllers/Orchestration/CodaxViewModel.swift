@@ -64,6 +64,22 @@ final class CodaxViewModel {
 		}
 	}
 
+	var activeGitSummary: CodaxGitSummaryState? {
+		get { threadSessionState.selectedGitSummary }
+		set {
+			guard let threadCodexId = threadSessionState.selectedThreadCodexId else { return }
+			threadSessionState.setGitSummary(newValue, for: threadCodexId)
+		}
+	}
+
+	var activeThreadSessionConfiguration: CodaxThreadSessionConfiguration? {
+		get { threadSessionState.selectedSessionConfiguration }
+		set {
+			guard let threadCodexId = threadSessionState.selectedThreadCodexId else { return }
+			threadSessionState.setSessionConfiguration(newValue, for: threadCodexId)
+		}
+	}
+
 	private let runtimeFactory: RuntimeFactory
 	private let initializeParamsFactory: InitializeParamsFactory
 	private let persistenceBridge: CodaxPersistenceBridge
@@ -206,22 +222,31 @@ final class CodaxViewModel {
 				return
 			}
 
-			threadSessionState.selectThread(codexId: selectedThreadCodexId)
-			try await hydrateThreadDetail(
-				threadCodexId: selectedThreadCodexId,
-				using: runtimeCoordinator,
-				force: true
-			)
-			startRecentHydration(
-				primaryThreadCodexId: selectedThreadCodexId,
-				using: runtimeCoordinator
-			)
+				threadSessionState.selectThread(codexId: selectedThreadCodexId)
+				try await hydrateThreadDetail(
+					threadCodexId: selectedThreadCodexId,
+					using: runtimeCoordinator,
+					force: true
+				)
+				await refreshSelectedGitSummary(using: runtimeCoordinator)
+				startRecentHydration(
+					primaryThreadCodexId: selectedThreadCodexId,
+					using: runtimeCoordinator
+				)
 		} catch {
 			record(error)
 		}
 	}
 
-	func startThread() async {
+	func importProject(rootPath: String) {
+		do {
+			_ = try persistenceBridge.persistProject(rootPath: rootPath)
+		} catch {
+			record(error)
+		}
+	}
+
+	func startThread(cwd: String? = nil) async {
 		guard connectionState == .connected, let runtimeCoordinator else { return }
 		errorState = nil
 
@@ -231,7 +256,7 @@ final class CodaxViewModel {
 					model: nil,
 					modelProvider: nil,
 					serviceTier: nil,
-					cwd: nil,
+						cwd: cwd,
 					approvalPolicy: nil,
 					sandbox: nil,
 					config: nil,
@@ -243,10 +268,19 @@ final class CodaxViewModel {
 					experimentalRawEvents: false,
 					persistExtendedHistory: false
 					)
-				)
+			)
 			try persistenceBridge.persistThreadDetail(response.thread)
 			threadSessionState.selectThread(codexId: response.thread.id)
 			threadSessionState.clearSelectedTransientState()
+			threadSessionState.setSessionConfiguration(
+				CodaxThreadSessionConfiguration(
+					approvalPolicy: response.approvalPolicy,
+					sandboxPolicy: response.sandbox,
+					reasoningEffort: response.reasoningEffort
+				),
+				for: response.thread.id
+			)
+			await refreshGitSummary(for: response.thread, using: runtimeCoordinator)
 		} catch {
 			record(error)
 		}
@@ -293,6 +327,7 @@ final class CodaxViewModel {
 				using: runtimeCoordinator,
 				force: false
 			)
+			await refreshSelectedGitSummary(using: runtimeCoordinator)
 		} catch {
 			record(error)
 		}
@@ -448,6 +483,122 @@ private extension CodaxViewModel {
 				await MainActor.run {
 					self.record(error)
 				}
+			}
+		}
+	}
+
+	func refreshSelectedGitSummary(using runtimeCoordinator: CodexRuntimeCoordinator) async {
+		guard
+			let threadCodexId = threadSessionState.selectedThreadCodexId,
+			let thread = try? persistenceBridge.fetchThread(codexId: threadCodexId)
+		else {
+			return
+		}
+		await refreshGitSummary(for: thread, using: runtimeCoordinator)
+	}
+
+	func refreshGitSummary(for thread: ThreadModel, using runtimeCoordinator: CodexRuntimeCoordinator) async {
+		let existingInfo = thread.gitInfo
+		threadSessionState.setGitSummary(
+			CodaxGitSummaryState(
+				branch: existingInfo?.branch,
+				sha: existingInfo?.sha,
+				originURL: existingInfo?.originUrl,
+				addedLineCount: 0,
+				removedLineCount: 0,
+				isRefreshing: true,
+				errorMessage: nil
+			),
+			for: thread.codexId
+		)
+
+		do {
+			let response = try await runtimeCoordinator.gitDiffToRemote(
+				GitDiffToRemoteParams(cwd: thread.cwd)
+			)
+			let lineCounts = parseGitDiffLineCounts(response.diff)
+			threadSessionState.setGitSummary(
+				CodaxGitSummaryState(
+					branch: existingInfo?.branch,
+					sha: response.sha,
+					originURL: existingInfo?.originUrl,
+					addedLineCount: lineCounts.added,
+					removedLineCount: lineCounts.removed,
+					isRefreshing: false,
+					errorMessage: nil
+				),
+				for: thread.codexId
+			)
+		} catch {
+			threadSessionState.setGitSummary(
+				CodaxGitSummaryState(
+					branch: existingInfo?.branch,
+					sha: existingInfo?.sha,
+					originURL: existingInfo?.originUrl,
+					addedLineCount: 0,
+					removedLineCount: 0,
+					isRefreshing: false,
+					errorMessage: error.localizedDescription
+				),
+				for: thread.codexId
+			)
+		}
+	}
+
+	func refreshGitSummary(for thread: Thread, using runtimeCoordinator: CodexRuntimeCoordinator) async {
+		threadSessionState.setGitSummary(
+			CodaxGitSummaryState(
+				branch: thread.gitInfo?.branch,
+				sha: thread.gitInfo?.sha,
+				originURL: thread.gitInfo?.originUrl,
+				addedLineCount: 0,
+				removedLineCount: 0,
+				isRefreshing: true,
+				errorMessage: nil
+			),
+			for: thread.id
+		)
+
+		do {
+			let response = try await runtimeCoordinator.gitDiffToRemote(
+				GitDiffToRemoteParams(cwd: thread.cwd)
+			)
+			let lineCounts = parseGitDiffLineCounts(response.diff)
+			threadSessionState.setGitSummary(
+				CodaxGitSummaryState(
+					branch: thread.gitInfo?.branch,
+					sha: response.sha,
+					originURL: thread.gitInfo?.originUrl,
+					addedLineCount: lineCounts.added,
+					removedLineCount: lineCounts.removed,
+					isRefreshing: false,
+					errorMessage: nil
+				),
+				for: thread.id
+			)
+		} catch {
+			threadSessionState.setGitSummary(
+				CodaxGitSummaryState(
+					branch: thread.gitInfo?.branch,
+					sha: thread.gitInfo?.sha,
+					originURL: thread.gitInfo?.originUrl,
+					addedLineCount: 0,
+					removedLineCount: 0,
+					isRefreshing: false,
+					errorMessage: error.localizedDescription
+				),
+				for: thread.id
+			)
+		}
+	}
+
+	func parseGitDiffLineCounts(_ diff: String) -> (added: Int, removed: Int) {
+		diff.split(whereSeparator: \.isNewline).reduce(into: (added: 0, removed: 0)) { counts, line in
+			guard let first = line.first else { return }
+			if first == "+", !line.hasPrefix("+++") {
+				counts.added += 1
+			} else if first == "-", !line.hasPrefix("---") {
+				counts.removed += 1
 			}
 		}
 	}

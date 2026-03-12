@@ -37,6 +37,7 @@ final class ThreadModel {
 	var cliVersion: String
 	var statusData: Data
 	var sourceData: Data
+	var gitInfoData: Data?
 	var tokenUsageData: Data?
 
 	var project: Project?
@@ -62,6 +63,7 @@ final class ThreadModel {
 		cliVersion: String,
 		statusData: Data,
 		sourceData: Data,
+		gitInfoData: Data? = nil,
 		tokenUsageData: Data? = nil,
 		project: Project? = nil,
 		turns: [TurnModel] = []
@@ -84,6 +86,7 @@ final class ThreadModel {
 		self.cliVersion = cliVersion
 		self.statusData = statusData
 		self.sourceData = sourceData
+		self.gitInfoData = gitInfoData
 		self.tokenUsageData = tokenUsageData
 		self.project = project
 		self.turns = turns
@@ -108,13 +111,14 @@ final class ThreadModel {
 			isClosed: false,
 			modelProvider: thread.modelProvider,
 			path: thread.path,
-			cwd: thread.cwd,
-			cliVersion: thread.cliVersion,
-			statusData: Self.encode(thread.status) ?? Data(),
-			sourceData: Self.encode(thread.source) ?? Data(),
-			project: project,
-			turns: thread.turns.map { TurnModel(turn: $0) }
-		)
+				cwd: thread.cwd,
+				cliVersion: thread.cliVersion,
+				statusData: Self.encode(thread.status) ?? Data(),
+				sourceData: Self.encode(thread.source) ?? Data(),
+				gitInfoData: Self.encodeOptional(thread.gitInfo),
+				project: project,
+				turns: thread.turns.map { TurnModel(turn: $0) }
+			)
 	}
 
 	var hydrationState: ThreadHydrationState {
@@ -128,6 +132,10 @@ final class ThreadModel {
 
 	var source: SessionSource? {
 		Self.decode(SessionSource.self, from: sourceData)
+	}
+
+	var gitInfo: GitInfo? {
+		Self.decode(GitInfo.self, from: gitInfoData)
 	}
 
 	var tokenUsage: ThreadTokenUsage? {
@@ -185,6 +193,7 @@ final class ThreadModel {
 		cliVersion = thread.cliVersion
 		statusData = Self.encode(thread.status) ?? Data()
 		sourceData = Self.encode(thread.source) ?? Data()
+		gitInfoData = Self.encodeOptional(thread.gitInfo)
 	}
 
 	private static func encode<T: Encodable>(_ value: T) -> Data? {

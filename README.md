@@ -16,11 +16,14 @@ Codax is still early, but the protocol boundary is no longer partial:
 - inbound server requests are surfaced into view-model-owned pending user-request state
 - SwiftData is now the durable read model for thread history, and SwiftUI reads that durable state through `@Query`
 - the sidebar is now a project-rooted `NavigationStack` that reads `Project` from SwiftData, pushes project-scoped thread lists, and keeps thread selection driving the content/detail columns
+- the detail column is now a compact inspector rail that expands into a detail-local `NavigationStack` for token usage, reasoning effort, git summary, permissions, and pending requests
+- the app shell now owns the toolbar, with `New Project`, `New Thread`, and inspector toggle actions at the split-view level
 
 The remaining unfinished work is above the connection layer:
 
 - richer approval, elicitation, and auth-refresh UX
 - broader durable projections for account, config, and catalog state
+- exec-backed git actions such as commit and commit-and-push
 - broader end-user polish and accessibility work
 
 ## Architecture
@@ -43,7 +46,7 @@ The remaining unfinished work is above the connection layer:
 - `CodexRuntimeCoordinator` is the app-facing session boundary: it starts transport, owns `CodexConnection`, forwards typed streams, and exposes the typed request surface used by the app
 - `CodaxPersistenceBridge` is the only app-side SwiftData writer: it maps runtime types into `Project`, `ThreadModel`, and `TurnModel`, owns hydration policy, and reconciles summary/detail updates
 - `CodaxViewModel` consumes runtime plus the persistence bridge, keeps only live session state, and owns UI-facing pending login, pending approval, elicitation, alerts, and hydration progress
-- SwiftUI views sit above the view model, fetch durable project and thread data from SwiftData with `@Query`, and use the view model only for transient state and actions
+- SwiftUI views sit above the view model, fetch durable project and thread data from SwiftData with `@Query`, use the view model only for transient state and actions, and route inspector state through the detail-column navigation stack
 
 ## Repository Layout
 
@@ -84,7 +87,7 @@ Current verified result:
 Project verification:
 
 - `xcodebuild -project /Users/galew/Workspace/Codax/Codax.xcodeproj -scheme Codax -sdk macosx test`
-- `88` tests passed in `10` suites
+- `90` tests passed in `10` suites
 
 ## Requirements
 

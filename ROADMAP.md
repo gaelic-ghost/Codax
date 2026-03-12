@@ -22,12 +22,15 @@
 - [x] `@Query`-backed thread list and selected-thread reads in SwiftUI
 - [x] selected-plus-recent thread hydration policy with durable summary/detail reconciliation
 - [x] project-rooted sidebar navigation with a sidebar-local `NavigationStack` and project-scoped thread lists
+- [x] compact detail inspector rail with a detail-local `NavigationStack` for token usage, reasoning effort, git summary, permissions, and pending requests
+- [x] app-shell toolbar actions for `New Project`, `New Thread`, and inspector visibility
 
 ## What Still Needs Work
 
 ### UI and app behavior
 
 - [ ] Add real approval, elicitation, and auth-refresh UX
+- [ ] Add exec-backed git actions after the inspector pass, including commit / commit-and-push UX with approval, output, and failure handling
 - [ ] Persist durable account, config, and catalog projections where offline or delayed rendering matters
 - [ ] Continue account/login polish around pending-login, browser handoff, and auth-refresh flows
 - [ ] Improve item, diff, plan, and realtime rendering
@@ -41,4 +44,4 @@
 
 ## Immediate Priority
 
-The protocol typing pass, transport/runtime cleanup, and durable-thread persistence split are complete. The highest-value next work is app behavior above that boundary: approvals, elicitation flows, auth-refresh behavior, richer durable projections, and UI polish.
+The protocol typing pass, transport/runtime cleanup, durable-thread persistence split, and first-pass inspector/toolbar cleanup are complete. The highest-value next work is app behavior above that boundary: approvals, elicitation flows, auth-refresh behavior, richer durable projections, exec-backed git actions, and UI polish.

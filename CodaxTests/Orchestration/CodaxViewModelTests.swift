@@ -78,8 +78,25 @@ struct CodaxViewModelTests {
 			#expect(viewModel.selectedThreadCodexId == "thread-1")
 			#expect(persistedThread?.codexId == "thread-1")
 			#expect(persistedThread?.hydrationState == .detail)
-			#expect(await transport.sentMethods() == ["initialize", "initialized", "account/read", "thread/list", "thread/start"])
-		}
+		#expect(await transport.sentMethods() == ["initialize", "initialized", "account/read", "thread/list", "thread/start", "gitDiffToRemote"])
+	}
+
+	@Test func startThreadProjectsSessionConfigurationAndGitSummary() async throws {
+		let transport = ViewModelTestTransport()
+		let modelContainer = try makeInMemoryModelContainer()
+		let viewModel = makeConnectedViewModel(transport: transport, modelContainer: modelContainer)
+
+		await viewModel.connect()
+		await viewModel.startThread()
+
+		#expect(viewModel.activeThreadSessionConfiguration?.approvalPolicy == .onRequest)
+		#expect(viewModel.activeThreadSessionConfiguration?.reasoningEffort == .medium)
+		#expect(viewModel.activeGitSummary?.branch == "main")
+		#expect(viewModel.activeGitSummary?.sha == "abc123")
+		#expect(viewModel.activeGitSummary?.addedLineCount == 2)
+		#expect(viewModel.activeGitSummary?.removedLineCount == 1)
+		#expect(await transport.sentMethods() == ["initialize", "initialized", "account/read", "thread/list", "thread/start", "gitDiffToRemote"])
+	}
 
 	@Test func startTurnPersistsTurnOnSelectedThread() async throws {
 			let transport = ViewModelTestTransport()
@@ -93,7 +110,7 @@ struct CodaxViewModelTests {
 			let persistedThread = try fetchThread(codexId: "thread-1", from: modelContainer)
 			#expect(persistedThread?.turns.count == 1)
 			#expect(persistedThread?.turns.first?.codexId == "turn-1")
-			#expect(await transport.sentMethods() == ["initialize", "initialized", "account/read", "thread/list", "thread/start", "turn/start"])
+		#expect(await transport.sentMethods() == ["initialize", "initialized", "account/read", "thread/list", "thread/start", "gitDiffToRemote", "turn/start"])
 		}
 
 	@Test func loadThreadsPersistsSummariesAndHydratesSelection() async throws {
@@ -111,7 +128,7 @@ struct CodaxViewModelTests {
 			let persistedThread = try fetchThread(codexId: "thread-1", from: modelContainer)
 			#expect(viewModel.selectedThreadCodexId == "thread-1")
 			#expect(persistedThread?.hydrationState == .detail)
-			#expect(await transport.sentMethods() == ["initialize", "initialized", "account/read", "thread/list", "thread/start", "thread/list", "thread/read"])
+		#expect(await transport.sentMethods() == ["initialize", "initialized", "account/read", "thread/list", "thread/start", "gitDiffToRemote", "thread/list", "thread/read", "gitDiffToRemote"])
 		}
 
 		@Test func loginWithChatGPTStartsRealLoginFlow() async throws {
@@ -284,7 +301,7 @@ private actor ViewModelTestTransport: CodexTransport {
 							"cwd": "/tmp",
 							"approvalPolicy": "on-request",
 							"sandbox": ["type": "dangerFullAccess"],
-							"reasoningEffort": NSNull(),
+							"reasoningEffort": "medium",
 						],
 					])
 				)
@@ -308,8 +325,8 @@ private actor ViewModelTestTransport: CodexTransport {
 						],
 					])
 				)
-			case "turn/start":
-				let turn = makeTurnPayload(id: "turn-\(nextTurnNumber)")
+				case "turn/start":
+					let turn = makeTurnPayload(id: "turn-\(nextTurnNumber)")
 				nextTurnNumber += 1
 				if var thread = currentThread {
 					var turns = (thread["turns"] as? [[String: Any]]) ?? []
@@ -317,15 +334,32 @@ private actor ViewModelTestTransport: CodexTransport {
 					thread["turns"] = turns
 					currentThread = thread
 				}
-				try enqueueReceive(
-					data: encodedJSONObject([
-						"id": object["id"] ?? NSNull(),
-						"result": ["turn": turn],
-					])
-				)
-			default:
-				return
-		}
+					try enqueueReceive(
+						data: encodedJSONObject([
+							"id": object["id"] ?? NSNull(),
+							"result": ["turn": turn],
+						])
+					)
+				case "gitDiffToRemote":
+					try enqueueReceive(
+						data: encodedJSONObject([
+							"id": object["id"] ?? NSNull(),
+							"result": [
+								"sha": "abc123",
+								"diff": """
+								diff --git a/README.md b/README.md
+								--- a/README.md
+								+++ b/README.md
+								+First
+								+Second
+								-Third
+								""",
+							],
+						])
+					)
+				default:
+					return
+			}
 	}
 
 	func receive() async throws -> Data {
@@ -380,7 +414,11 @@ private actor ViewModelTestTransport: CodexTransport {
 			"source": "appServer",
 			"agentNickname": NSNull(),
 			"agentRole": NSNull(),
-			"gitInfo": NSNull(),
+			"gitInfo": [
+				"sha": "abc123",
+				"branch": "main",
+				"originUrl": "https://example.com/repo.git",
+			],
 			"name": "Thread \(id)",
 			"turns": [],
 		]

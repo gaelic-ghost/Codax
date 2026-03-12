@@ -38,6 +38,12 @@ final class CodaxPersistenceBridge {
 		return try modelContext.fetch(descriptor).first
 	}
 
+	func persistProject(rootPath: String) throws -> Project {
+		let project = ensureProject(rootPath: rootPath)
+		try saveIfNeeded()
+		return project
+	}
+
 	func persistThreadList(_ threads: [Thread]) throws {
 		for thread in threads {
 			let project = ensureProject(rootPath: thread.cwd)

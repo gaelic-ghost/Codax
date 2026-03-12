@@ -47,6 +47,22 @@ struct CodaxPendingLogin: Equatable {
 	let authURL: String
 }
 
+struct CodaxGitSummaryState: Equatable {
+	let branch: String?
+	let sha: String?
+	let originURL: String?
+	let addedLineCount: Int
+	let removedLineCount: Int
+	let isRefreshing: Bool
+	let errorMessage: String?
+}
+
+struct CodaxThreadSessionConfiguration: Equatable {
+	let approvalPolicy: AskForApproval?
+	let sandboxPolicy: SandboxPolicy?
+	let reasoningEffort: ReasoningEffort?
+}
+
 enum CodaxPendingUserRequest: Identifiable, Equatable {
 	case itemCommandExecutionRequestApproval(CommandExecutionRequestApprovalParams, requestId: RequestId)
 	case itemFileChangeRequestApproval(FileChangeRequestApprovalParams, requestId: RequestId)
@@ -159,6 +175,8 @@ struct CodaxViewModelThreadSessionState {
 	private(set) var tokenUsageByThreadCodexId: [String: ThreadTokenUsage] = [:]
 	private(set) var turnPlanByThreadCodexId: [String: [TurnPlanStep]] = [:]
 	private(set) var turnDiffByThreadCodexId: [String: String] = [:]
+	private(set) var gitSummaryByThreadCodexId: [String: CodaxGitSummaryState] = [:]
+	private(set) var sessionConfigurationByThreadCodexId: [String: CodaxThreadSessionConfiguration] = [:]
 	var selectedThreadCodexId: String?
 
 	var selectedTokenUsage: ThreadTokenUsage? {
@@ -174,6 +192,16 @@ struct CodaxViewModelThreadSessionState {
 	var selectedTurnDiff: String? {
 		guard let selectedThreadCodexId else { return nil }
 		return turnDiffByThreadCodexId[selectedThreadCodexId]
+	}
+
+	var selectedGitSummary: CodaxGitSummaryState? {
+		guard let selectedThreadCodexId else { return nil }
+		return gitSummaryByThreadCodexId[selectedThreadCodexId]
+	}
+
+	var selectedSessionConfiguration: CodaxThreadSessionConfiguration? {
+		guard let selectedThreadCodexId else { return nil }
+		return sessionConfigurationByThreadCodexId[selectedThreadCodexId]
 	}
 
 	mutating func selectThread(codexId: String) {
@@ -192,11 +220,21 @@ struct CodaxViewModelThreadSessionState {
 		turnDiffByThreadCodexId[threadCodexId] = diff
 	}
 
+	mutating func setGitSummary(_ gitSummary: CodaxGitSummaryState?, for threadCodexId: String) {
+		gitSummaryByThreadCodexId[threadCodexId] = gitSummary
+	}
+
+	mutating func setSessionConfiguration(_ configuration: CodaxThreadSessionConfiguration?, for threadCodexId: String) {
+		sessionConfigurationByThreadCodexId[threadCodexId] = configuration
+	}
+
 	mutating func clearSelectedTransientState() {
 		guard let selectedThreadCodexId else { return }
 		tokenUsageByThreadCodexId[selectedThreadCodexId] = nil
 		turnPlanByThreadCodexId[selectedThreadCodexId] = []
 		turnDiffByThreadCodexId[selectedThreadCodexId] = nil
+		gitSummaryByThreadCodexId[selectedThreadCodexId] = nil
+		sessionConfigurationByThreadCodexId[selectedThreadCodexId] = nil
 	}
 
 	mutating func clearSelection() {
@@ -207,6 +245,8 @@ struct CodaxViewModelThreadSessionState {
 		tokenUsageByThreadCodexId = tokenUsageByThreadCodexId.filter { validThreadCodexIDs.contains($0.key) }
 		turnPlanByThreadCodexId = turnPlanByThreadCodexId.filter { validThreadCodexIDs.contains($0.key) }
 		turnDiffByThreadCodexId = turnDiffByThreadCodexId.filter { validThreadCodexIDs.contains($0.key) }
+		gitSummaryByThreadCodexId = gitSummaryByThreadCodexId.filter { validThreadCodexIDs.contains($0.key) }
+		sessionConfigurationByThreadCodexId = sessionConfigurationByThreadCodexId.filter { validThreadCodexIDs.contains($0.key) }
 		if let selectedThreadCodexId, !validThreadCodexIDs.contains(selectedThreadCodexId) {
 			self.selectedThreadCodexId = nil
 		}

@@ -84,6 +84,16 @@ struct CodaxPersistenceBridgeTests {
 		let updatedProject = try #require(fetchProjects(from: harness.modelContainer).first)
 		#expect(updatedProject.updatedAt > originalUpdatedAt)
 	}
+
+	@Test func persistProjectCreatesActiveProject() throws {
+		let harness = try makeBridgeHarness()
+
+		let project = try harness.bridge.persistProject(rootPath: "/tmp/codax")
+
+		#expect(project.rootPath == "/tmp/codax")
+		#expect(project.isActive == true)
+		#expect(try fetchProjects(from: harness.modelContainer).map(\.rootPath) == ["/tmp/codax"])
+	}
 }
 
 @MainActor

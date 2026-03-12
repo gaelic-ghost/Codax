@@ -19,6 +19,8 @@ Current app-level implementation baseline:
 - selected-thread durable hydration: implemented
 - selected-plus-recent background hydration: implemented
 - project-rooted sidebar navigation: implemented
+- compact detail inspector rail: implemented
+- app-shell toolbar actions for new project, new thread, and inspector toggle: implemented
 - pending server-request prompts: implemented as transient view-model state
 - approval execution UX: not started beyond prompt surfacing
 - upstream README delta surfaces: blocked by contract until the pinned schema catches up
@@ -72,7 +74,7 @@ Current app-level implementation baseline:
 | Config | `config/requirements/read` | pinned | none | ViewModel | mapped | medium |
 | Account / auth | `account/read` | pinned | none | ViewModel | implemented | high |
 | Search / summaries | `conversationSummary/get` | pinned | none | ViewModel | mapped | medium |
-| Search / summaries | `gitDiffToRemote` | pinned | none | ViewModel | mapped | medium |
+| Search / summaries | `gitDiffToRemote` | pinned | none | ViewModel | implemented | medium |
 | Account / auth | `authStatus/get` | pinned | none | ViewModel | mapped | medium |
 | Search / summaries | `fuzzyFileSearch` | pinned | none | ViewModel | mapped | medium |
 
@@ -160,3 +162,4 @@ Current app-level implementation baseline:
 - SwiftData should stay the source of truth for durable thread summaries, hydrated thread detail, and persisted turn history.
 - `CodaxViewModel` should stay the source of truth for connection state, pending login, pending approvals, alerts, in-flight plan/diff state, and hydration coordination.
 - Views should fetch durable models through `@Query`, but still drive user actions and transient prompts through the view model.
+- The inspector rail should stay app-owned live state layered over durable thread selection, not a second durable projection store.

@@ -31,21 +31,14 @@ struct ContentView: View {
 						.textSelection(.enabled)
 				}
 
-				HStack {
-					Button("Connect") {
-						Task {
-							await viewModel.connect()
+					HStack {
+						Button("Connect") {
+							Task {
+								await viewModel.connect()
+							}
 						}
+						.disabled(viewModel.connectionState != .disconnected)
 					}
-					.disabled(viewModel.connectionState != .disconnected)
-
-					Button("Start Thread") {
-						Task {
-							await viewModel.startThread()
-						}
-					}
-					.disabled(viewModel.connectionState != .connected)
-				}
 
 				Divider()
 

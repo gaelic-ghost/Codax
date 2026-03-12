@@ -14,6 +14,12 @@ final class CodaxOrchestrator {
 
 		// MARK: - OBSERVABLE STATE FOR UI GOES HERE
 
+	var projects: [CodaxProject] = []
+	var projectListings: [CodaxProjectListing] = []
+	var selectedProject: CodaxProject?
+	var selectedProjectThreadListings: [CodaxProjectThreadListing] = []
+	var selectedProjectThread: CodaxProjectThread?
+
 		// MARK: - RAW TYPES
 
 		// MARK: Account & Auth
@@ -125,5 +131,59 @@ final class CodaxOrchestrator {
 	}
 
 	// MARK: - METHODS
+
+}
+
+// MARK: - Supporting Types for UI State
+
+extension CodaxOrchestrator {
+
+	// MARK: Account
+
+	// MARK: Application
+
+	// MARK: Project and Threads
+
+	struct CodaxProject {
+		let listing: CodaxProjectListing
+
+	}
+
+		/// Subset of Project info relevant for listing in the sidebar
+	struct CodaxProjectListing {
+
+	}
+
+		/// A Thread belonging to a Project
+	struct CodaxProjectThread {
+		let listing: CodaxProjectThreadListing
+
+	}
+
+		/// Subset of Thread info relevant for listing in the sidebar
+	struct CodaxProjectThreadListing {
+
+	}
+
+		/// A paginated chunk of Turns in a Thread suitable for loading in and out as a ThreadView is scrolled
+	struct CodaxProjectThreadChunk {
+
+	}
+
+	// MARK: Turns
+
+	struct CodaxTurn {
+
+	}
+
+	// MARK: Items
+
+	struct CodaxUserItem {
+
+	}
+
+	struct CodaxAgentItem {
+
+	}
 
 }

@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 
 const repoRoot = path.resolve(__dirname, "..");
-const schemaRoot = path.join(repoRoot, "codex-schemas", "v0.112.0");
+const schemaRoot = path.join(repoRoot, "codex-schemas", "v0.114.0");
 const outputDir = path.join(repoRoot, "Codax", "Controllers", "Connection");
 const outputFile = path.join(outputDir, "CodexSchema.generated.swift");
 
@@ -24,11 +24,13 @@ const CLIENT_REQUEST_RESPONSES = {
   "thread/loaded/list": "ThreadLoadedListResponse",
   "thread/read": "ThreadReadResponse",
   "skills/list": "SkillsListResponse",
+  "plugin/list": "PluginListResponse",
   "skills/remote/list": "SkillsRemoteReadResponse",
   "skills/remote/export": "SkillsRemoteWriteResponse",
   "app/list": "AppsListResponse",
   "skills/config/write": "SkillsConfigWriteResponse",
   "plugin/install": "PluginInstallResponse",
+  "plugin/uninstall": "PluginUninstallResponse",
   "turn/start": "TurnStartResponse",
   "turn/steer": "TurnSteerResponse",
   "turn/interrupt": "TurnInterruptResponse",
@@ -45,6 +47,9 @@ const CLIENT_REQUEST_RESPONSES = {
   "account/rateLimits/read": "GetAccountRateLimitsResponse",
   "feedback/upload": "FeedbackUploadResponse",
   "command/exec": "CommandExecResponse",
+  "command/exec/write": "CommandExecWriteResponse",
+  "command/exec/terminate": "CommandExecTerminateResponse",
+  "command/exec/resize": "CommandExecResizeResponse",
   "config/read": "ConfigReadResponse",
   "externalAgentConfig/detect": "ExternalAgentConfigDetectResponse",
   "externalAgentConfig/import": "ExternalAgentConfigImportResponse",
@@ -67,6 +72,7 @@ const ROOTS = [
   "FileChangeRequestApprovalResponse",
   "ToolRequestUserInputResponse",
   "McpServerElicitationRequestResponse",
+  "PermissionsRequestApprovalResponse",
   "DynamicToolCallResponse",
   "ChatgptAuthTokensRefreshResponse",
   "ApplyPatchApprovalResponse",
@@ -153,7 +159,7 @@ class Tokenizer {
         this.tokens.push({ type: "string", value: this.readString() });
         continue;
       }
-      if (/[A-Za-z_]/.test(char)) {
+      if (/[A-Za-z_$]/.test(char)) {
         this.tokens.push({ type: "identifier", value: this.readIdentifier() });
         continue;
       }
@@ -194,7 +200,7 @@ class Tokenizer {
   readIdentifier() {
     const start = this.index;
     this.index += 1;
-    while (this.index < this.input.length && /[A-Za-z0-9_]/.test(this.input[this.index])) {
+    while (this.index < this.input.length && /[A-Za-z0-9_$]/.test(this.input[this.index])) {
       this.index += 1;
     }
     return this.input.slice(start, this.index);
@@ -393,8 +399,6 @@ function collectReferences(node, into) {
 }
 
 function computeClosure(definitions) {
-  return [...definitions.values()];
-
   const included = new Set();
   const queue = [...ROOTS];
   while (queue.length > 0) {
@@ -949,6 +953,7 @@ function serverRequestCases(definitions) {
     "item/fileChange/requestApproval": "FileChangeRequestApprovalResponse",
     "item/tool/requestUserInput": "ToolRequestUserInputResponse",
     "mcpServer/elicitation/request": "McpServerElicitationRequestResponse",
+    "item/permissions/requestApproval": "PermissionsRequestApprovalResponse",
     "item/tool/call": "DynamicToolCallResponse",
     "account/chatgptAuthTokens/refresh": "ChatgptAuthTokensRefreshResponse",
     "applyPatchApproval": "ApplyPatchApprovalResponse",
@@ -1024,12 +1029,12 @@ function emitServerRequestSupport(definitions) {
 
 function main() {
   const definitions = loadSchemaFiles();
-  const closure = computeClosure(definitions);
-  const duplicates = findDuplicates(closure.map((definition) => renameType(definition.typeName)));
+  const allDefinitions = [...definitions.values()];
+  const duplicates = findDuplicates(allDefinitions.map((definition) => renameType(definition.typeName)));
   if (duplicates.length > 0) {
     throw new Error(`Duplicate generated type names: ${duplicates.join(", ")}`);
   }
-  const sorted = closure.sort((lhs, rhs) => lhs.relative.localeCompare(rhs.relative));
+  const sorted = allDefinitions.sort((lhs, rhs) => lhs.relative.localeCompare(rhs.relative));
   const emittedDefinitions = [];
   for (const definition of sorted) {
     try {

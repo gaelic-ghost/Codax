@@ -132,7 +132,7 @@ private func makeThread(
 		"status": ["type": "idle"],
 		"path": NSNull(),
 		"cwd": "/tmp/codax",
-		"cliVersion": "0.112.0",
+		"cliVersion": "0.114.0",
 		"source": "appServer",
 		"agentNickname": NSNull(),
 		"agentRole": NSNull(),

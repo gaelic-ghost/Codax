@@ -13,7 +13,7 @@ It now owns:
 - inbound `ServerRequestEnvelope` decoding
 - typed request methods for every `ClientRequest` method
 - typed server-request response routing through `CodexServerRequestResponder`
-- the generated Swift representation of every exported schema in `codex-schemas/v0.112.0`
+- the generated Swift representation of every exported schema in `codex-schemas/v0.114.0`
 
 ## Public Surface
 
@@ -31,10 +31,10 @@ The raw JSON-RPC helpers remain internal implementation details.
 
 Verified by [connection-schema-progress.md](/Users/galew/Workspace/Codax/Docs/connection-schema-progress.md):
 
-- `433/433` exported schema types represented
-- `47/47` client requests represented
-- `44/44` server notifications represented
-- `8/8` server requests represented
+- `497/497` exported schema types represented
+- `52/52` client requests represented
+- `47/47` server notifications represented
+- `9/9` server requests represented
 
 ## File Ownership
 

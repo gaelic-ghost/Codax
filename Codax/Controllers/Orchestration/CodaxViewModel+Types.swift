@@ -68,6 +68,7 @@ enum CodaxPendingUserRequest: Identifiable, Equatable {
 	case itemFileChangeRequestApproval(FileChangeRequestApprovalParams, requestId: RequestId)
 	case itemToolRequestUserInput(ToolRequestUserInputParams, requestId: RequestId)
 	case mcpServerElicitationRequest(McpServerElicitationRequestParams, requestId: RequestId)
+	case itemPermissionsRequestApproval(PermissionsRequestApprovalParams, requestId: RequestId)
 	case itemToolCall(DynamicToolCallParams, requestId: RequestId)
 	case accountChatgptAuthTokensRefresh(ChatgptAuthTokensRefreshParams, requestId: RequestId)
 	case applyPatchApproval(ApplyPatchApprovalParams, requestId: RequestId)
@@ -83,6 +84,8 @@ enum CodaxPendingUserRequest: Identifiable, Equatable {
 				self = .itemToolRequestUserInput(params, requestId: id)
 			case let .mcpServerElicitationRequest(params, id):
 				self = .mcpServerElicitationRequest(params, requestId: id)
+			case let .itemPermissionsRequestApproval(params, id):
+				self = .itemPermissionsRequestApproval(params, requestId: id)
 			case let .itemToolCall(params, id):
 				self = .itemToolCall(params, requestId: id)
 			case let .accountChatgptAuthTokensRefresh(params, id):
@@ -104,6 +107,7 @@ enum CodaxPendingUserRequest: Identifiable, Equatable {
 				let .itemFileChangeRequestApproval(_, requestId),
 				let .itemToolRequestUserInput(_, requestId),
 				let .mcpServerElicitationRequest(_, requestId),
+				let .itemPermissionsRequestApproval(_, requestId),
 				let .itemToolCall(_, requestId),
 				let .accountChatgptAuthTokensRefresh(_, requestId),
 				let .applyPatchApproval(_, requestId),
@@ -122,6 +126,8 @@ enum CodaxPendingUserRequest: Identifiable, Equatable {
 				return "Tool input request"
 			case .mcpServerElicitationRequest:
 				return "MCP elicitation request"
+			case .itemPermissionsRequestApproval:
+				return "Permissions approval"
 			case .itemToolCall:
 				return "Tool call"
 			case .accountChatgptAuthTokensRefresh:
@@ -143,11 +149,13 @@ enum CodaxPendingUserRequest: Identifiable, Equatable {
 				return params.questions.first?.question ?? "Tool requires user input."
 			case let .mcpServerElicitationRequest(params, _):
 				switch params {
-					case let .form(_, _, serverName, message, _):
+					case let .form(_, _, serverName, _, message, _):
 						return "\(serverName): \(message)"
-					case let .url(_, _, serverName, message, url, _):
+					case let .url(_, _, serverName, _, message, url, _):
 						return "\(serverName): \(message) (\(url))"
 				}
+			case let .itemPermissionsRequestApproval(params, _):
+				return params.reason ?? "Additional permissions require approval."
 			case let .itemToolCall(params, _):
 				return "\(params.tool) requested \(params.callId)"
 			case let .accountChatgptAuthTokensRefresh(params, _):

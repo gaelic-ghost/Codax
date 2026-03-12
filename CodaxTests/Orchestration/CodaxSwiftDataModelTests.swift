@@ -23,7 +23,7 @@ struct CodaxSwiftDataModelTests {
 			ephemeral: false,
 				modelProvider: "openai",
 				cwd: "/tmp/codax",
-				cliVersion: "0.112.0",
+				cliVersion: "0.114.0",
 				statusData: encode(ThreadStatus.idle),
 				sourceData: encode(SessionSource.appServer)
 			)
@@ -101,7 +101,7 @@ struct CodaxSwiftDataModelTests {
 			ephemeral: false,
 				modelProvider: "openai",
 				cwd: "/tmp/codax",
-				cliVersion: "0.112.0",
+				cliVersion: "0.114.0",
 				statusData: Data("not-json".utf8),
 				sourceData: encode(SessionSource.appServer)
 			)

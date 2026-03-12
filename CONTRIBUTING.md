@@ -15,11 +15,11 @@ What is already real:
 - a full generated connection-owned schema boundary
 - a SwiftData-backed durable thread read model
 - a dedicated persistence bridge between runtime types and SwiftData
-- initial compatibility gating for Codex CLI `0.111.x` and `0.112.x`
+- initial compatibility gating for Codex CLI `0.114.x`
 - a `NavigationSplitView` shell whose sidebar is a project-rooted `NavigationStack` backed by SwiftData `@Query` reads
 - a compact detail inspector rail backed by a detail-local `NavigationStack`
 - app-shell toolbar actions for project import, thread creation, and inspector visibility
-- layer reports grounded in the current `v0.112.0` schema baseline
+- layer reports grounded in the current `v0.114.0` schema baseline
 
 What is still early or incomplete:
 

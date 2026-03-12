@@ -3,6 +3,19 @@ import Testing
 @testable import Codax
 
 struct CodexConnectionTests {
+	@Test func generatedSchemaBoundaryDoesNotEmitUndefinedResponseTypes() throws {
+		let generatedFileURL = URL(fileURLWithPath: #filePath)
+			.deletingLastPathComponent()
+			.deletingLastPathComponent()
+			.deletingLastPathComponent()
+			.appendingPathComponent("Codax/Controllers/Connection/CodexSchema.generated.swift")
+		let source = try String(contentsOf: generatedFileURL, encoding: .utf8)
+
+		#expect(source.contains("async throws -> undefined") == false)
+		#expect(source.contains("case itemPermissionsRequestApproval(undefined)") == false)
+		#expect(source.contains("MISSING_RESPONSE_MAP") == false)
+	}
+
 	@Test func jsonRPCErrorObjectDecodesJSONValueData() throws {
 		let data = Data(
 			"""

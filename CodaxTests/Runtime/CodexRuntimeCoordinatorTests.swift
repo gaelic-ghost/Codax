@@ -301,7 +301,7 @@ private func makeThreadPayload(id: String) -> [String: Any] {
 		"status": ["type": "idle"],
 		"path": "/tmp/\(id)",
 		"cwd": "/tmp",
-		"cliVersion": "0.112.0",
+		"cliVersion": "0.114.0",
 		"source": "appServer",
 		"agentNickname": NSNull(),
 		"agentRole": NSNull(),

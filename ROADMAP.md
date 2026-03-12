@@ -6,16 +6,16 @@
 - `CodexConnection` is the only app-server boundary
 - SwiftData is the durable read model for thread history and hydrated thread detail
 - the separate client layer has been removed
-- the connection schema generator and verifier currently report `433/433` exported schema types represented
+- the connection schema generator and verifier currently report `497/497` exported schema types represented
 
 ## What Is Done
 
 - [x] Local `codex app-server` process launch and stdio transport
 - [x] JSON-RPC request/response routing in `CodexConnection`
-- [x] typed `CodexConnection` request API for every `ClientRequest` method in `codex-schemas/v0.112.0`
+- [x] typed `CodexConnection` request API for every `ClientRequest` method in `codex-schemas/v0.114.0`
 - [x] typed `ServerNotificationEnvelope` for every `ServerNotification` method
 - [x] typed `ServerRequestEnvelope` and `ServerRequestResponse` for every `ServerRequest` method
-- [x] generated connection-owned Swift representation for every exported schema in `codex-schemas/v0.112.0`
+- [x] generated connection-owned Swift representation for every exported schema in `codex-schemas/v0.114.0`
 - [x] connection schema verification gate via `node Tools/update_connection_schema_progress.js --verify`
 - [x] generated schema output ignored in `.gitignore`
 - [x] dedicated `CodaxPersistenceBridge` as the only app-side SwiftData writer

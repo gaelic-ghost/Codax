@@ -1,19 +1,19 @@
 # Connection Schema Progress
 
-Generated on 2026-03-11T21:51:06.626Z.
+Generated on 2026-03-12T12:27:30.821Z.
 
-This tracker is derived from the pinned `codex-schemas/v0.112.0` tree and checked against `Codax/Controllers/Connection/CodexSchema.generated.swift`.
+This tracker is derived from the pinned `codex-schemas/v0.114.0` tree and checked against `Codax/Controllers/Connection/CodexSchema.generated.swift`.
 
 ## Summary
 
-- Total exported schema types: 433
-- Exported schema types represented in connection Swift: 433
+- Total exported schema types: 497
+- Exported schema types represented in connection Swift: 497
 - Exported schema types still missing in connection Swift: 0
-- Reachable protocol-surface types: 306
-- Non-reachable exported types: 127
-- Client request methods: 47 (all done)
-- Server notification methods: 44 (all done)
-- Server request methods: 8 (all done)
+- Reachable protocol-surface types: 365
+- Non-reachable exported types: 132
+- Client request methods: 52 (all done)
+- Server notification methods: 47 (all done)
+- Server request methods: 9 (all done)
 - Reachable types missing generated Swift: 0
 
 ## Client Requests
@@ -35,11 +35,13 @@ This tracker is derived from the pinned `codex-schemas/v0.112.0` tree and checke
 | `thread/loaded/list` | `threadLoadedList` | `ThreadLoadedListParams` | `ThreadLoadedListResponse` | done |
 | `thread/read` | `threadRead` | `ThreadReadParams` | `ThreadReadResponse` | done |
 | `skills/list` | `skillsList` | `SkillsListParams` | `SkillsListResponse` | done |
+| `plugin/list` | `pluginList` | `PluginListParams` | `PluginListResponse` | done |
 | `skills/remote/list` | `skillsRemoteList` | `SkillsRemoteReadParams` | `SkillsRemoteReadResponse` | done |
 | `skills/remote/export` | `skillsRemoteExport` | `SkillsRemoteWriteParams` | `SkillsRemoteWriteResponse` | done |
 | `app/list` | `appList` | `AppsListParams` | `AppsListResponse` | done |
 | `skills/config/write` | `skillsConfigWrite` | `SkillsConfigWriteParams` | `SkillsConfigWriteResponse` | done |
 | `plugin/install` | `pluginInstall` | `PluginInstallParams` | `PluginInstallResponse` | done |
+| `plugin/uninstall` | `pluginUninstall` | `PluginUninstallParams` | `PluginUninstallResponse` | done |
 | `turn/start` | `turnStart` | `TurnStartParams` | `TurnStartResponse` | done |
 | `turn/steer` | `turnSteer` | `TurnSteerParams` | `TurnSteerResponse` | done |
 | `turn/interrupt` | `turnInterrupt` | `TurnInterruptParams` | `TurnInterruptResponse` | done |
@@ -56,6 +58,9 @@ This tracker is derived from the pinned `codex-schemas/v0.112.0` tree and checke
 | `account/rateLimits/read` | `accountRateLimitsRead` | `undefined` | `GetAccountRateLimitsResponse` | done |
 | `feedback/upload` | `feedbackUpload` | `FeedbackUploadParams` | `FeedbackUploadResponse` | done |
 | `command/exec` | `commandExec` | `CommandExecParams` | `CommandExecResponse` | done |
+| `command/exec/write` | `commandExecWrite` | `CommandExecWriteParams` | `CommandExecWriteResponse` | done |
+| `command/exec/terminate` | `commandExecTerminate` | `CommandExecTerminateParams` | `CommandExecTerminateResponse` | done |
+| `command/exec/resize` | `commandExecResize` | `CommandExecResizeParams` | `CommandExecResizeResponse` | done |
 | `config/read` | `configRead` | `ConfigReadParams` | `ConfigReadResponse` | done |
 | `externalAgentConfig/detect` | `externalAgentConfigDetect` | `ExternalAgentConfigDetectParams` | `ExternalAgentConfigDetectResponse` | done |
 | `externalAgentConfig/import` | `externalAgentConfigImport` | `ExternalAgentConfigImportParams` | `ExternalAgentConfigImportResponse` | done |
@@ -72,50 +77,53 @@ This tracker is derived from the pinned `codex-schemas/v0.112.0` tree and checke
 
 | Method | Envelope Case | Params | Status |
 | --- | --- | --- | --- |
-| `error` | `error` | `undefined` | done |
-| `thread/started` | `threadStarted` | `undefined` | done |
-| `thread/status/changed` | `threadStatusChanged` | `undefined` | done |
-| `thread/archived` | `threadArchived` | `undefined` | done |
-| `thread/unarchived` | `threadUnarchived` | `undefined` | done |
-| `thread/closed` | `threadClosed` | `undefined` | done |
-| `skills/changed` | `skillsChanged` | `undefined` | done |
-| `thread/name/updated` | `threadNameUpdated` | `undefined` | done |
-| `thread/tokenUsage/updated` | `threadTokenUsageUpdated` | `undefined` | done |
-| `turn/started` | `turnStarted` | `undefined` | done |
-| `turn/completed` | `turnCompleted` | `undefined` | done |
-| `turn/diff/updated` | `turnDiffUpdated` | `undefined` | done |
-| `turn/plan/updated` | `turnPlanUpdated` | `undefined` | done |
-| `item/started` | `itemStarted` | `undefined` | done |
-| `item/completed` | `itemCompleted` | `undefined` | done |
-| `rawResponseItem/completed` | `rawResponseItemCompleted` | `undefined` | done |
-| `item/agentMessage/delta` | `itemAgentMessageDelta` | `undefined` | done |
-| `item/plan/delta` | `itemPlanDelta` | `undefined` | done |
-| `item/commandExecution/outputDelta` | `itemCommandExecutionOutputDelta` | `undefined` | done |
-| `item/commandExecution/terminalInteraction` | `itemCommandExecutionTerminalInteraction` | `undefined` | done |
-| `item/fileChange/outputDelta` | `itemFileChangeOutputDelta` | `undefined` | done |
-| `serverRequest/resolved` | `serverRequestResolved` | `undefined` | done |
-| `item/mcpToolCall/progress` | `itemMcpToolCallProgress` | `undefined` | done |
-| `mcpServer/oauthLogin/completed` | `mcpServerOauthLoginCompleted` | `undefined` | done |
-| `account/updated` | `accountUpdated` | `undefined` | done |
-| `account/rateLimits/updated` | `accountRateLimitsUpdated` | `undefined` | done |
-| `app/list/updated` | `appListUpdated` | `undefined` | done |
-| `item/reasoning/summaryTextDelta` | `itemReasoningSummaryTextDelta` | `undefined` | done |
-| `item/reasoning/summaryPartAdded` | `itemReasoningSummaryPartAdded` | `undefined` | done |
-| `item/reasoning/textDelta` | `itemReasoningTextDelta` | `undefined` | done |
-| `thread/compacted` | `threadCompacted` | `undefined` | done |
-| `model/rerouted` | `modelRerouted` | `undefined` | done |
-| `deprecationNotice` | `deprecationNotice` | `undefined` | done |
-| `configWarning` | `configWarning` | `undefined` | done |
-| `fuzzyFileSearch/sessionUpdated` | `fuzzyFileSearchSessionUpdated` | `undefined` | done |
-| `fuzzyFileSearch/sessionCompleted` | `fuzzyFileSearchSessionCompleted` | `undefined` | done |
-| `thread/realtime/started` | `threadRealtimeStarted` | `undefined` | done |
-| `thread/realtime/itemAdded` | `threadRealtimeItemAdded` | `undefined` | done |
-| `thread/realtime/outputAudio/delta` | `threadRealtimeOutputAudioDelta` | `undefined` | done |
-| `thread/realtime/error` | `threadRealtimeError` | `undefined` | done |
-| `thread/realtime/closed` | `threadRealtimeClosed` | `undefined` | done |
-| `windows/worldWritableWarning` | `windowsWorldWritableWarning` | `undefined` | done |
-| `windowsSandbox/setupCompleted` | `windowsSandboxSetupCompleted` | `undefined` | done |
-| `account/login/completed` | `accountLoginCompleted` | `undefined` | done |
+| `error` | `error` | `ErrorNotification` | done |
+| `thread/started` | `threadStarted` | `ThreadStartedNotification` | done |
+| `thread/status/changed` | `threadStatusChanged` | `ThreadStatusChangedNotification` | done |
+| `thread/archived` | `threadArchived` | `ThreadArchivedNotification` | done |
+| `thread/unarchived` | `threadUnarchived` | `ThreadUnarchivedNotification` | done |
+| `thread/closed` | `threadClosed` | `ThreadClosedNotification` | done |
+| `skills/changed` | `skillsChanged` | `SkillsChangedNotification` | done |
+| `thread/name/updated` | `threadNameUpdated` | `ThreadNameUpdatedNotification` | done |
+| `thread/tokenUsage/updated` | `threadTokenUsageUpdated` | `ThreadTokenUsageUpdatedNotification` | done |
+| `turn/started` | `turnStarted` | `TurnStartedNotification` | done |
+| `hook/started` | `hookStarted` | `HookStartedNotification` | done |
+| `turn/completed` | `turnCompleted` | `TurnCompletedNotification` | done |
+| `hook/completed` | `hookCompleted` | `HookCompletedNotification` | done |
+| `turn/diff/updated` | `turnDiffUpdated` | `TurnDiffUpdatedNotification` | done |
+| `turn/plan/updated` | `turnPlanUpdated` | `TurnPlanUpdatedNotification` | done |
+| `item/started` | `itemStarted` | `ItemStartedNotification` | done |
+| `item/completed` | `itemCompleted` | `ItemCompletedNotification` | done |
+| `rawResponseItem/completed` | `rawResponseItemCompleted` | `RawResponseItemCompletedNotification` | done |
+| `item/agentMessage/delta` | `itemAgentMessageDelta` | `AgentMessageDeltaNotification` | done |
+| `item/plan/delta` | `itemPlanDelta` | `PlanDeltaNotification` | done |
+| `command/exec/outputDelta` | `commandExecOutputDelta` | `CommandExecOutputDeltaNotification` | done |
+| `item/commandExecution/outputDelta` | `itemCommandExecutionOutputDelta` | `CommandExecutionOutputDeltaNotification` | done |
+| `item/commandExecution/terminalInteraction` | `itemCommandExecutionTerminalInteraction` | `TerminalInteractionNotification` | done |
+| `item/fileChange/outputDelta` | `itemFileChangeOutputDelta` | `FileChangeOutputDeltaNotification` | done |
+| `serverRequest/resolved` | `serverRequestResolved` | `ServerRequestResolvedNotification` | done |
+| `item/mcpToolCall/progress` | `itemMcpToolCallProgress` | `McpToolCallProgressNotification` | done |
+| `mcpServer/oauthLogin/completed` | `mcpServerOauthLoginCompleted` | `McpServerOauthLoginCompletedNotification` | done |
+| `account/updated` | `accountUpdated` | `AccountUpdatedNotification` | done |
+| `account/rateLimits/updated` | `accountRateLimitsUpdated` | `AccountRateLimitsUpdatedNotification` | done |
+| `app/list/updated` | `appListUpdated` | `AppListUpdatedNotification` | done |
+| `item/reasoning/summaryTextDelta` | `itemReasoningSummaryTextDelta` | `ReasoningSummaryTextDeltaNotification` | done |
+| `item/reasoning/summaryPartAdded` | `itemReasoningSummaryPartAdded` | `ReasoningSummaryPartAddedNotification` | done |
+| `item/reasoning/textDelta` | `itemReasoningTextDelta` | `ReasoningTextDeltaNotification` | done |
+| `thread/compacted` | `threadCompacted` | `ContextCompactedNotification` | done |
+| `model/rerouted` | `modelRerouted` | `ModelReroutedNotification` | done |
+| `deprecationNotice` | `deprecationNotice` | `DeprecationNoticeNotification` | done |
+| `configWarning` | `configWarning` | `ConfigWarningNotification` | done |
+| `fuzzyFileSearch/sessionUpdated` | `fuzzyFileSearchSessionUpdated` | `FuzzyFileSearchSessionUpdatedNotification` | done |
+| `fuzzyFileSearch/sessionCompleted` | `fuzzyFileSearchSessionCompleted` | `FuzzyFileSearchSessionCompletedNotification` | done |
+| `thread/realtime/started` | `threadRealtimeStarted` | `ThreadRealtimeStartedNotification` | done |
+| `thread/realtime/itemAdded` | `threadRealtimeItemAdded` | `ThreadRealtimeItemAddedNotification` | done |
+| `thread/realtime/outputAudio/delta` | `threadRealtimeOutputAudioDelta` | `ThreadRealtimeOutputAudioDeltaNotification` | done |
+| `thread/realtime/error` | `threadRealtimeError` | `ThreadRealtimeErrorNotification` | done |
+| `thread/realtime/closed` | `threadRealtimeClosed` | `ThreadRealtimeClosedNotification` | done |
+| `windows/worldWritableWarning` | `windowsWorldWritableWarning` | `WindowsWorldWritableWarningNotification` | done |
+| `windowsSandbox/setupCompleted` | `windowsSandboxSetupCompleted` | `WindowsSandboxSetupCompletedNotification` | done |
+| `account/login/completed` | `accountLoginCompleted` | `AccountLoginCompletedNotification` | done |
 
 ## Server Requests
 
@@ -125,6 +133,7 @@ This tracker is derived from the pinned `codex-schemas/v0.112.0` tree and checke
 | `item/fileChange/requestApproval` | `itemFileChangeRequestApproval` | `FileChangeRequestApprovalParams` | done |
 | `item/tool/requestUserInput` | `itemToolRequestUserInput` | `ToolRequestUserInputParams` | done |
 | `mcpServer/elicitation/request` | `mcpServerElicitationRequest` | `McpServerElicitationRequestParams` | done |
+| `item/permissions/requestApproval` | `itemPermissionsRequestApproval` | `PermissionsRequestApprovalParams` | done |
 | `item/tool/call` | `itemToolCall` | `DynamicToolCallParams` | done |
 | `account/chatgptAuthTokens/refresh` | `accountChatgptAuthTokensRefresh` | `ChatgptAuthTokensRefreshParams` | done |
 | `applyPatchApproval` | `applyPatchApproval` | `ApplyPatchApprovalParams` | done |
@@ -155,6 +164,7 @@ This tracker is derived from the pinned `codex-schemas/v0.112.0` tree and checke
 | `AppScreenshot` | `AppScreenshot` | `generated:struct` | `v2/AppScreenshot.ts` |
 | `AppsListParams` | `AppsListParams` | `generated:struct` | `v2/AppsListParams.ts` |
 | `AppsListResponse` | `AppsListResponse` | `generated:struct` | `v2/AppsListResponse.ts` |
+| `AppSummary` | `AppSummary` | `generated:struct` | `v2/AppSummary.ts` |
 | `AskForApproval` | `AskForApproval` | `generated:enum` | `v2/AskForApproval.ts` |
 | `AuthMode` | `AuthMode` | `generated:enum` | `AuthMode.ts` |
 | `ByteRange` | `ByteRange` | `generated:struct` | `v2/ByteRange.ts` |
@@ -173,13 +183,23 @@ This tracker is derived from the pinned `codex-schemas/v0.112.0` tree and checke
 | `CollabAgentToolCallStatus` | `CollabAgentToolCallStatus` | `generated:enum` | `v2/CollabAgentToolCallStatus.ts` |
 | `CollaborationMode` | `CollaborationMode` | `generated:struct` | `CollaborationMode.ts` |
 | `CommandAction` | `CommandAction` | `generated:enum` | `v2/CommandAction.ts` |
+| `CommandExecOutputDeltaNotification` | `CommandExecOutputDeltaNotification` | `generated:struct` | `v2/CommandExecOutputDeltaNotification.ts` |
+| `CommandExecOutputStream` | `CommandExecOutputStream` | `generated:enum` | `v2/CommandExecOutputStream.ts` |
 | `CommandExecParams` | `CommandExecParams` | `generated:struct` | `v2/CommandExecParams.ts` |
+| `CommandExecResizeParams` | `CommandExecResizeParams` | `generated:struct` | `v2/CommandExecResizeParams.ts` |
+| `CommandExecResizeResponse` | `CommandExecResizeResponse` | `generated:struct` | `v2/CommandExecResizeResponse.ts` |
 | `CommandExecResponse` | `CommandExecResponse` | `generated:struct` | `v2/CommandExecResponse.ts` |
+| `CommandExecTerminalSize` | `CommandExecTerminalSize` | `generated:struct` | `v2/CommandExecTerminalSize.ts` |
+| `CommandExecTerminateParams` | `CommandExecTerminateParams` | `generated:struct` | `v2/CommandExecTerminateParams.ts` |
+| `CommandExecTerminateResponse` | `CommandExecTerminateResponse` | `generated:struct` | `v2/CommandExecTerminateResponse.ts` |
 | `CommandExecutionApprovalDecision` | `CommandExecutionApprovalDecision` | `generated:enum` | `v2/CommandExecutionApprovalDecision.ts` |
 | `CommandExecutionOutputDeltaNotification` | `CommandExecutionOutputDeltaNotification` | `generated:struct` | `v2/CommandExecutionOutputDeltaNotification.ts` |
 | `CommandExecutionRequestApprovalParams` | `CommandExecutionRequestApprovalParams` | `generated:struct` | `v2/CommandExecutionRequestApprovalParams.ts` |
 | `CommandExecutionRequestApprovalResponse` | `CommandExecutionRequestApprovalResponse` | `generated:struct` | `v2/CommandExecutionRequestApprovalResponse.ts` |
+| `CommandExecutionRequestApprovalSkillMetadata` | `CommandExecutionRequestApprovalSkillMetadata` | `generated:struct` | `v2/CommandExecutionRequestApprovalSkillMetadata.ts` |
 | `CommandExecutionStatus` | `CommandExecutionStatus` | `generated:enum` | `v2/CommandExecutionStatus.ts` |
+| `CommandExecWriteParams` | `CommandExecWriteParams` | `generated:struct` | `v2/CommandExecWriteParams.ts` |
+| `CommandExecWriteResponse` | `CommandExecWriteResponse` | `generated:struct` | `v2/CommandExecWriteResponse.ts` |
 | `Config` | `Config` | `generated:struct` | `v2/Config.ts` |
 | `ConfigBatchWriteParams` | `ConfigBatchWriteParams` | `generated:struct` | `v2/ConfigBatchWriteParams.ts` |
 | `ConfigEdit` | `ConfigEdit` | `generated:struct` | `v2/ConfigEdit.ts` |
@@ -246,7 +266,19 @@ This tracker is derived from the pinned `codex-schemas/v0.112.0` tree and checke
 | `GitDiffToRemoteResponse` | `GitDiffToRemoteResponse` | `generated:struct` | `GitDiffToRemoteResponse.ts` |
 | `GitInfo` | `GitInfo` | `generated:struct` | `v2/GitInfo.ts` |
 | `GitSha` | `GitSha` | `generated:typealias` | `GitSha.ts` |
+| `GrantedMacOsPermissions` | `GrantedMacOsPermissions` | `generated:struct` | `v2/GrantedMacOsPermissions.ts` |
+| `GrantedPermissionProfile` | `GrantedPermissionProfile` | `generated:struct` | `v2/GrantedPermissionProfile.ts` |
 | `HazelnutScope` | `HazelnutScope` | `generated:enum` | `v2/HazelnutScope.ts` |
+| `HookCompletedNotification` | `HookCompletedNotification` | `generated:struct` | `v2/HookCompletedNotification.ts` |
+| `HookEventName` | `HookEventName` | `generated:enum` | `v2/HookEventName.ts` |
+| `HookExecutionMode` | `HookExecutionMode` | `generated:enum` | `v2/HookExecutionMode.ts` |
+| `HookHandlerType` | `HookHandlerType` | `generated:enum` | `v2/HookHandlerType.ts` |
+| `HookOutputEntry` | `HookOutputEntry` | `generated:struct` | `v2/HookOutputEntry.ts` |
+| `HookOutputEntryKind` | `HookOutputEntryKind` | `generated:enum` | `v2/HookOutputEntryKind.ts` |
+| `HookRunStatus` | `HookRunStatus` | `generated:enum` | `v2/HookRunStatus.ts` |
+| `HookRunSummary` | `HookRunSummary` | `generated:struct` | `v2/HookRunSummary.ts` |
+| `HookScope` | `HookScope` | `generated:enum` | `v2/HookScope.ts` |
+| `HookStartedNotification` | `HookStartedNotification` | `generated:struct` | `v2/HookStartedNotification.ts` |
 | `ImageDetail` | `ImageDetail` | `generated:enum` | `ImageDetail.ts` |
 | `InitializeCapabilities` | `InitializeCapabilities` | `generated:struct` | `InitializeCapabilities.ts` |
 | `InitializeParams` | `InitializeParams` | `generated:struct` | `InitializeParams.ts` |
@@ -266,6 +298,28 @@ This tracker is derived from the pinned `codex-schemas/v0.112.0` tree and checke
 | `MacOsAutomationPermission` | `MacOsAutomationPermission` | `generated:enum` | `MacOsAutomationPermission.ts` |
 | `MacOsPreferencesPermission` | `MacOsPreferencesPermission` | `generated:enum` | `MacOsPreferencesPermission.ts` |
 | `McpAuthStatus` | `McpAuthStatus` | `generated:enum` | `v2/McpAuthStatus.ts` |
+| `McpElicitationArrayType` | `McpElicitationArrayType` | `generated:enum` | `v2/McpElicitationArrayType.ts` |
+| `McpElicitationBooleanSchema` | `McpElicitationBooleanSchema` | `generated:struct` | `v2/McpElicitationBooleanSchema.ts` |
+| `McpElicitationBooleanType` | `McpElicitationBooleanType` | `generated:enum` | `v2/McpElicitationBooleanType.ts` |
+| `McpElicitationConstOption` | `McpElicitationConstOption` | `generated:struct` | `v2/McpElicitationConstOption.ts` |
+| `McpElicitationEnumSchema` | `McpElicitationEnumSchema` | `generated:enum` | `v2/McpElicitationEnumSchema.ts` |
+| `McpElicitationLegacyTitledEnumSchema` | `McpElicitationLegacyTitledEnumSchema` | `generated:struct` | `v2/McpElicitationLegacyTitledEnumSchema.ts` |
+| `McpElicitationMultiSelectEnumSchema` | `McpElicitationMultiSelectEnumSchema` | `generated:enum` | `v2/McpElicitationMultiSelectEnumSchema.ts` |
+| `McpElicitationNumberSchema` | `McpElicitationNumberSchema` | `generated:struct` | `v2/McpElicitationNumberSchema.ts` |
+| `McpElicitationNumberType` | `McpElicitationNumberType` | `generated:enum` | `v2/McpElicitationNumberType.ts` |
+| `McpElicitationObjectType` | `McpElicitationObjectType` | `generated:enum` | `v2/McpElicitationObjectType.ts` |
+| `McpElicitationPrimitiveSchema` | `McpElicitationPrimitiveSchema` | `generated:enum` | `v2/McpElicitationPrimitiveSchema.ts` |
+| `McpElicitationSchema` | `McpElicitationSchema` | `generated:struct` | `v2/McpElicitationSchema.ts` |
+| `McpElicitationSingleSelectEnumSchema` | `McpElicitationSingleSelectEnumSchema` | `generated:enum` | `v2/McpElicitationSingleSelectEnumSchema.ts` |
+| `McpElicitationStringFormat` | `McpElicitationStringFormat` | `generated:enum` | `v2/McpElicitationStringFormat.ts` |
+| `McpElicitationStringSchema` | `McpElicitationStringSchema` | `generated:struct` | `v2/McpElicitationStringSchema.ts` |
+| `McpElicitationStringType` | `McpElicitationStringType` | `generated:enum` | `v2/McpElicitationStringType.ts` |
+| `McpElicitationTitledEnumItems` | `McpElicitationTitledEnumItems` | `generated:struct` | `v2/McpElicitationTitledEnumItems.ts` |
+| `McpElicitationTitledMultiSelectEnumSchema` | `McpElicitationTitledMultiSelectEnumSchema` | `generated:struct` | `v2/McpElicitationTitledMultiSelectEnumSchema.ts` |
+| `McpElicitationTitledSingleSelectEnumSchema` | `McpElicitationTitledSingleSelectEnumSchema` | `generated:struct` | `v2/McpElicitationTitledSingleSelectEnumSchema.ts` |
+| `McpElicitationUntitledEnumItems` | `McpElicitationUntitledEnumItems` | `generated:struct` | `v2/McpElicitationUntitledEnumItems.ts` |
+| `McpElicitationUntitledMultiSelectEnumSchema` | `McpElicitationUntitledMultiSelectEnumSchema` | `generated:struct` | `v2/McpElicitationUntitledMultiSelectEnumSchema.ts` |
+| `McpElicitationUntitledSingleSelectEnumSchema` | `McpElicitationUntitledSingleSelectEnumSchema` | `generated:struct` | `v2/McpElicitationUntitledSingleSelectEnumSchema.ts` |
 | `McpServerElicitationAction` | `McpServerElicitationAction` | `generated:enum` | `v2/McpServerElicitationAction.ts` |
 | `McpServerElicitationRequestParams` | `McpServerElicitationRequestParams` | `generated:enum` | `v2/McpServerElicitationRequestParams.ts` |
 | `McpServerElicitationRequestResponse` | `McpServerElicitationRequestResponse` | `generated:struct` | `v2/McpServerElicitationRequestResponse.ts` |
@@ -297,11 +351,22 @@ This tracker is derived from the pinned `codex-schemas/v0.112.0` tree and checke
 | `ParsedCommand` | `ParsedCommand` | `generated:enum` | `ParsedCommand.ts` |
 | `PatchApplyStatus` | `PatchApplyStatus` | `generated:enum` | `v2/PatchApplyStatus.ts` |
 | `PatchChangeKind` | `PatchChangeKind` | `generated:enum` | `v2/PatchChangeKind.ts` |
+| `PermissionGrantScope` | `PermissionGrantScope` | `generated:enum` | `v2/PermissionGrantScope.ts` |
+| `PermissionsRequestApprovalParams` | `PermissionsRequestApprovalParams` | `generated:struct` | `v2/PermissionsRequestApprovalParams.ts` |
+| `PermissionsRequestApprovalResponse` | `PermissionsRequestApprovalResponse` | `generated:struct` | `v2/PermissionsRequestApprovalResponse.ts` |
 | `Personality` | `Personality` | `generated:enum` | `Personality.ts` |
 | `PlanDeltaNotification` | `PlanDeltaNotification` | `generated:struct` | `v2/PlanDeltaNotification.ts` |
 | `PlanType` | `PlanType` | `generated:enum` | `PlanType.ts` |
 | `PluginInstallParams` | `PluginInstallParams` | `generated:struct` | `v2/PluginInstallParams.ts` |
 | `PluginInstallResponse` | `PluginInstallResponse` | `generated:struct` | `v2/PluginInstallResponse.ts` |
+| `PluginInterface` | `PluginInterface` | `generated:struct` | `v2/PluginInterface.ts` |
+| `PluginListParams` | `PluginListParams` | `generated:struct` | `v2/PluginListParams.ts` |
+| `PluginListResponse` | `PluginListResponse` | `generated:struct` | `v2/PluginListResponse.ts` |
+| `PluginMarketplaceEntry` | `PluginMarketplaceEntry` | `generated:struct` | `v2/PluginMarketplaceEntry.ts` |
+| `PluginSource` | `PluginSource` | `generated:struct` | `v2/PluginSource.ts` |
+| `PluginSummary` | `PluginSummary` | `generated:struct` | `v2/PluginSummary.ts` |
+| `PluginUninstallParams` | `PluginUninstallParams` | `generated:struct` | `v2/PluginUninstallParams.ts` |
+| `PluginUninstallResponse` | `PluginUninstallResponse` | `generated:struct` | `v2/PluginUninstallResponse.ts` |
 | `ProductSurface` | `ProductSurface` | `generated:enum` | `v2/ProductSurface.ts` |
 | `ProfileV2` | `ProfileV2` | `generated:struct` | `v2/ProfileV2.ts` |
 | `RateLimitSnapshot` | `RateLimitSnapshot` | `generated:struct` | `v2/RateLimitSnapshot.ts` |
@@ -433,7 +498,10 @@ This tracker is derived from the pinned `codex-schemas/v0.112.0` tree and checke
 | `UserInput` | `UserInput` | `generated:enum` | `v2/UserInput.ts` |
 | `Verbosity` | `Verbosity` | `generated:enum` | `Verbosity.ts` |
 | `WebSearchAction` | `WebSearchAction` | `generated:enum` | `v2/WebSearchAction.ts` |
+| `WebSearchContextSize` | `WebSearchContextSize` | `generated:enum` | `WebSearchContextSize.ts` |
+| `WebSearchLocation` | `WebSearchLocation` | `generated:struct` | `WebSearchLocation.ts` |
 | `WebSearchMode` | `WebSearchMode` | `generated:enum` | `WebSearchMode.ts` |
+| `WebSearchToolConfig` | `WebSearchToolConfig` | `generated:struct` | `WebSearchToolConfig.ts` |
 | `WindowsSandboxSetupCompletedNotification` | `WindowsSandboxSetupCompletedNotification` | `generated:struct` | `v2/WindowsSandboxSetupCompletedNotification.ts` |
 | `WindowsSandboxSetupMode` | `WindowsSandboxSetupMode` | `generated:enum` | `v2/WindowsSandboxSetupMode.ts` |
 | `WindowsSandboxSetupStartParams` | `WindowsSandboxSetupStartParams` | `generated:struct` | `v2/WindowsSandboxSetupStartParams.ts` |
@@ -497,6 +565,7 @@ This tracker is derived from the pinned `codex-schemas/v0.112.0` tree and checke
 | `ErrorEvent` | `ErrorEvent` | `generated:struct` | `ErrorEvent.ts` |
 | `EventMsg` | `EventMsg` | `generated:enum` | `EventMsg.ts` |
 | `ExecApprovalRequestEvent` | `ExecApprovalRequestEvent` | `generated:struct` | `ExecApprovalRequestEvent.ts` |
+| `ExecApprovalRequestSkillMetadata` | `ExecApprovalRequestSkillMetadata` | `generated:struct` | `ExecApprovalRequestSkillMetadata.ts` |
 | `ExecCommandBeginEvent` | `ExecCommandBeginEvent` | `generated:struct` | `ExecCommandBeginEvent.ts` |
 | `ExecCommandEndEvent` | `ExecCommandEndEvent` | `generated:struct` | `ExecCommandEndEvent.ts` |
 | `ExecCommandOutputDeltaEvent` | `ExecCommandOutputDeltaEvent` | `generated:struct` | `ExecCommandOutputDeltaEvent.ts` |
@@ -507,6 +576,8 @@ This tracker is derived from the pinned `codex-schemas/v0.112.0` tree and checke
 | `FileSystemPermissions` | `FileSystemPermissions` | `generated:struct` | `FileSystemPermissions.ts` |
 | `GetHistoryEntryResponseEvent` | `GetHistoryEntryResponseEvent` | `generated:struct` | `GetHistoryEntryResponseEvent.ts` |
 | `HistoryEntry` | `HistoryEntry` | `generated:struct` | `HistoryEntry.ts` |
+| `HookCompletedEvent` | `HookCompletedEvent` | `generated:struct` | `HookCompletedEvent.ts` |
+| `HookStartedEvent` | `HookStartedEvent` | `generated:struct` | `HookStartedEvent.ts` |
 | `ImageGenerationBeginEvent` | `ImageGenerationBeginEvent` | `generated:struct` | `ImageGenerationBeginEvent.ts` |
 | `ImageGenerationEndEvent` | `ImageGenerationEndEvent` | `generated:struct` | `ImageGenerationEndEvent.ts` |
 | `ImageGenerationItem` | `ImageGenerationItem` | `generated:struct` | `ImageGenerationItem.ts` |
@@ -539,13 +610,15 @@ This tracker is derived from the pinned `codex-schemas/v0.112.0` tree and checke
 | `RealtimeConversationRealtimeEvent` | `RealtimeConversationRealtimeEvent` | `generated:struct` | `RealtimeConversationRealtimeEvent.ts` |
 | `RealtimeConversationStartedEvent` | `RealtimeConversationStartedEvent` | `generated:struct` | `RealtimeConversationStartedEvent.ts` |
 | `RealtimeEvent` | `RealtimeEvent` | `generated:enum` | `RealtimeEvent.ts` |
-| `RealtimeHandoffMessage` | `RealtimeHandoffMessage` | `generated:struct` | `RealtimeHandoffMessage.ts` |
 | `RealtimeHandoffRequested` | `RealtimeHandoffRequested` | `generated:struct` | `RealtimeHandoffRequested.ts` |
+| `RealtimeTranscriptDelta` | `RealtimeTranscriptDelta` | `generated:struct` | `RealtimeTranscriptDelta.ts` |
+| `RealtimeTranscriptEntry` | `RealtimeTranscriptEntry` | `generated:struct` | `RealtimeTranscriptEntry.ts` |
 | `ReasoningContentDeltaEvent` | `ReasoningContentDeltaEvent` | `generated:struct` | `ReasoningContentDeltaEvent.ts` |
 | `ReasoningItem` | `ReasoningItem` | `generated:struct` | `ReasoningItem.ts` |
 | `ReasoningRawContentDeltaEvent` | `ReasoningRawContentDeltaEvent` | `generated:struct` | `ReasoningRawContentDeltaEvent.ts` |
 | `RejectConfig` | `RejectConfig` | `generated:struct` | `RejectConfig.ts` |
 | `RemoteSkillDownloadedEvent` | `RemoteSkillDownloadedEvent` | `generated:struct` | `RemoteSkillDownloadedEvent.ts` |
+| `RequestPermissionsEvent` | `RequestPermissionsEvent` | `generated:struct` | `RequestPermissionsEvent.ts` |
 | `RequestUserInputEvent` | `RequestUserInputEvent` | `generated:struct` | `RequestUserInputEvent.ts` |
 | `RequestUserInputQuestion` | `RequestUserInputQuestion` | `generated:struct` | `RequestUserInputQuestion.ts` |
 | `RequestUserInputQuestionOption` | `RequestUserInputQuestionOption` | `generated:struct` | `RequestUserInputQuestionOption.ts` |

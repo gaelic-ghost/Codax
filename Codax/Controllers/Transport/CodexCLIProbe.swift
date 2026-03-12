@@ -214,10 +214,10 @@ public struct CodexCLIProbe: Sendable {
 }
 
 extension CodexCLIProbe {
-	static let supportedRangeDescription = "0.111.x and 0.112.x"
+	static let supportedRangeDescription = "0.114.x"
 
 	static func isSupported(version: CodexCLIVersion) -> Bool {
-		version.major == 0 && (version.minor == 111 || version.minor == 112)
+		version.major == 0 && version.minor == 114
 	}
 
 	static func parseFirstSemanticVersion(in text: String) -> CodexCLIVersion? {

@@ -9,8 +9,8 @@ Codax is still early, but the protocol boundary is no longer partial:
 - `Transport -> Connection -> Runtime -> ViewModel -> Views`
 - `CodexConnection` is the only app-server boundary
 - the separate client layer has been deleted
-- the connection layer now represents every exported schema in `codex-schemas/v0.112.0`
-- the generated connection surface currently verifies as `433/433` schema exports represented
+- the connection layer now represents every exported schema in `codex-schemas/v0.114.0`
+- the generated connection surface currently verifies as `497/497` schema exports represented
 - `CodaxViewModel` now starts a real ChatGPT login flow through runtime and tracks pending login state
 - thread loading now uses `thread/list` to persist durable thread summaries, then `thread/read` to hydrate the selected thread into SwiftData
 - inbound server requests are surfaced into view-model-owned pending user-request state
@@ -77,12 +77,12 @@ The schema coverage gate is:
 
 Current verified result:
 
-- `433` total exported schema types
-- `433` represented in connection Swift
+- `497` total exported schema types
+- `497` represented in connection Swift
 - `0` missing
-- `47/47` client requests represented through typed `CodexConnection` methods
-- `44/44` server notifications represented through `ServerNotificationEnvelope`
-- `8/8` server requests represented through `ServerRequestEnvelope`
+- `52/52` client requests represented through typed `CodexConnection` methods
+- `47/47` server notifications represented through `ServerNotificationEnvelope`
+- `9/9` server requests represented through `ServerRequestEnvelope`
 
 Project verification:
 

@@ -4,7 +4,7 @@
 
 This tracker covers the user-facing app-server surface in two lanes:
 
-- `pinned`: present in `codex-schemas/v0.112.0` and therefore available in the generated connection/runtime surface today
+- `pinned`: present in `codex-schemas/v0.114.0` and therefore available in the generated connection/runtime surface today
 - `upstream-delta`: present in the current upstream app-server README at [openai/codex app-server README](https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md) but not in the pinned schema contract yet
 
 Ownership rules for the current app:
@@ -23,7 +23,7 @@ Current app-level implementation baseline:
 - app-shell toolbar actions for new project, new thread, and inspector toggle: implemented
 - pending server-request prompts: implemented as transient view-model state
 - approval execution UX: not started beyond prompt surfacing
-- upstream README delta surfaces: blocked by contract until the pinned schema catches up
+- several former upstream README delta surfaces are now pinned in `v0.114.0`; remaining deltas are blocked until the next schema bump
 
 ## Client Requests
 
@@ -49,7 +49,9 @@ Current app-level implementation baseline:
 | Skills / apps | `skills/remote/export` | pinned | none | ViewModel | mapped | low |
 | Skills / apps | `app/list` | pinned | none | ViewModel | mapped | medium |
 | Skills / apps | `skills/config/write` | pinned | none | ViewModel | mapped | low |
+| Skills / apps | `plugin/list` | pinned | none | ViewModel | mapped | medium |
 | Skills / apps | `plugin/install` | pinned | none | ViewModel | mapped | medium |
+| Skills / apps | `plugin/uninstall` | pinned | none | ViewModel | mapped | medium |
 | Active conversation | `turn/start` | pinned | SwiftData | ViewModel | implemented | high |
 | Active conversation | `turn/steer` | pinned | none | ViewModel | mapped | medium |
 | Active conversation | `turn/interrupt` | pinned | none | ViewModel | mapped | medium |
@@ -66,6 +68,9 @@ Current app-level implementation baseline:
 | Account / auth | `account/rateLimits/read` | pinned | none | ViewModel | mapped | medium |
 | Feedback | `feedback/upload` | pinned | none | ViewModel | mapped | low |
 | Command execution | `command/exec` | pinned | none | ViewModel | mapped | medium |
+| Command execution | `command/exec/write` | pinned | none | ViewModel | mapped | medium |
+| Command execution | `command/exec/resize` | pinned | none | ViewModel | mapped | medium |
+| Command execution | `command/exec/terminate` | pinned | none | ViewModel | mapped | medium |
 | Config | `config/read` | pinned | none | ViewModel | mapped | medium |
 | Config | `externalAgentConfig/detect` | pinned | none | ViewModel | mapped | low |
 | Config | `externalAgentConfig/import` | pinned | none | ViewModel | mapped | low |
@@ -92,7 +97,9 @@ Current app-level implementation baseline:
 | Thread history | `thread/name/updated` | pinned | SwiftData | ViewModel | implemented | medium |
 | Thread history | `thread/tokenUsage/updated` | pinned | SwiftData | ViewModel | implemented | high |
 | Active conversation | `turn/started` | pinned | SwiftData | ViewModel | implemented | high |
+| Active conversation | `hook/started` | pinned | none | ViewModel | mapped | low |
 | Active conversation | `turn/completed` | pinned | SwiftData | ViewModel | implemented | high |
+| Active conversation | `hook/completed` | pinned | none | ViewModel | mapped | low |
 | Active conversation | `turn/diff/updated` | pinned | none | ViewModel | implemented | high |
 | Active conversation | `turn/plan/updated` | pinned | none | ViewModel | implemented | high |
 | Active conversation | `item/started` | pinned | none | ViewModel | mapped | medium |
@@ -100,6 +107,7 @@ Current app-level implementation baseline:
 | Active conversation | `rawResponseItem/completed` | pinned | none | ViewModel | mapped | low |
 | Active conversation | `item/agentMessage/delta` | pinned | none | ViewModel | mapped | medium |
 | Active conversation | `item/plan/delta` | pinned | none | ViewModel | mapped | medium |
+| Command execution | `command/exec/outputDelta` | pinned | none | ViewModel | mapped | medium |
 | Command execution | `item/commandExecution/outputDelta` | pinned | none | ViewModel | mapped | medium |
 | Command execution | `item/commandExecution/terminalInteraction` | pinned | none | ViewModel | mapped | medium |
 | Active conversation | `item/fileChange/outputDelta` | pinned | none | ViewModel | mapped | medium |
@@ -135,6 +143,7 @@ Current app-level implementation baseline:
 | Approvals / prompts | `item/fileChange/requestApproval` | pinned | none | ViewModel | ephemeral only | high |
 | Approvals / prompts | `item/tool/requestUserInput` | pinned | none | ViewModel | ephemeral only | high |
 | Approvals / prompts | `mcpServer/elicitation/request` | pinned | none | ViewModel | ephemeral only | high |
+| Approvals / prompts | `item/permissions/requestApproval` | pinned | none | ViewModel | ephemeral only | high |
 | Approvals / prompts | `item/tool/call` | pinned | none | ViewModel | ephemeral only | high |
 | Account / auth | `account/chatgptAuthTokens/refresh` | pinned | none | ViewModel | ephemeral only | high |
 | Approvals / prompts | `applyPatchApproval` | pinned | none | ViewModel | ephemeral only | high |
@@ -145,16 +154,11 @@ Current app-level implementation baseline:
 | Feature Area | Surface | Direction | Spec Basis | Durable Owner | Live Owner | Current App Status | Priority |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Models / features | `collaborationMode/list` | client request | upstream-delta | none | ViewModel | blocked by contract | medium |
-| Skills / apps | `plugin/list` | client request | upstream-delta | none | ViewModel | blocked by contract | medium |
-| Skills / apps | `plugin/uninstall` | client request | upstream-delta | none | ViewModel | blocked by contract | medium |
 | Thread history | `thread/backgroundTerminals/clean` | client request | upstream-delta | none | ViewModel | blocked by contract | low |
 | Realtime / audio | `thread/realtime/start` | client request | upstream-delta | none | ViewModel | blocked by contract | medium |
 | Realtime / audio | `thread/realtime/appendAudio` | client request | upstream-delta | none | ViewModel | blocked by contract | medium |
 | Realtime / audio | `thread/realtime/appendText` | client request | upstream-delta | none | ViewModel | blocked by contract | medium |
 | Realtime / audio | `thread/realtime/stop` | client request | upstream-delta | none | ViewModel | blocked by contract | medium |
-| Command execution | `command/exec/write` | client request | upstream-delta | none | ViewModel | blocked by contract | medium |
-| Command execution | `command/exec/resize` | client request | upstream-delta | none | ViewModel | blocked by contract | medium |
-| Command execution | `command/exec/terminate` | client request | upstream-delta | none | ViewModel | blocked by contract | medium |
 | Approvals / prompts | `tool/requestUserInput` | client request | upstream-delta | none | ViewModel | blocked by contract | medium |
 
 ## Practical Split

@@ -105,7 +105,7 @@ struct ConnectionSchemaModelTests {
 			  "status": { "type": "active", "activeFlags": ["waitingOnApproval"] },
 			  "path": "/tmp/thread-1",
 			  "cwd": "/tmp",
-			  "cliVersion": "0.112.0",
+			  "cliVersion": "0.114.0",
 			  "source": { "subAgent": { "other": "test" } },
 			  "agentNickname": "agent",
 			  "agentRole": "reviewer",

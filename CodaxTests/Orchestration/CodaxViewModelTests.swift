@@ -14,7 +14,7 @@ struct CodaxViewModelTests {
 				return makeFailingRuntimeCoordinator(
 					error: LocalCodexTransport.LaunchError.launchFailed(
 						command: "/usr/bin/env codex app-server --listen stdio://",
-						reason: "Codax currently supports Codex CLI 0.111.x and 0.112.x only.",
+						reason: "Codax currently supports Codex CLI 0.114.x only.",
 						stderrSnapshot: nil,
 						debugSnapshot: CodexCLIProbe.DebugSnapshot(
 							inheritedPath: "/usr/bin",
@@ -23,7 +23,7 @@ struct CodaxViewModelTests {
 								version: CodexCLIVersion(major: 0, minor: 113, patch: 0),
 								path: "/usr/local/bin/codex",
 								supportedRange: CodexCLIProbe.supportedRangeDescription,
-								reason: "Codax currently supports Codex CLI 0.111.x and 0.112.x only."
+								reason: "Codax currently supports Codex CLI 0.114.x only."
 							),
 							attempts: []
 						)
@@ -228,6 +228,40 @@ struct CodaxViewModelTests {
 
 		#expect(viewModel.pendingUserRequests.isEmpty)
 	}
+
+	@Test func permissionsApprovalRequestsBecomePendingUiState() async throws {
+		let transport = ViewModelTestTransport()
+		let modelContainer = try makeInMemoryModelContainer()
+		let viewModel = makeConnectedViewModel(transport: transport, modelContainer: modelContainer)
+
+		await viewModel.connect()
+
+		viewModel.handle(
+			.itemPermissionsRequestApproval(
+				PermissionsRequestApprovalParams(
+					threadId: "thread-1",
+					turnId: "turn-1",
+					itemId: "item-1",
+					reason: "Need temporary automation access",
+					permissions: AdditionalPermissionProfile(
+						network: nil,
+						fileSystem: nil,
+						macos: AdditionalMacOsPermissions(
+							preferences: .readOnly,
+							automations: .all,
+							accessibility: false,
+							calendar: false
+						)
+					)
+				),
+				id: .string("request-1")
+			)
+		)
+
+		#expect(viewModel.pendingUserRequests.count == 1)
+		#expect(viewModel.pendingUserRequests.first?.title == "Permissions approval")
+		#expect(viewModel.pendingUserRequests.first?.summary == "Need temporary automation access")
+	}
 }
 
 private actor RuntimeFactoryRecorder {
@@ -410,7 +444,7 @@ private actor ViewModelTestTransport: CodexTransport {
 			"status": ["type": "idle"],
 			"path": "/tmp/\(id)",
 			"cwd": "/tmp",
-			"cliVersion": "0.112.0",
+			"cliVersion": "0.114.0",
 			"source": "appServer",
 			"agentNickname": NSNull(),
 			"agentRole": NSNull(),

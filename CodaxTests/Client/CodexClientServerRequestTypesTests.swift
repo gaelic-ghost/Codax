@@ -162,6 +162,147 @@ struct ConnectionServerRequestSchemaTests {
 		#expect(params.conversationId == "thread-1")
 		#expect(params.parsedCmd == [.unknown(cmd: "echo hi")])
 	}
+
+	@Test func mcpElicitationSchemaDecodesDollarSchemaField() throws {
+		let schema = try decode(
+			McpElicitationSchema.self,
+			from: """
+			{
+			  "$schema": "https://example.com/elicitation.schema.json",
+			  "type": "object",
+			  "properties": {
+			    "project": {
+			      "type": "string",
+			      "title": "Project",
+			      "default": "Codax"
+			    }
+			  },
+			  "required": ["project"]
+			}
+			"""
+		)
+
+		#expect(schema.schema == "https://example.com/elicitation.schema.json")
+		#expect(schema.required == ["project"])
+	}
+
+	@Test func permissionsApprovalTypesDecodeAndRoundTrip() throws {
+		let params = try decode(
+			PermissionsRequestApprovalParams.self,
+			from: """
+			{
+			  "threadId": "thread-1",
+			  "turnId": "turn-1",
+			  "itemId": "item-1",
+			  "reason": "Need automation",
+			  "permissions": {
+			    "macos": {
+			      "preferences": "read_only",
+			      "automations": { "bundle_ids": ["com.apple.Terminal"] },
+			      "accessibility": false,
+			      "calendar": false
+			    }
+			  }
+			}
+			"""
+		)
+
+		#expect(params.reason == "Need automation")
+		#expect(params.permissions.macos?.automations == .bundleIds(["com.apple.Terminal"]))
+
+		let response = try decode(
+			PermissionsRequestApprovalResponse.self,
+			from: """
+			{
+			  "permissions": {
+			    "macos": {
+			      "automations": { "bundle_ids": ["com.apple.Terminal"] },
+			      "accessibility": true
+			    }
+			  },
+			  "scope": "session"
+			}
+			"""
+		)
+
+		#expect(response.permissions.macos?.automations == .bundleIds(["com.apple.Terminal"]))
+		#expect(response.permissions.macos?.accessibility == true)
+		#expect(response.scope == .session)
+	}
+
+	@Test func pluginAndCommandExecStreamingTypesDecode() throws {
+		let pluginList = try decode(
+			PluginListResponse.self,
+			from: """
+			{
+			  "marketplaces": [
+			    {
+			      "name": "Official",
+			      "path": "/tmp/marketplace",
+			      "plugins": [
+			        {
+			          "id": "plugin-1",
+			          "name": "Plugin One",
+			          "installed": true,
+			          "enabled": true,
+			          "interface": {
+			            "displayName": "Plugin One",
+			            "shortDescription": "Short",
+			            "longDescription": "Long",
+			            "developerName": "OpenAI",
+			            "category": "utilities",
+			            "capabilities": ["tools"],
+			            "websiteUrl": null,
+			            "privacyPolicyUrl": null,
+			            "termsOfServiceUrl": null,
+			            "defaultPrompt": null,
+			            "brandColor": null,
+			            "composerIcon": null,
+			            "logo": null,
+			            "screenshots": []
+			          },
+			          "source": {
+			            "type": "local",
+			            "path": "/tmp/marketplace/plugin-one"
+			          }
+			        }
+			      ]
+			    }
+			  ]
+			}
+			"""
+		)
+		#expect(pluginList.marketplaces.count == 1)
+		#expect(pluginList.marketplaces.first?.plugins.first?.name == "Plugin One")
+
+		let uninstall = try decode(
+			PluginUninstallResponse.self,
+			from: "{}"
+		)
+		_ = uninstall
+
+		let writeResponse = try decode(CommandExecWriteResponse.self, from: "{}")
+		let terminateResponse = try decode(CommandExecTerminateResponse.self, from: "{}")
+		let resizeResponse = try decode(CommandExecResizeResponse.self, from: "{}")
+		_ = writeResponse
+		_ = terminateResponse
+		_ = resizeResponse
+
+		let outputDelta = try decode(
+			CommandExecOutputDeltaNotification.self,
+			from: """
+			{
+			  "processId": "process-1",
+			  "stream": "stdout",
+			  "deltaBase64": "aGVsbG8=",
+			  "capReached": false
+			}
+			"""
+		)
+		#expect(outputDelta.processId == "process-1")
+		#expect(outputDelta.stream == .stdout)
+		#expect(outputDelta.capReached == false)
+	}
 }
 
 private func decode<T: Decodable>(_ type: T.Type, from json: String) throws -> T {

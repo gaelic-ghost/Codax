@@ -5,29 +5,25 @@ import Testing
 struct CodexCLIProbeTests {
 	@Test func parsesSupportedVersionsFromPlainOutput() async throws {
 		#expect(
-			CodexCLIProbe.parseFirstSemanticVersion(in: "codex-cli 0.111.4") ==
-			CodexCLIVersion(major: 0, minor: 111, patch: 4)
-		)
-		#expect(
-			CodexCLIProbe.parseFirstSemanticVersion(in: "codex-cli 0.112.0") ==
-			CodexCLIVersion(major: 0, minor: 112, patch: 0)
+			CodexCLIProbe.parseFirstSemanticVersion(in: "codex-cli 0.114.0") ==
+			CodexCLIVersion(major: 0, minor: 114, patch: 0)
 		)
 	}
 
 	@Test func parsesVersionFromNoisyOutput() async throws {
 		let output = """
 		WARNING: proceeding, even though we could not update PATH: Operation not permitted (os error 1)
-		codex-cli 0.112.0
+		codex-cli 0.114.0
 		"""
 		#expect(
 			CodexCLIProbe.parseFirstSemanticVersion(in: output) ==
-			CodexCLIVersion(major: 0, minor: 112, patch: 0)
+			CodexCLIVersion(major: 0, minor: 114, patch: 0)
 		)
 	}
 
 	@Test func probeReportsSupportedCompatibility() async throws {
 		let probe = makeProbe(
-			versionOutput: .init(status: 0, stdout: "codex-cli 0.112.0\n", stderr: ""),
+			versionOutput: .init(status: 0, stdout: "codex-cli 0.114.0\n", stderr: ""),
 			resolvedPath: "/usr/local/bin/codex"
 		)
 
@@ -35,7 +31,7 @@ struct CodexCLIProbeTests {
 		#expect(
 			compatibility ==
 			.supported(
-				version: CodexCLIVersion(major: 0, minor: 112, patch: 0),
+				version: CodexCLIVersion(major: 0, minor: 114, patch: 0),
 				path: "/usr/local/bin/codex"
 			)
 		)
@@ -43,7 +39,7 @@ struct CodexCLIProbeTests {
 
 	@Test func probeReportsUnsupportedVersion() async throws {
 		let probe = makeProbe(
-			versionOutput: .init(status: 0, stdout: "codex-cli 0.113.0\n", stderr: ""),
+			versionOutput: .init(status: 0, stdout: "codex-cli 0.112.0\n", stderr: ""),
 			resolvedPath: "/opt/homebrew/bin/codex"
 		)
 
@@ -53,9 +49,9 @@ struct CodexCLIProbeTests {
 			return
 		}
 
-		#expect(version == CodexCLIVersion(major: 0, minor: 113, patch: 0))
+		#expect(version == CodexCLIVersion(major: 0, minor: 112, patch: 0))
 		#expect(path == "/opt/homebrew/bin/codex")
-		#expect(supportedRange == "0.111.x and 0.112.x")
+		#expect(supportedRange == "0.114.x")
 		#expect(reason.contains("supports Codex CLI"))
 	}
 
@@ -73,7 +69,7 @@ struct CodexCLIProbeTests {
 
 		#expect(version == nil)
 		#expect(path == "/usr/local/bin/codex")
-		#expect(supportedRange == "0.111.x and 0.112.x")
+		#expect(supportedRange == "0.114.x")
 		#expect(reason.contains("Could not parse"))
 	}
 
@@ -97,7 +93,7 @@ struct CodexCLIProbeTests {
 
 		#expect(version == nil)
 		#expect(path == nil)
-		#expect(supportedRange == "0.111.x and 0.112.x")
+		#expect(supportedRange == "0.114.x")
 		#expect(reason.contains("Could not find `codex`"))
 	}
 
@@ -112,7 +108,7 @@ struct CodexCLIProbeTests {
 						userInfo: [NSLocalizedDescriptionKey: "No such file or directory"]
 					)
 				case ("/opt/homebrew/bin/codex", ["--version"]):
-					return .init(status: 0, stdout: "codex-cli 0.112.0\n", stderr: "")
+					return .init(status: 0, stdout: "codex-cli 0.114.0\n", stderr: "")
 				case ("/usr/local/bin/codex", ["--version"]):
 					throw NSError(
 						domain: "CodaxTests",
@@ -133,7 +129,7 @@ struct CodexCLIProbeTests {
 		#expect(snapshot.attempts[0].executablePath == "/usr/bin/env")
 		#expect(snapshot.attempts[0].errorDescription?.contains("No such file") == true)
 		#expect(snapshot.attempts[1].executablePath == "/opt/homebrew/bin/codex")
-		#expect(snapshot.attempts[1].stdout.contains("0.112.0"))
+		#expect(snapshot.attempts[1].stdout.contains("0.114.0"))
 		#expect(snapshot.attempts.contains { $0.executablePath == "/usr/local/bin/codex" })
 		#expect(snapshot.attempts.contains {
 			$0.executablePath == "/usr/local/bin/codex" &&

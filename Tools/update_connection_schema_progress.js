@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 
 const repoRoot = path.resolve(__dirname, "..");
-const schemaRoot = path.join(repoRoot, "codex-schemas", "v0.112.0");
+const schemaRoot = path.join(repoRoot, "codex-schemas", "v0.114.0");
 const generatedSwiftPath = path.join(repoRoot, "Codax", "Controllers", "Connection", "CodexSchema.generated.swift");
 const connectionSwiftPaths = [
   generatedSwiftPath,
@@ -30,11 +30,13 @@ const CLIENT_REQUEST_RESPONSES = {
   "thread/loaded/list": "ThreadLoadedListResponse",
   "thread/read": "ThreadReadResponse",
   "skills/list": "SkillsListResponse",
+  "plugin/list": "PluginListResponse",
   "skills/remote/list": "SkillsRemoteReadResponse",
   "skills/remote/export": "SkillsRemoteWriteResponse",
   "app/list": "AppsListResponse",
   "skills/config/write": "SkillsConfigWriteResponse",
   "plugin/install": "PluginInstallResponse",
+  "plugin/uninstall": "PluginUninstallResponse",
   "turn/start": "TurnStartResponse",
   "turn/steer": "TurnSteerResponse",
   "turn/interrupt": "TurnInterruptResponse",
@@ -51,6 +53,9 @@ const CLIENT_REQUEST_RESPONSES = {
   "account/rateLimits/read": "GetAccountRateLimitsResponse",
   "feedback/upload": "FeedbackUploadResponse",
   "command/exec": "CommandExecResponse",
+  "command/exec/write": "CommandExecWriteResponse",
+  "command/exec/terminate": "CommandExecTerminateResponse",
+  "command/exec/resize": "CommandExecResizeResponse",
   "config/read": "ConfigReadResponse",
   "externalAgentConfig/detect": "ExternalAgentConfigDetectResponse",
   "externalAgentConfig/import": "ExternalAgentConfigImportResponse",
@@ -73,6 +78,7 @@ const ROOTS = [
   "FileChangeRequestApprovalResponse",
   "ToolRequestUserInputResponse",
   "McpServerElicitationRequestResponse",
+  "PermissionsRequestApprovalResponse",
   "DynamicToolCallResponse",
   "ChatgptAuthTokensRefreshResponse",
   "ApplyPatchApprovalResponse",
@@ -155,7 +161,7 @@ class Tokenizer {
         this.tokens.push({ type: "string", value: this.readString() });
         continue;
       }
-      if (/[A-Za-z_]/.test(char)) {
+      if (/[A-Za-z_$]/.test(char)) {
         this.tokens.push({ type: "identifier", value: this.readIdentifier() });
         continue;
       }
@@ -194,7 +200,7 @@ class Tokenizer {
   readIdentifier() {
     const start = this.index;
     this.index += 1;
-    while (this.index < this.input.length && /[A-Za-z0-9_]/.test(this.input[this.index])) {
+    while (this.index < this.input.length && /[A-Za-z0-9_$]/.test(this.input[this.index])) {
       this.index += 1;
     }
     return this.input.slice(start, this.index);
@@ -458,7 +464,7 @@ function parseUnionCases(definition) {
     })
     .map((chunk) => {
       const methodMatch = chunk.match(/"method"\s*:\s*"([^"]+)"/);
-      const paramsMatch = chunk.match(/params\s*:\s*([^,}]+)/);
+      const paramsMatch = chunk.match(/"?params"?\s*:\s*([^,}]+)/);
       return {
         method: methodMatch ? methodMatch[1] : null,
         paramsType: paramsMatch ? paramsMatch[1].trim() : null,
@@ -587,7 +593,7 @@ function main() {
     "",
     `Generated on ${new Date().toISOString()}.`,
     "",
-    "This tracker is derived from the pinned `codex-schemas/v0.112.0` tree and checked against `Codax/Controllers/Connection/CodexSchema.generated.swift`.",
+    "This tracker is derived from the pinned `codex-schemas/v0.114.0` tree and checked against `Codax/Controllers/Connection/CodexSchema.generated.swift`.",
     "",
     "## Summary",
     "",

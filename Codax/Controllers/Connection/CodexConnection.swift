@@ -364,6 +364,8 @@ private extension CodexConnection {
 			try await sendResponse(id: request.id, result: response)
 		case let .mcpServerElicitationRequest(response):
 			try await sendResponse(id: request.id, result: response)
+		case let .itemPermissionsRequestApproval(response):
+			try await sendResponse(id: request.id, result: response)
 		case let .itemToolCall(response):
 			try await sendResponse(id: request.id, result: response)
 		case let .accountChatgptAuthTokensRefresh(response):

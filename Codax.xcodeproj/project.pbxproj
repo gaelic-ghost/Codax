@@ -61,7 +61,7 @@
 			path = Tools;
 			sourceTree = "<group>";
 		};
-		49BD911A2F5F91F9004A63F7 /* codex-schemas */ = {
+		49903E122F62E0EE001E9DDB /* codex-schemas */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "codex-schemas";
 			sourceTree = "<group>";
@@ -100,6 +100,7 @@
 		490E239D2F5CCA8A00972F32 = {
 			isa = PBXGroup;
 			children = (
+				49903E122F62E0EE001E9DDB /* codex-schemas */,
 				49722E322F6218C50025032B /* Tools */,
 				49C635B22F5DA26000BDA18D /* Docs */,
 				49F339562F60498700287536 /* Codax.xctestplan */,
@@ -110,7 +111,6 @@
 				49C635F82F5DFD1100BDA18D /* LICENSE */,
 				490E23A82F5CCA8A00972F32 /* Codax */,
 				49C635B92F5DA5F900BDA18D /* CodaxTests */,
-				49BD911A2F5F91F9004A63F7 /* codex-schemas */,
 				490E23A72F5CCA8A00972F32 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -142,6 +142,7 @@
 			fileSystemSynchronizedGroups = (
 				490E23A82F5CCA8A00972F32 /* Codax */,
 				49722E322F6218C50025032B /* Tools */,
+				49903E122F62E0EE001E9DDB /* codex-schemas */,
 				49C635B22F5DA26000BDA18D /* Docs */,
 			);
 			name = Codax;
@@ -166,7 +167,6 @@
 				49C635BD2F5DA5F900BDA18D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				49BD911A2F5F91F9004A63F7 /* codex-schemas */,
 				49C635B92F5DA5F900BDA18D /* CodaxTests */,
 			);
 			name = CodaxTests;

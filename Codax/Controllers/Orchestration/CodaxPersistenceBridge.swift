@@ -84,36 +84,42 @@ final class CodaxPersistenceBridge {
 		}
 		thread.lastHydratedAt = .now
 		thread.hydrationState = .detail
+		touchProject(for: thread)
 		try saveIfNeeded()
 	}
 
 	func persistThreadStatus(_ status: ThreadStatus, for threadCodexId: String) throws {
 		guard let thread = try fetchThread(codexId: threadCodexId) else { return }
 		thread.setStatus(status)
+		touchProject(for: thread)
 		try saveIfNeeded()
 	}
 
 	func persistThreadName(_ name: String?, for threadCodexId: String) throws {
 		guard let thread = try fetchThread(codexId: threadCodexId) else { return }
 		thread.name = name
+		touchProject(for: thread)
 		try saveIfNeeded()
 	}
 
 	func persistThreadTokenUsage(_ tokenUsage: ThreadTokenUsage?, for threadCodexId: String) throws {
 		guard let thread = try fetchThread(codexId: threadCodexId) else { return }
 		thread.setTokenUsage(tokenUsage)
+		touchProject(for: thread)
 		try saveIfNeeded()
 	}
 
 	func persistThreadArchived(_ isArchived: Bool, for threadCodexId: String) throws {
 		guard let thread = try fetchThread(codexId: threadCodexId) else { return }
 		thread.setArchived(isArchived)
+		touchProject(for: thread)
 		try saveIfNeeded()
 	}
 
 	func persistThreadClosed(for threadCodexId: String) throws {
 		guard let thread = try fetchThread(codexId: threadCodexId) else { return }
 		thread.setClosed(true)
+		touchProject(for: thread)
 		try saveIfNeeded()
 	}
 
@@ -178,6 +184,11 @@ private extension CodaxPersistenceBridge {
 		for storedTurn in thread.turns where !incomingTurnIDs.contains(storedTurn.codexId) {
 			modelContext.delete(storedTurn)
 		}
+	}
+
+	func touchProject(for thread: ThreadModel) {
+		thread.project?.updatedAt = .now
+		thread.project?.isActive = true
 	}
 
 	func saveIfNeeded() throws {

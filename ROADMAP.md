@@ -21,6 +21,7 @@
 - [x] dedicated `CodaxPersistenceBridge` as the only app-side SwiftData writer
 - [x] `@Query`-backed thread list and selected-thread reads in SwiftUI
 - [x] selected-plus-recent thread hydration policy with durable summary/detail reconciliation
+- [x] project-rooted sidebar navigation with a sidebar-local `NavigationStack` and project-scoped thread lists
 
 ## What Still Needs Work
 

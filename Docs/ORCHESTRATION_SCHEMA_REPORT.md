@@ -28,12 +28,13 @@ What is true now:
 - the view model consumes runtime only and no longer reaches directly into `CodexConnection`
 - the persistence bridge is the only app-side `ModelContext` owner and writer
 - the view model owns UI projection state, pending login state, pending user-request state, thread selection, transient turn state, alerts, and hydration progress
-- SwiftUI views fetch durable thread summaries and selected-thread detail from SwiftData with `@Query`
+- SwiftUI views fetch durable project lists, project-scoped thread lists, and selected-thread detail from SwiftData with `@Query`
 - `loadThreads()` uses `thread/list` to persist thread summaries and `thread/read` to hydrate the selected thread into SwiftData
 - `loginWithChatGPT()` starts a real `account/login/start` flow and stores pending login state
 - selected-plus-recent hydration is bounded and sequential so startup does not flood the `codex app-server` link
 - test fixtures and app-state projections have been updated to the schema-owned `id` and source shapes
 - generator-backed connection types come from `node Tools/generate_connection_schema.js`
+- the sidebar is now a sidebar-local `NavigationStack` rooted in SwiftData `Project` rows, with project navigation staying view-local and thread selection continuing to drive the content/detail columns
 
 ## Practical Conclusion
 

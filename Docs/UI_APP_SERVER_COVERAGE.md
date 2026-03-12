@@ -11,13 +11,14 @@ Ownership rules for the current app:
 
 - durable user-facing read models live in SwiftData and are written only through `CodaxPersistenceBridge`
 - live session state, approvals, pending login, alerts, hydration progress, plan, and diff state stay in `CodaxViewModel`
-- views read durable thread state through `@Query` and send user actions upward into the view model
+- views read durable project and thread state through `@Query` and send user actions upward into the view model
 
 Current app-level implementation baseline:
 
 - durable thread summaries: implemented
 - selected-thread durable hydration: implemented
 - selected-plus-recent background hydration: implemented
+- project-rooted sidebar navigation: implemented
 - pending server-request prompts: implemented as transient view-model state
 - approval execution UX: not started beyond prompt surfacing
 - upstream README delta surfaces: blocked by contract until the pinned schema catches up

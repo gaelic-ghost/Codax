@@ -70,6 +70,20 @@ struct CodaxPersistenceBridgeTests {
 		#expect(try harness.bridge.shouldHydrateThreadDetail(codexId: "thread-1", maxAge: -1) == true)
 		#expect(try harness.bridge.shouldHydrateThreadDetail(codexId: "missing", maxAge: 60) == true)
 	}
+
+	@Test func projectRecencyUpdatesWhenThreadMutates() throws {
+		let harness = try makeBridgeHarness()
+		let thread = makeThread(codexId: "thread-1", preview: "Thread", updatedAt: 10, turns: [])
+		try harness.bridge.persistThreadDetail(thread)
+		let originalProject = try #require(fetchProjects(from: harness.modelContainer).first)
+		let originalUpdatedAt = originalProject.updatedAt
+
+		Thread.sleep(forTimeInterval: 0.01)
+		try harness.bridge.persistThreadStatus(.active(activeFlags: [.waitingOnApproval]), for: "thread-1")
+
+		let updatedProject = try #require(fetchProjects(from: harness.modelContainer).first)
+		#expect(updatedProject.updatedAt > originalUpdatedAt)
+	}
 }
 
 @MainActor
@@ -82,6 +96,13 @@ private func makeBridgeHarness() throws -> (bridge: CodaxPersistenceBridge, mode
 private func fetchThreads(from modelContainer: ModelContainer) throws -> [ThreadModel] {
 	try modelContainer.mainContext.fetch(
 		FetchDescriptor<ThreadModel>(sortBy: [SortDescriptor(\ThreadModel.codexId)])
+	)
+}
+
+@MainActor
+private func fetchProjects(from modelContainer: ModelContainer) throws -> [Project] {
+	try modelContainer.mainContext.fetch(
+		FetchDescriptor<Project>(sortBy: [SortDescriptor(\Project.updatedAt, order: .reverse)])
 	)
 }
 

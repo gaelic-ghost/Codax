@@ -15,6 +15,7 @@ Codax is still early, but the protocol boundary is no longer partial:
 - thread loading now uses `thread/list` to persist durable thread summaries, then `thread/read` to hydrate the selected thread into SwiftData
 - inbound server requests are surfaced into view-model-owned pending user-request state
 - SwiftData is now the durable read model for thread history, and SwiftUI reads that durable state through `@Query`
+- the sidebar is now a project-rooted `NavigationStack` that reads `Project` from SwiftData, pushes project-scoped thread lists, and keeps thread selection driving the content/detail columns
 
 The remaining unfinished work is above the connection layer:
 
@@ -42,7 +43,7 @@ The remaining unfinished work is above the connection layer:
 - `CodexRuntimeCoordinator` is the app-facing session boundary: it starts transport, owns `CodexConnection`, forwards typed streams, and exposes the typed request surface used by the app
 - `CodaxPersistenceBridge` is the only app-side SwiftData writer: it maps runtime types into `Project`, `ThreadModel`, and `TurnModel`, owns hydration policy, and reconciles summary/detail updates
 - `CodaxViewModel` consumes runtime plus the persistence bridge, keeps only live session state, and owns UI-facing pending login, pending approval, elicitation, alerts, and hydration progress
-- SwiftUI views sit above the view model, fetch durable thread data from SwiftData with `@Query`, and use the view model only for transient state and actions
+- SwiftUI views sit above the view model, fetch durable project and thread data from SwiftData with `@Query`, and use the view model only for transient state and actions
 
 ## Repository Layout
 
@@ -83,7 +84,7 @@ Current verified result:
 Project verification:
 
 - `xcodebuild -project /Users/galew/Workspace/Codax/Codax.xcodeproj -scheme Codax -sdk macosx test`
-- `87` tests passed in `10` suites
+- `88` tests passed in `10` suites
 
 ## Requirements
 

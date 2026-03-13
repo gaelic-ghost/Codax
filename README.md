@@ -1,30 +1,27 @@
 # Codax
 
-An accessibility-forward native macOS Codex app that talks to a local `codex app-server` over stdio.
+A very under-construction, accessibility-forward Codex GUI for macOS. It talks to your local `codex app-server` over stdio, no extra subscription needed. It's currently in the middle of a migration from an older `CodaxViewModel` app layer to `CodaxOrchestrator`.
 
 ## Current State
 
-Codax is still early, but the protocol boundary is no longer partial:
+What is solid in the checked-in code today:
 
-- `Transport -> Connection -> Runtime -> ViewModel -> Views`
-- `CodexConnection` is the only app-server boundary
-- the separate client layer has been deleted
-- the connection layer now represents every exported schema in `codex-schemas/v0.114.0`
+- `CodexTransport`, `LocalCodexTransport`, and `CodexCLIProbe` provide the local process and stdio boundary.
+- `CodexConnection` is the only typed app-server boundary.
+- the connection layer represents every exported schema in `codex-schemas/v0.114.0`
 - the generated connection surface currently verifies as `497/497` schema exports represented
-- `CodaxViewModel` now starts a real ChatGPT login flow through runtime and tracks pending login state
-- thread loading now uses `thread/list` to persist durable thread summaries, then `thread/read` to hydrate the selected thread into SwiftData
-- inbound server requests are surfaced into view-model-owned pending user-request state
-- SwiftData is now the durable read model for thread history, and SwiftUI reads that durable state through `@Query`
-- the sidebar is now a project-rooted `NavigationStack` that reads `Project` from SwiftData, pushes project-scoped thread lists, and keeps thread selection driving the content/detail columns
-- the detail column is now a compact inspector rail that expands into a detail-local `NavigationStack` for token usage, reasoning effort, git summary, permissions, and pending requests
-- the app shell now owns the toolbar, with `New Project`, `New Thread`, and inspector toggle actions at the split-view level
+- `CodexRuntimeCoordinator` starts transport, owns `CodexConnection`, forwards typed notifications, and forwards typed server requests
+- `CodaxOrchestrator` exists as the current top-level app-facing observable object
+- the app shell already uses `NavigationSplitView`
 
-The remaining unfinished work is above the connection layer:
+What is visibly mid-transition:
 
-- richer approval, elicitation, and auth-refresh UX
-- broader durable projections for account, config, and catalog state
-- exec-backed git actions such as commit and commit-and-push
-- broader end-user polish and accessibility work
+- several docs still describe the older `CodaxViewModel` architecture as if it were current
+- orchestration tests still target `CodaxViewModel`
+- some view files are placeholders or still reference `CodaxViewModel`
+- the checked-in UI does not yet support all of the inspector, toolbar, SwiftData `@Query`, and project-navigation behavior previously described in the docs
+
+This means the protocol and schema layers are ahead of the app shell. Documentation in this repo should be read as transition-aware unless a file is generated from schema coverage data.
 
 ## Architecture
 
@@ -41,11 +38,16 @@ The remaining unfinished work is above the connection layer:
 - the generated file is `CodexSchema.generated.swift`
 - raw string-method request helpers are internal implementation details, not the public API
 
-### Runtime And Above
+### Runtime
 
-- `CodexRuntimeCoordinator` is the app-facing session boundary: it starts transport, owns `CodexConnection`, forwards typed streams, and exposes the typed request surface used by the app
-- `CodaxViewModel` consumes runtime, owns the remaining app-side SwiftData persistence for thread and project state, keeps only live session state, and owns UI-facing pending login, pending approval, elicitation, alerts, and hydration progress
-- SwiftUI views sit above the view model, fetch durable project and thread data from SwiftData with `@Query`, use the view model only for transient state and actions, and route inspector state through the detail-column navigation stack
+- `CodexRuntimeCoordinator` is the app-facing session boundary for the current runtime layer
+- it starts transport, owns `CodexConnection`, forwards typed streams, and exposes the typed request surface used by higher layers
+
+### Orchestration And UI
+
+- `CodaxOrchestrator` is the checked-in observable app object used by [`CodaxApp.swift`](/Users/galew/Workspace/Codax/Codax/CodaxApp.swift)
+- the repo is still migrating off the older `CodaxViewModel` design; some files and tests still reflect that older shape
+- SwiftUI views above the app shell are not yet uniformly migrated, so they should not be treated as a completed reference architecture
 
 ## Repository Layout
 
@@ -56,11 +58,13 @@ The remaining unfinished work is above the connection layer:
 - `Codax/Controllers/Runtime`
   - runtime ownership and stream forwarding
 - `Codax/Controllers/Orchestration`
-  - `CodaxViewModel` plus SwiftData container setup
+  - `CodaxOrchestrator` and request-surface forwarding extensions
+- `Codax/SwiftData`
+  - durable model types used by the in-progress app layer
 - `Codax/Views`
-  - the current SwiftUI shell, now backed by SwiftData queries for durable thread state
+  - the current SwiftUI shell and the migration-in-progress view tree
 - `CodaxTests`
-  - transport, connection, runtime, and orchestration tests
+  - transport, connection, runtime, and older orchestration tests
 - `Docs`
   - architecture, coverage, and schema tracking reports
 
@@ -74,7 +78,7 @@ The schema coverage gate is:
 
 - `node Tools/update_connection_schema_progress.js --verify`
 
-Current verified result:
+Current documented coverage result:
 
 - `497` total exported schema types
 - `497` represented in connection Swift
@@ -86,12 +90,16 @@ Current verified result:
 Version support policy:
 
 - until `codex` reaches `v1.x.x`, Codax aims to track the latest released `codex app-server` schema version rather than maintain a broad pre-`v1` compatibility matrix
-- compatibility gating may still pin the current verified CLI release in code and tests, but docs and upgrade work should treat "latest pre-`v1`" as the target
+- compatibility gating in code and tests may temporarily stay pinned to a narrower verified CLI range while migration work catches up
 
-Project verification:
+Project checks commonly used in this repo:
 
-- `xcodebuild -project /Users/galew/Workspace/Codax/Codax.xcodeproj -scheme Codax -sdk macosx test`
-- `92` tests passed in `10` suites
+- `node Tools/generate_connection_schema.js`
+- `node Tools/update_connection_schema_progress.js --verify`
+- `xcodebuild -project /Users/galew/Workspace/Codax/Codax.xcodeproj -scheme Codax -sdk macosx build`
+- `xcodebuild -project /Users/galew/Workspace/Codax/Codax.xcodeproj -scheme Codax -destination 'platform=macOS' test`
+
+The checked-in docs previously claimed a passing test count, but this README intentionally does not restate that number until it is re-verified against the current repo state.
 
 ## Requirements
 

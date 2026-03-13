@@ -8,31 +8,28 @@ Codax is a public early-alpha project. Contributions are welcome, but the repo i
 
 Codax is currently a native macOS Codex client under active development.
 
-What is already real:
+What is already real in the checked-in code:
 
 - transport and process-launch hardening
-- a JSON-RPC `Connection` layer
+- a JSON-RPC `CodexConnection` layer
 - a full generated connection-owned schema boundary
-- a SwiftData-backed durable thread read model
-- a dedicated persistence bridge between runtime types and SwiftData
+- a runtime layer centered on `CodexRuntimeCoordinator`
+- a checked-in `CodaxOrchestrator` used by the app entrypoint
 - initial compatibility gating for Codex CLI `0.114.x`
-- a `NavigationSplitView` shell whose sidebar is a project-rooted `NavigationStack` backed by SwiftData `@Query` reads
-- a compact detail inspector rail backed by a detail-local `NavigationStack`
-- app-shell toolbar actions for project import, thread creation, and inspector visibility
 - layer reports grounded in the current `v0.114.0` schema baseline
+
+What is still visibly in transition:
+
+- several docs still refer to the older `CodaxViewModel` architecture
+- orchestration tests still target `CodaxViewModel`
+- some SwiftUI views are placeholders or still reference older app-layer types
+- the current app shell should not be treated as proof that SwiftData `@Query`, inspector navigation, and toolbar behavior are fully migrated
 
 Version-support policy while `codex` is still pre-`v1`:
 
 - Codax aims to support the latest released `codex app-server` schema version, not a wide matrix of `0.x` releases
 - when the CLI is still pre-`v1`, treat the newest upstream schema release as the intended target for generator, docs, and protocol audit work
 - the in-repo compatibility gate may remain pinned to the currently verified CLI build while that latest-version work is being landed
-
-What is still early or incomplete:
-
-- the current `NavigationSplitView` shell still needs broader pane behavior, polish, and accessibility work
-- broader UX polish
-- the full accessibility pass
-- broader reduction of the full typed schema surface into polished app behavior
 
 Please do not assume unfinished layers are stable just because the repo is public.
 
@@ -62,10 +59,9 @@ For this repo in particular, that applies strongly to work spanning `Transport`,
 The highest-value contribution areas right now are:
 
 - schema and report alignment
-- broader notification and app-behavior coverage
-- runtime and view-model refinement
-- SwiftData bridge and durable projection refinement
-- SwiftUI shell and pane-state cleanup
+- connection and runtime refinement
+- migration cleanup between `CodaxViewModel` leftovers and `CodaxOrchestrator`
+- SwiftUI shell cleanup
 - accessibility-first UI groundwork
 - documentation cleanup and consistency fixes
 
@@ -89,16 +85,16 @@ Keep the workflow lightweight:
 A few practical expectations:
 
 - prefer small PRs over broad mixed changes
-- keep naming and terminology aligned with the existing `Transport`, `Connection`, `Runtime`, and `ViewModel` vocabulary
+- keep naming and terminology aligned with the current checked-in layers: `Transport`, `Connection`, `Runtime`, and `Orchestration`
 - if your change crosses layer boundaries, explain why that boundary shift is necessary
-- keep docs aligned with current roadmap milestones, layer boundaries, and schema-version framing
+- keep docs aligned with current roadmap milestones, layer boundaries, schema-version framing, and the repo's transition state
 - if you change `codex-schemas` or either generator script, regenerate the checked-in connection surface before build/test
-- if you change the durable projection mapping, keep the `@Query` views, `CodaxViewModel`, and SwiftData models aligned in the same pass
+- if your change touches stale `CodaxViewModel` references, either update the full affected slice or clearly document why the migration is still partial
 - treat accessibility regressions, protocol drift, and untested behavior changes as high-risk
 
 ## Checks Before Opening a PR
 
-Run the checks that are real today:
+Run the checks that are intended to matter in this repo:
 
 ```bash
 node Tools/generate_connection_schema.js
@@ -109,7 +105,7 @@ xcodebuild -project Codax.xcodeproj -scheme Codax -destination 'platform=macOS' 
 
 The default `Codax` scheme test workflow uses the repo's `Codax.xctestplan`, with target-level parallelization disabled for the `CodaxTests` target.
 
-Current baseline verification is `92` passing tests in `10` suites.
+This contribution guide does not restate a passing test count because the app-layer migration is still in flight and verification should be confirmed against the current checkout.
 
 This repo does not currently have documented CI workflows, issue templates, or PR templates. Please do not assume hidden automation is going to catch missing verification for you.
 

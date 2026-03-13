@@ -2,42 +2,38 @@
 
 ## Summary
 
-`CodaxViewModel` is the app-state projection layer.
+This report is intentionally reality-first.
 
-It is a runtime-only consumer. It does not own protocol models or call `CodexConnection` directly.
+The checked-in repo no longer supports documenting `CodaxViewModel` as the active orchestration layer without qualification. [`CodaxApp.swift`](/Users/galew/Workspace/Codax/Codax/CodaxApp.swift) now instantiates `CodaxOrchestrator`, but the surrounding views, tests, and older narrative docs have not fully caught up.
 
 ## Current Relationship
 
 - `CodexConnection`
   - complete typed schema boundary
 - `CodexRuntimeCoordinator`
-  - sole app-facing session boundary
-- `CodaxViewModel`
-  - app-facing live state projection, pending user-request state, and the remaining app-side SwiftData writes
+  - sole typed runtime/session boundary
+- `CodaxOrchestrator`
+  - current checked-in app-facing observable object
 - SwiftUI views
-  - presentation plus durable `@Query` reads
+  - partially migrated consumers; some files still use placeholders or stale `CodaxViewModel` references
+- older orchestration tests
+  - still target `CodaxViewModel`
 
-## Current State
+## What Is Verifiably True Now
 
-What is true now:
+- the connection layer has complete schema coverage against the pinned `v0.114.0` schema tree
+- runtime constructs `LocalCodexTransport`, injects `CodexConnection`, exposes typed request forwarding, and forwards typed notifications and server requests
+- `CodaxOrchestrator` owns a `CodexRuntimeCoordinator` and forwards typed request calls through extension files under `Codax/Controllers/Orchestration`
+- `CodaxApp` stores a `CodaxOrchestrator` in `@State` and injects it into the app environment
+- `CodaxOrchestrator` already owns app-facing observable state such as account, status, project listings, selected thread state, and pending server requests
 
-- the connection layer has complete schema coverage
-- runtime constructs `LocalCodexTransport`, injects `CodexConnection`, exposes typed request forwarding, and forwards typed streams
-- the view model consumes runtime only and no longer reaches directly into `CodexConnection`
-- the view model owns the app-side SwiftData writes that remain for thread and project persistence
-- the view model owns UI projection state, pending login state, pending user-request state, thread selection, transient turn state, alerts, and hydration progress
-- SwiftUI views fetch durable project lists, project-scoped thread lists, and selected-thread detail from SwiftData with `@Query`
-- `loadThreads()` uses `thread/list` to persist thread summaries and `thread/read` to hydrate the selected thread into SwiftData
-- `loginWithChatGPT()` starts a real `account/login/start` flow and stores pending login state
-- selected-plus-recent hydration is bounded and sequential so startup does not flood the `codex app-server` link
-- test fixtures and app-state projections have been updated to the schema-owned `id` and source shapes
-- generator-backed connection types come from `node Tools/generate_connection_schema.js`
-- the sidebar is now a sidebar-local `NavigationStack` rooted in SwiftData `Project` rows, with project navigation staying view-local and thread selection continuing to drive the content/detail columns
-- the detail column is now a compact inspector rail that expands into a detail-local `NavigationStack`
-- the app shell now owns toolbar actions for `New Project`, `New Thread`, and inspector visibility
-- the current first-pass inspector surfaces are token usage, reasoning effort, git summary, permissions, and pending requests
-- git summary is app-owned live state derived from durable thread git metadata plus `gitDiffToRemote` line-count parsing, not a dedicated protocol summary field
+## What Is Not Safe To Claim Yet
+
+- that SwiftUI views are uniformly migrated to `CodaxOrchestrator`
+- that the checked-in app already provides the full SwiftData-backed `@Query` architecture described by earlier docs
+- that sidebar project navigation, detail inspector navigation, and toolbar behavior are complete app features rather than partial migration targets
+- that the orchestration layer has one settled design across code, tests, and docs
 
 ## Practical Conclusion
 
-This layer is no longer blocked on the removed client layer or on direct connection reach-through. Its remaining work is not protocol migration; it is richer approval, elicitation, auth-refresh UX, broader durable projections, deferred exec-backed git actions, and broader UI shaping.
+The orchestration layer is in transition rather than blocked. The repo has a newer top-level orchestrator shape, but the view tree, tests, and prior documentation still expose the older `CodaxViewModel` architecture. Any future cleanup should update code, tests, and narrative docs in the same pass so the repo stops describing two different app layers at once.

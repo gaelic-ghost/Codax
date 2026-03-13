@@ -109,9 +109,9 @@ The checked-in docs previously claimed a passing test count, but this README int
 
 ## Project Docs
 
-- [ROADMAP.md](/Users/galew/Workspace/Codax/ROADMAP.md)
-- [connection-schema-progress.md](/Users/galew/Workspace/Codax/Docs/connection-schema-progress.md)
-- [CONNECTION_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/CONNECTION_SCHEMA_REPORT.md)
-- [TRANSPORT_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/TRANSPORT_SCHEMA_REPORT.md)
-- [ORCHESTRATION_SCHEMA_REPORT.md](/Users/galew/Workspace/Codax/Docs/ORCHESTRATION_SCHEMA_REPORT.md)
-- [UI_APP_SERVER_COVERAGE.md](/Users/galew/Workspace/Codax/Docs/UI_APP_SERVER_COVERAGE.md)
+- [ROADMAP.md](https://github.com/gaelic-ghost/Codax/blob/main/ROADMAP.md)
+- [connection-schema-progress.md](https://github.com/gaelic-ghost/Codax/blob/main/Docs/connection-schema-progress.md)
+- [CONNECTION_SCHEMA_REPORT.md](https://github.com/gaelic-ghost/Codax/blob/main/Docs/CONNECTION_SCHEMA_REPORT.md)
+- [TRANSPORT_SCHEMA_REPORT.md](https://github.com/gaelic-ghost/Codax/blob/main/Docs/TRANSPORT_SCHEMA_REPORT.md)
+- [ORCHESTRATION_SCHEMA_REPORT.md](https://github.com/gaelic-ghost/Codax/blob/main/Docs/ORCHESTRATION_SCHEMA_REPORT.md)
+- [UI_APP_SERVER_COVERAGE.md](https://github.com/gaelic-ghost/Codax/blob/main/Docs/UI_APP_SERVER_COVERAGE.md)
